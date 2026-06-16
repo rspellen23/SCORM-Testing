@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://teletracking.local/nova-course-ir/v1",
+  "title": "Nova Course IR",
+  "type": "object",
+  "required": ["title", "blocks"],
+  "properties": {
+    "schema": { "const": "nova-course-ir/v1" },
+    "id": { "type": "string" },
+    "title": { "type": "string" },
+    "locale": { "enum": ["en", "en-GB"] },
+    "accent": {
+      "type": "string",
+      "description": "Official TeleTracking accent hex",
+      "enum": ["#1EB16A", "#069696", "#539BD2", "#003E51", "#0B2C37", "#ECBD00", "#F27D05", "#BD362F", "#4EE89E"]
+    },
+    "hero": {
+      "type": ["object", "null"],
+      "properties": {
+        "image": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" }
+      }
+    },
+    "blocks": { "type": "array", "items": { "$ref": "#/definitions/block" } },
+    "graded": { "type": "boolean", "description": "scored course: KCs count toward a score; status becomes passed/failed (default false = completion-only, unscored)" },
+    "passingScore": { "type": "integer", "minimum": 0, "maximum": 100, "description": "graded only: percent correct required to pass (default 80)" },
+    "retry": { "type": "integer", "minimum": 0, "description": "max attempts per knowledge check before it locks + reveals (0 = one-shot). Graded courses score the final answer within the attempts." },
+    "_stats": { "type": "object" }
+  },
+  "definitions": {
+    "block": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["heading", "paragraph", "headingParagraph", "image", "imageText",
+                   "video", "audio", "embed",
+                   "note", "statement", "list", "table", "divider", "continue", "knowledgeCheck",
+                   "button", "cardGrid"]
+        },
+        "gated": { "type": "boolean", "description": "Hidden until the preceding continue gate is clicked" },
+        "level": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "html": { "type": "string", "description": "Inline HTML (strong/em/a/ul/li kept)" },
+        "headingHtml": { "type": "string" },
+        "variant": { "enum": ["full", "hero"] },
+        "src": { "type": "string", "description": "assets/<file> path (bundled) or an https URL (embed/streamed)" },
+        "alt": { "type": "string" },
+        "caption": { "type": "string" },
+        "side": { "enum": ["left", "right"] },
+        "mode": { "enum": ["file", "embed"], "description": "video: 'file' = self-hosted <video> bundled in the zip; 'embed' = streamed <iframe>" },
+        "poster": { "type": "string", "description": "video (file mode): assets/<file> poster frame" },
+        "captions": { "type": "string", "description": "video (file mode): assets/<file>.vtt caption track (508/WCAG)" },
+        "captionsLang": { "type": "string", "description": "BCP-47 lang for the caption <track> (default 'en')" },
+        "transcript": { "type": "string", "description": "audio: full text transcript (collapsible, 508/WCAG)" },
+        "title": { "type": "string", "description": "embed/video-embed: iframe accessible title" },
+        "aspect": { "type": "string", "description": "embed/video-embed: 'W:H' responsive box (default 16:9)" },
+        "height": { "type": "integer", "description": "embed: fixed pixel height (overrides aspect)" },
+        "requireComplete": { "type": "boolean", "description": "video(file)/audio only: gate course completion on the media 'ended' event. Ignored for embed (cross-origin, unobservable)." },
+        "ordered": { "type": "boolean" },
+        "items": { "type": "array", "items": { "type": "string" } },
+        "text": { "type": "string", "description": "Continue button label" },
+        "prompt": { "type": "string" },
+        "id": { "type": "string", "description": "knowledgeCheck: stable id, reported as the cmi.interactions id in graded courses" },
+        "multi": { "type": "boolean" },
+        "feedback": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["html", "correct"],
+            "properties": {
+              "html": { "type": "string" },
+              "correct": { "type": "boolean" }
+            }
+          }
+        },
+
+        "label": { "type": "string", "description": "button: visible button label" },
+        "buttonVariant": { "enum": ["primary", "secondary"], "description": "button/card link styling" },
+        "arrow": { "type": "boolean", "description": "button: append the animated arrow icon" },
+        "action": { "enum": ["link", "modal"], "description": "button: 'link' opens href in a new tab; 'modal' opens the bundled modal payload" },
+        "href": { "type": "string", "description": "button(action=link)/card link target URL" },
+        "requireOpen": { "type": "boolean", "description": "cardGrid: learner must open every modal card before the course can complete (like required media)" },
+        "columns": { "type": "integer", "minimum": 1, "maximum": 4, "description": "cardGrid: preferred column count (the grid still reflows to 1 on narrow screens)" },
+        "cards": {
+          "type": "array",
+          "description": "cardGrid: the content cards. A card with a 'modal' expands on click; with only 'link' it is a clickable callout; with neither it is static.",
+          "items": {
+            "type": "object",
+            "required": ["title"],
+            "properties": {
+              "icon": { "type": "string", "description": "Optional leading glyph or inline <svg> shown above the title" },
+              "title": { "type": "string" },
+              "teaser": { "type": "string", "description": "Short summary line shown on the card face" },
+              "href": { "type": "string", "description": "Clickable-callout target (used when there is no modal)" },
+              "modal": { "$ref": "#/definitions/modal" }
+            }
+          }
+        },
+        "modal": { "$ref": "#/definitions/modal" }
+      }
+    },
+    "modal": {
+      "type": "object",
+      "description": "Bounded modal payload: a heading, ONE media slot, rich text, and an optional link.",
+      "properties": {
+        "heading": { "type": "string" },
+        "html": { "type": "string", "description": "Rich body HTML (strong/em/a/ul/li/p)" },
+        "media": {
+          "type": "object",
+          "properties": {
+            "type": { "enum": ["image", "video", "embed"] },
+            "src": { "type": "string", "description": "assets/<file> (bundled) or an https URL" },
+            "alt": { "type": "string" },
+            "mode": { "enum": ["file", "embed"], "description": "video only: 'file' self-hosted vs 'embed' streamed iframe" },
+            "poster": { "type": "string" },
+            "aspect": { "type": "string", "description": "video(embed)/embed: 'W:H' (default 16:9)" }
+          }
+        },
+        "link": {
+          "type": "object",
+          "properties": {
+            "href": { "type": "string" },
+            "label": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

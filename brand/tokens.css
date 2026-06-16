@@ -1,0 +1,61 @@
+/* TeleTracking brand tokens — sourced from TeleTracking_BrandingColors.png + TeleFonts (2026-06-04).
+   Single source of truth for the course look. Players reference var(--tt-*) only. */
+
+@font-face { font-family: "Open Sans"; font-weight: 400; font-style: normal;
+  src: url("fonts/OpenSans-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 400; font-style: italic;
+  src: url("fonts/OpenSans-Italic.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 600; font-style: normal;
+  src: url("fonts/OpenSans-SemiBold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 700; font-style: normal;
+  src: url("fonts/OpenSans-Bold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 800; font-style: normal;
+  src: url("fonts/OpenSans-ExtraBold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans Condensed"; font-weight: 700; font-style: normal;
+  src: url("fonts/OpenSansCondensed-Bold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans Condensed"; font-weight: 300; font-style: normal;
+  src: url("fonts/OpenSansCondensed-Light.ttf") format("truetype"); font-display: swap; }
+
+:root {
+  /* --- Brand palette (exact hex from the brand sheet) --- */
+  --tt-telegreen:    #1EB16A;  /* primary */
+  --tt-teal:         #069696;
+  --tt-blue:         #539BD2;
+  --tt-navy:         #003E51;
+  --tt-deep-navy:    #0B2C37;
+  --tt-yellow:       #ECBD00;
+  --tt-orange:       #F27D05;
+  --tt-red:          #BD362F;  /* used for incorrect-answer state */
+  --tt-accent-green: #4EE89E;
+  --tt-mint:         #ABF7BC;
+  --tt-black:        #0C0E0F;
+  --tt-charcoal:     #394047;
+  --tt-slate:        #6C7782;
+  --tt-light-gray:   #C7CFD6;
+  --tt-gray:         #EDF0F0;
+  --tt-white:        #FFFFFF;
+
+  /* --- Semantic roles (themeable per course via --tt-accent) --- */
+  --tt-accent:        var(--tt-telegreen);
+  --tt-accent-ink:    #0d5e39;          /* darker accent for text-on-light */
+  --tt-band-bg:       var(--tt-navy);   /* heading band / KC card background */
+  --tt-band-ink:      var(--tt-white);
+  --tt-page-bg:       var(--tt-white);
+  --tt-surface:       var(--tt-gray);   /* tinted block background */
+  --tt-ink:           #1b2127;          /* body text */
+  --tt-ink-soft:      var(--tt-slate);
+  --tt-note-bg:       #eaf7f0;          /* callout tint (telegreen-derived) */
+  --tt-note-border:   var(--tt-telegreen);
+  --tt-correct:       var(--tt-telegreen);
+  --tt-incorrect:     var(--tt-red);
+
+  /* --- Type --- */
+  --tt-font-body:    "Open Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --tt-font-head:    "Open Sans Condensed", "Open Sans", system-ui, sans-serif;
+
+  /* --- Shape / rhythm --- */
+  --tt-radius:        14px;
+  --tt-radius-lg:     22px;
+  --tt-content-width: 820px;
+  --tt-gap:           1.6rem;
+}

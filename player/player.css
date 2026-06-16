@@ -1,0 +1,245 @@
+/* Nova Course Player — block + layout styles. Brand values come only from ../brand/tokens.css. */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--tt-font-body);
+  color: var(--tt-ink);
+  background: var(--tt-page-bg);
+  line-height: 1.6;
+  font-size: 18px;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; height: auto; display: block; }
+
+/* ---- App chrome ---- */
+.nv-topbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 22px; background: var(--tt-deep-navy); color: var(--tt-white);
+  position: sticky; top: 0; z-index: 20;
+}
+.nv-topbar img { height: 26px; }
+.nv-topbar .nv-title { font-family: var(--tt-font-head); font-weight: 700; font-size: 1.15rem; letter-spacing: .3px; }
+.nv-progress { flex: 1; height: 6px; background: rgba(255,255,255,.18); border-radius: 99px; overflow: hidden; }
+.nv-progress > span { display: block; height: 100%; width: 0; background: var(--tt-accent); transition: width .35s ease; }
+
+.nv-main { max-width: var(--tt-content-width); margin: 0 auto; padding: 0 22px 120px; }
+
+/* ---- Cover / hero ---- */
+.nv-hero { position: relative; margin: 0 -22px 2rem; }
+.nv-hero img { width: 100%; max-height: 360px; object-fit: cover; }
+.nv-hero .nv-hero-cap {
+  position: absolute; inset: auto 0 0 0; padding: 28px 22px;
+  background: linear-gradient(transparent, rgba(11,44,55,.82));
+  color: var(--tt-white);
+}
+.nv-hero .nv-hero-cap h1 { font-family: var(--tt-font-head); margin: 0; font-size: 2.4rem; }
+
+/* ---- Blocks (generic) ---- */
+.nv-block { margin: var(--tt-gap) 0; }
+.nv-block--tint { background: var(--tt-surface); border-radius: var(--tt-radius); padding: 1.4rem 1.6rem; }
+
+.nv-h1, .nv-h2, .nv-h3 { font-family: var(--tt-font-head); color: var(--tt-navy); line-height: 1.2; margin: .4em 0; }
+.nv-h1 { font-size: 2.3rem; font-weight: 700; }
+.nv-h2 { font-size: 1.8rem; font-weight: 700; }
+.nv-h3 { font-size: 1.35rem; font-weight: 700; color: var(--tt-accent-ink); }
+
+/* heading "band" (Rise put headings on a navy bar) */
+.nv-band {
+  background: var(--tt-band-bg); color: var(--tt-band-ink);
+  border-radius: var(--tt-radius); padding: 1.1rem 1.4rem; margin: var(--tt-gap) 0;
+}
+.nv-band .nv-h1, .nv-band .nv-h2, .nv-band .nv-h3 { color: var(--tt-band-ink); margin: 0; }
+
+.nv-p { margin: .6rem 0; }
+.nv-p a { color: var(--tt-accent-ink); }
+
+/* image variants */
+.nv-figure { margin: var(--tt-gap) 0; }
+.nv-figure img { border-radius: var(--tt-radius); width: 100%; }
+.nv-figure figcaption { color: var(--tt-ink-soft); font-size: .9rem; margin-top: .5rem; text-align: center; }
+.nv-aside { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; align-items: center; margin: var(--tt-gap) 0; }
+.nv-aside.right { direction: rtl; } .nv-aside.right > * { direction: ltr; }
+.nv-aside img { border-radius: var(--tt-radius); }
+@media (max-width: 680px){ .nv-aside { grid-template-columns: 1fr; } }
+
+/* ---- Media: video / audio / embed ---- */
+.nv-video, .nv-audio, .nv-embed { margin: var(--tt-gap) 0; }
+.nv-video video { width: 100%; border-radius: var(--tt-radius); display: block; background: #000; }
+.nv-audio audio { width: 100%; }
+.nv-embed-frame {
+  position: relative; aspect-ratio: var(--nv-aspect, 16/9);
+  overflow: hidden; border-radius: var(--tt-radius); background: var(--tt-surface);
+}
+.nv-embed-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.nv-video figcaption, .nv-audio figcaption, .nv-embed figcaption {
+  color: var(--tt-ink-soft); font-size: .9rem; margin-top: .5rem; text-align: center;
+}
+.nv-transcript { margin-top: .6rem; font-size: .95rem; }
+.nv-transcript summary { cursor: pointer; color: var(--tt-accent-ink); font-weight: 600; }
+.nv-transcript .nv-p { margin-top: .5rem; }
+
+/* impact: note (callout) + statement */
+.nv-note {
+  background: var(--tt-note-bg); border-left: 6px solid var(--tt-note-border);
+  border-radius: 10px; padding: 1.1rem 1.3rem; margin: var(--tt-gap) 0;
+}
+.nv-statement {
+  text-align: center; font-family: var(--tt-font-head); font-weight: 700;
+  font-size: 1.6rem; color: var(--tt-navy); padding: 1.2rem 1rem; margin: var(--tt-gap) 0;
+}
+
+/* lists / tables */
+.nv-list { margin: var(--tt-gap) 0; padding-left: 1.4rem; }
+.nv-list li { margin: .4rem 0; }
+.nv-table-wrap { overflow-x: auto; margin: var(--tt-gap) 0; }
+.nv-table-wrap table { border-collapse: collapse; width: 100%; }
+.nv-table-wrap th, .nv-table-wrap td { border: 1px solid var(--tt-light-gray); padding: .6rem .8rem; text-align: left; }
+.nv-table-wrap th { background: var(--tt-navy); color: var(--tt-white); font-family: var(--tt-font-head); }
+.nv-table-wrap tr:nth-child(even) td { background: var(--tt-gray); }
+.nv-divider { height: 1px; background: var(--tt-light-gray); border: 0; margin: 2rem 0; }
+
+/* ---- Transition band (brand ribbon wave divider) ---- */
+.nv-transition { margin: var(--tt-gap) 0; line-height: 0; }
+.nv-transition img { width: 100%; height: auto; display: block; border-radius: 0; }
+
+/* ---- Colored section (solid brand bg, white text), bracketed by matching waves ---- */
+/* Waves directly adjacent to a section are flush (no gap) so the color flows in/out. */
+.nv-section { padding: .5rem 0 1rem; }
+.nv-section--green { background: var(--tt-accent); color: var(--tt-white); }
+.nv-section--green :where(.nv-h1,.nv-h2,.nv-h3,.nv-p,strong,em,a,li) { color: var(--tt-white); }
+.nv-section--green .nv-band { background: transparent; }
+.nv-section .nv-block { padding-left: 22px; padding-right: 22px; }
+.nv-transition + .nv-section, .nv-section + .nv-transition { margin-top: 0; }
+.nv-transition.is-section-lead { margin: var(--tt-gap) 0 0; }
+.nv-transition.is-section-tail { margin: 0 0 var(--tt-gap); }
+
+/* ---- Course end / exit ---- */
+.nv-course-end { text-align: center; margin: 3rem 0 1rem; }
+.nv-course-end-msg { color: var(--tt-ink-soft); margin-bottom: 1rem; }
+.nv-exit { background: var(--tt-accent); color: var(--tt-white); }
+
+/* ---- Continue gate ---- */
+.nv-continue { text-align: center; margin: 2.2rem 0; }
+.nv-btn {
+  font-family: var(--tt-font-head); font-weight: 700; letter-spacing: .5px;
+  background: var(--tt-accent); color: var(--tt-white); border: 0; cursor: pointer;
+  padding: .85rem 2.2rem; border-radius: 99px; font-size: 1.05rem;
+}
+.nv-btn:disabled { opacity: .45; cursor: not-allowed; }
+.nv-gated { display: none; }
+.nv-gated.revealed { display: block; animation: nv-fade .4s ease; }
+@keyframes nv-fade { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+
+/* ---- Knowledge check ---- */
+.nv-kc { background: var(--tt-band-bg); color: var(--tt-band-ink); border-radius: var(--tt-radius-lg); padding: 1.6rem; margin: var(--tt-gap) 0; }
+.nv-kc .nv-kc-prompt { font-family: var(--tt-font-head); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem; }
+.nv-kc-opt {
+  display: block; width: 100%; text-align: left; background: var(--tt-white); color: var(--tt-ink);
+  border: 2px solid transparent; border-radius: 12px; padding: .8rem 1rem; margin: .5rem 0; cursor: pointer; font-size: 1rem;
+}
+.nv-kc-opt:hover { border-color: var(--tt-accent); }
+.nv-kc-opt.correct { border-color: var(--tt-correct); background: #e9faf1; }
+.nv-kc-opt.incorrect { border-color: var(--tt-incorrect); background: #fbeceb; }
+.nv-kc-opt.is-disabled { pointer-events: none; opacity: .85; }
+.nv-kc-fb { margin-top: 1rem; padding: .9rem 1.1rem; border-radius: 10px; background: rgba(255,255,255,.12); display: none; }
+.nv-kc-fb.show { display: block; }
+.nv-kc-fb.ok { border-left: 5px solid var(--tt-correct); }
+.nv-kc-fb.no { border-left: 5px solid var(--tt-incorrect); }
+
+/* ---- Branded CTA buttons (re-skinned from Uiverse MIT snippets: gradient sweep + arrow) ---- */
+/* Shared base for library buttons AND the continue/exit controls, so everything matches. */
+.nv-cta, .nv-btn, .nv-exit {
+  position: relative; overflow: hidden; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+  font-family: var(--tt-font-head); font-weight: 700; letter-spacing: .5px;
+  border: 2px solid transparent; border-radius: 99px; cursor: pointer;
+  text-decoration: none; padding: .85rem 2.2rem; font-size: 1.05rem; line-height: 1;
+  transition: color .25s ease, border-color .25s ease, transform .12s ease;
+}
+/* the left-to-right fill sweep (Button 1/2) */
+.nv-cta::before, .nv-btn::before, .nv-exit::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; width: 0;
+  background: linear-gradient(90deg, var(--tt-telegreen), var(--tt-accent-green));
+  transition: width .45s ease;
+}
+.nv-cta:hover::before, .nv-btn:hover:not(:disabled)::before, .nv-exit:hover::before { width: 100%; }
+.nv-cta:active, .nv-btn:active, .nv-exit:active { transform: scale(.97); }
+.nv-cta:focus-visible, .nv-btn:focus-visible, .nv-exit:focus-visible,
+.nv-card--interactive:focus-visible, .nv-card--link:focus-visible, .nv-modal-close:focus-visible {
+  outline: 3px solid var(--tt-navy); outline-offset: 2px;
+}
+
+/* primary = solid telegreen, sweeps to the lighter accent on hover */
+.nv-cta--primary, .nv-btn, .nv-exit { background: var(--tt-accent); color: var(--tt-white); }
+/* secondary = outlined, fills with brand on hover (Button 2 behavior) */
+.nv-cta--secondary { background: var(--tt-white); color: var(--tt-accent-ink); border-color: var(--tt-accent); }
+.nv-cta--secondary:hover { color: var(--tt-white); }
+.nv-cta-wrap { text-align: center; }
+.nv-cta-arrow { display: inline-block; transition: transform .3s ease; font-weight: 700; }
+.nv-cta--arrow:hover .nv-cta-arrow { transform: translateX(4px); }
+
+/* ---- Content card grid (3-up, reflows to 1 on narrow screens) ---- */
+.nv-cardgrid {
+  display: grid; gap: 1.2rem;
+  grid-template-columns: repeat(var(--nv-cols, auto-fit), minmax(220px, 1fr));
+}
+@media (max-width: 680px){ .nv-cardgrid { grid-template-columns: 1fr; } }
+.nv-card {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: .6rem;
+  text-align: left; background: var(--tt-white); color: var(--tt-ink);
+  border: 1px solid var(--tt-light-gray); border-radius: var(--tt-radius-lg);
+  padding: 1.4rem 1.4rem 1.5rem; box-shadow: 0 4px 14px rgba(11,44,55,.06);
+  font: inherit; width: 100%;
+  transition: transform .35s cubic-bezier(.23,1,.32,1), box-shadow .35s ease, border-color .25s ease;
+}
+.nv-card--interactive, .nv-card--link { cursor: pointer; }
+.nv-card--interactive:hover, .nv-card--link:hover {
+  transform: translateY(-6px); box-shadow: 0 14px 30px rgba(11,44,55,.16); border-color: var(--tt-accent);
+}
+.nv-card-icon { font-size: 1.8rem; line-height: 1; color: var(--tt-accent); }
+.nv-card-icon svg { width: 40px; height: 40px; }
+.nv-card-title { font-family: var(--tt-font-head); font-weight: 700; color: var(--tt-navy); margin: 0; font-size: 1.25rem; }
+.nv-card-teaser { margin: 0; color: var(--tt-ink-soft); font-size: .98rem; }
+.nv-card-cue {
+  position: absolute; top: 12px; right: 14px; width: 26px; height: 26px; border-radius: 99px;
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+  background: var(--tt-note-bg); color: var(--tt-accent-ink); transition: background .25s ease, color .25s ease;
+}
+.nv-card--interactive:hover .nv-card-cue { background: var(--tt-accent); color: var(--tt-white); }
+
+/* ---- Modal / expanded card ---- */
+body.nv-modal-open { overflow: hidden; }
+.nv-modal {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  padding: 22px; background: rgba(11,44,55,.55); animation: nv-modal-fade .2s ease;
+}
+.nv-modal[hidden] { display: none; }
+@keyframes nv-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+.nv-modal-card {
+  position: relative; background: var(--tt-white); color: var(--tt-ink);
+  border-radius: var(--tt-radius-lg); padding: 2rem 1.9rem 2.1rem;
+  max-width: 640px; width: 100%; max-height: 88vh; overflow: auto;
+  box-shadow: 0 24px 60px rgba(11,44,55,.4); animation: nv-modal-rise .28s cubic-bezier(.23,1,.32,1);
+}
+@keyframes nv-modal-rise { from { transform: translateY(16px); opacity: .6; } to { transform: none; opacity: 1; } }
+.nv-modal-close {
+  position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border: 0; border-radius: 99px;
+  background: var(--tt-gray); color: var(--tt-navy); font-size: 1.3rem; line-height: 1; cursor: pointer;
+}
+.nv-modal-close:hover { background: var(--tt-light-gray); }
+.nv-modal-title { font-family: var(--tt-font-head); color: var(--tt-navy); margin: 0 2.5rem .9rem 0; font-size: 1.7rem; }
+.nv-modal-media { width: 100%; border-radius: var(--tt-radius); margin: 0 0 1rem; }
+.nv-modal .nv-embed-frame { margin: 0 0 1rem; }
+.nv-modal-body { margin: 0 0 1.1rem; }
+
+/* Respect reduced-motion: kill sweeps, lifts, and modal animations */
+@media (prefers-reduced-motion: reduce) {
+  .nv-cta, .nv-btn, .nv-exit, .nv-cta::before, .nv-btn::before, .nv-exit::before,
+  .nv-cta-arrow, .nv-card, .nv-card-cue, .nv-modal, .nv-modal-card { transition: none; animation: none; }
+  .nv-card--interactive:hover, .nv-card--link:hover { transform: none; }
+}
+
+/* utility: strip leftover Rise inline white text that would vanish on white bg is handled at import,
+   but as a guard, force readable ink inside light blocks */
+.nv-block :where(span,strong,em,p)[style*="color: rgb(255, 255, 255)"] { color: inherit !important; }

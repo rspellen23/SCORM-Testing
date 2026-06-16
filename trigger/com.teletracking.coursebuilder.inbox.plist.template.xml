@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Template. Do not load this directly: run install.sh, which fills the
+     __PLACEHOLDER__ values with paths resolved on THIS machine and installs the
+     result to ~/Library/LaunchAgents/. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.teletracking.coursebuilder.inbox</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>__DISPATCH__</string>
+    </array>
+
+    <key>WatchPaths</key>
+    <array>
+        <string>__INBOX__</string>
+    </array>
+
+    <!-- Paths to the local AI agent + python, resolved at install time so
+         launchd's minimal environment can find them. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>ENGINE</key>      <string>__ENGINE__</string>
+        <key>CLAUDE_BIN</key>  <string>__CLAUDE_BIN__</string>
+        <key>CODEX_BIN</key>   <string>__CODEX_BIN__</string>
+        <key>PYTHON_BIN</key>  <string>__PYTHON_BIN__</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__OUT_LOG__</string>
+    <key>StandardErrorPath</key>
+    <string>__ERR_LOG__</string>
+</dict>
+</plist>

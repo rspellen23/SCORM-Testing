@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microlearning Template Editor — TeleTracking</title>
+<style>
+  :root{
+    --navy:#0B2C37; --navy2:#003E51; --green:#1EB16A; --ink:#1d2b30; --soft:#5d6b70;
+    --line:#d9e0e2; --bg:#eef2f3; --card:#ffffff; --warn:#b06a00; --warnbg:#fff6e6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5}
+  header{background:var(--navy);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+  header h1{font-size:1.05rem;margin:0;font-weight:700;letter-spacing:.2px}
+  header .grow{flex:1}
+  select,button,input,textarea{font:inherit}
+  select{padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#fff}
+  button{cursor:pointer;border:0;border-radius:8px;padding:8px 14px;font-weight:600;background:#23414c;color:#fff}
+  button.primary{background:var(--green)}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff}
+  button.mini{padding:3px 9px;font-size:.8rem;background:#e7edee;color:#23414c;font-weight:600}
+  button.mini.danger{background:#fbe7e6;color:#a3322b}
+  .saved{font-size:.8rem;color:#bfe9d4}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;gap:0;height:calc(100vh - 58px)}
+  .pane{overflow:auto;padding:20px}
+  .pane.form{background:var(--bg)}
+  .pane.preview{background:#0e2129}
+  .field{margin:0 0 14px}
+  .field label{display:block;font-size:.78rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+  .field input[type=text], .field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff}
+  .field textarea{resize:vertical;min-height:54px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86rem}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:0 0 14px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .card.kc{border-color:var(--green);box-shadow:0 0 0 1px rgba(30,177,106,.25)}
+  .card .row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .card .row .num{background:var(--navy);color:#fff;width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0}
+  .card .row .roleinput{flex:1}
+  .card .row .roleinput input{width:100%;padding:6px 9px;border:1px solid var(--line);border-radius:8px;font-weight:600}
+  .card .tools{display:flex;gap:5px;flex-shrink:0}
+  .kc-badge{background:var(--green);color:#fff;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.5px}
+  .hint{font-size:.78rem;color:var(--soft);margin:3px 0 0}
+  .section-title{font-size:.95rem;font-weight:800;color:var(--navy);margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--green)}
+  .addrow{display:flex;gap:8px;margin:6px 0 4px}
+  .toggle{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--soft);margin-top:4px}
+  pre.preview-md{margin:0;color:#cfe8df;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;white-space:pre-wrap;word-break:break-word}
+  .preview-head{color:#7fd3ab;font-size:.75rem;text-transform:uppercase;letter-spacing:.6px;margin:0 0 12px;font-weight:700}
+  .banner{background:var(--warnbg);border:1px solid #ecd6a8;color:var(--warn);border-radius:9px;padding:9px 12px;font-size:.83rem;margin-bottom:14px}
+  details.adv{margin-top:18px;font-size:.85rem;color:var(--soft)}
+  details.adv summary{cursor:pointer;font-weight:700}
+  .hidden{display:none}
+  @media(max-width:820px){.wrap{grid-template-columns:1fr;height:auto}.pane{height:auto}}
+  /* ---- Block palette / showcase ---- */
+  .palette-overlay{position:fixed;inset:0;background:rgba(11,44,55,.55);z-index:40;display:flex;align-items:stretch;justify-content:center;padding:28px}
+  .palette{background:var(--bg);border-radius:14px;width:min(1100px,100%);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(11,44,55,.45)}
+  .palette-head{background:var(--navy);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px}
+  .palette-head h2{margin:0;font-size:1.05rem}
+  .palette-head .sub{font-size:.82rem;color:#bfe9d4;flex:1}
+  .palette-body{overflow:auto;padding:18px 20px}
+  .palette-cat{font-size:.78rem;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;border-bottom:2px solid var(--green);padding-bottom:5px}
+  .palette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .blockcard{background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden;display:flex;flex-direction:column}
+  .blockcard .frame{border:0;width:100%;height:150px;background:#fff;border-bottom:1px solid var(--line)}
+  .blockcard .meta{padding:10px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+  .blockcard .nm{font-weight:700;color:var(--navy)}
+  .blockcard .ds{font-size:.82rem;color:var(--soft);flex:1}
+  .blockcard .ins{align-self:flex-start;margin-top:4px;background:var(--green);color:#fff;font-size:.82rem;padding:5px 12px;border-radius:7px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧩 Microlearning Template Editor</h1>
+  <select id="picker" aria-label="Choose a template"></select>
+  <button class="primary" id="btnExport">⬇ Export Template (.md)</button>
+  <button id="btnBlocks">🧱 Blocks</button>
+  <button id="btnCopy">Copy</button>
+  <span class="grow"></span>
+  <span class="saved" id="saved"></span>
+  <label class="ghost" style="padding:8px 14px;border-radius:8px;cursor:pointer">Import…
+    <input id="fileImport" type="file" accept=".md,.json,text/markdown" class="hidden">
+  </label>
+  <button class="ghost" id="btnReset">Reset</button>
+</header>
+
+<div class="wrap">
+  <div class="pane form" id="form">
+    <div class="banner">
+      You're editing the <b>template</b> — the reusable scaffold, not a finished lesson. Change the
+      slide roles, headings and the guidance that steers Claude. The structural markers stay protected,
+      so you can't break the format. When done, <b>Export</b> and send the file to James.
+    </div>
+    <div id="formBody"></div>
+  </div>
+  <div class="pane preview">
+    <p class="preview-head">Live preview — this is the template file that gets saved</p>
+    <pre class="preview-md" id="preview"></pre>
+  </div>
+</div>
+
+<div class="palette-overlay hidden" id="paletteOverlay">
+  <div class="palette">
+    <div class="palette-head">
+      <h2>🧱 Block library</h2>
+      <span class="sub">Every content block the builder supports. Preview it, then <b>Insert</b> it into your template.</span>
+      <button class="ghost" id="btnClosePalette" style="border-color:rgba(255,255,255,.4)">Close</button>
+    </div>
+    <div class="palette-body" id="paletteBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================ DEFAULT TEMPLATE DEFINITIONS ============================ */
+/* One entry per archetype. Slides with isKC:true render as a Knowledge Check.            */
+const DEFAULTS = { archetypes: [
+  {
+    id:"concept-explainer", name:"Concept Explainer",
+    titleTemplate:"{{Concept Name}}",
+    whenToUse:"Teach an idea/model/term the learner needs to understand (not a task to perform). Proven by the Responsible AI modules.",
+    slides:[
+      {role:"Learning Objectives", heading:"Learning Objectives", guidance:"3–5 concrete, learner-facing outcomes (\"you will be able to…\"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual.", visual:{type:"graphic", desc:"Objectives illustration", slot:"{{slug}}_1_objectives.svg"}, body:"By the end of this microlearning, you will be able to:\n- {{objective 1}}\n- {{objective 2}}\n- {{objective 3}}"},
+      {role:"Hook / why this matters", heading:"{{Hook heading, e.g. \"Why <concept> matters to you\"}}", guidance:"Open with the learner's stake — the problem this concept solves or the decision it informs. 2–4 sentences.", body:"{{Hook prose.}}"},
+      {role:"What it is (definition)", heading:"What is {{Concept}}?", guidance:"One clear definition in plain language. Define any sub-term you introduce.", body:"{{Definition prose.}}"},
+      {role:"How it works (mechanism)", heading:"How it works", guidance:"Explain the moving parts. A numbered list or a comparison table works well here.", visual:{type:"diagram", desc:"Diagram of how it works", slot:"{{slug}}_3_diagram.svg"}, body:"{{Mechanism prose.}}\n- {{step or component}}\n- {{step or component}}"},
+      {role:"Why it matters here", heading:"Why this matters at TeleTracking", guidance:"Tie the concept to a real Nova/operations context. Concrete, not abstract.", body:"{{Application prose.}}"},
+      {role:"Example or analogy (optional)", heading:"{{An example or analogy}}", guidance:"One concrete instance that makes it stick. Optional — cut to stay in budget.", body:"{{Example/analogy prose.}}"},
+      {role:"Takeaway / recap", heading:"The takeaway", guidance:"The single idea to carry away. Short.", body:"{{Takeaway prose.}}"},
+      {role:"Knowledge Check", isKC:true, guidance:"Test understanding of HOW/WHY the concept works — avoid pure definition recall.", question:"{{Test understanding of the concept's mechanism}}", options:["{{option}}","{{option}}","{{option}}","{{option}}"], correct:"{{letter}}", fbCorrect:"{{reinforce the mechanism}}", fbIncorrect:"{{name the misconception and correct it}}"}
+    ],
+    buildNotes:{objectives:["- The learner can explain {{concept}} and {{why it matters / how it works}}."], confidence:"{{High | Medium | Low}}", media:["Slide 3: IMAGE or VIDEO (embed) — {{diagram/animation of the mechanism}}; slot `{{slug}}_3_diagram.png`"]},
+    sources:["- {{source}}"]
+  },
+  {
+    id:"software-procedure", name:"Software Procedure / Walkthrough",
+    titleTemplate:"{{Task Name, e.g. \"Creating a Transfer Request\"}}",
+    whenToUse:"Teach the learner to DO a task in Nova (a click-path/workflow they execute). Proven by Managing Bed Requests.",
+    slides:[
+      {role:"Learning Objectives", heading:"Learning Objectives", guidance:"3–5 concrete, learner-facing outcomes (\"you will be able to…\"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual.", visual:{type:"graphic", desc:"Objectives illustration", slot:"{{slug}}_1_objectives.svg"}, body:"By the end of this microlearning, you will be able to:\n- {{objective 1}}\n- {{objective 2}}\n- {{objective 3}}"},
+      {role:"The goal / when you'd do this", heading:"{{When you'll do this}}", guidance:"State the task, who does it, and the real trigger (\"when a bed becomes available, you…\").", body:"{{Framing prose.}}"},
+      {role:"Before you start (optional)", heading:"Before you start", guidance:"Access/role needed, where in Nova to begin. Cut if trivial.", body:"{{Prereq prose.}}"},
+      {role:"Step by step", heading:"Step by step", guidance:"NUMBERED list, one action per step, name the exact UI element. Keep ≤7; split if longer.", visual:{type:"screenshot", desc:"Annotated screenshot of the key screen", slot:"{{slug}}_3_screen.png"}, body:"1. {{Action — click/select/enter, naming the exact field/button.}}\n2. {{Action.}}\n3. {{Action.}}\n4. {{Action.}}"},
+      {role:"See it in action (demo)", heading:"See it in action", guidance:"The visual goes in via the Build Notes Media plan (a demo GIF or self-hosted video). Body = 1–2 sentence orientation.", body:"{{One or two sentences orienting the learner to the demo below.}}"},
+      {role:"Common mistakes / edge cases", heading:"Common mistakes", guidance:"The 2–3 errors people actually make and how to avoid/recover.", body:"- {{mistake → consequence → fix}}\n- {{mistake → consequence → fix}}"},
+      {role:"Quick reference / recap", heading:"Quick reference", guidance:"The steps condensed to a scannable list or table.", body:"| Step | Action |\n|---|---|\n| 1 | {{...}} |\n| 2 | {{...}} |"},
+      {role:"Knowledge Check (scenario)", isKC:true, guidance:"A realistic situation — \"You're at <screen> and need to <goal>. What do you do?\"", question:"{{You're at <screen> and need to <goal>. What do you do?}}", options:["{{plausible wrong path}}","{{the correct action}}","{{plausible wrong path}}","{{plausible wrong path}}"], correct:"{{letter}}", fbCorrect:"{{confirm and reinforce why this is the right path}}", fbIncorrect:"{{point to the right step without a click-by-click crutch}}"}
+    ],
+    buildNotes:{objectives:["- The learner can {{perform the task}} in Nova unaided."], confidence:"{{High | Medium | Low}}", media:["Slide 4: VIDEO (file) — screen demo of the full flow; slot `{{slug}}_4_demo.mp4`; requireComplete: true","Slide 3: IMAGE — annotated screenshot of the key screen; slot `{{slug}}_3_screen.png`"]},
+    sources:["- {{source — the product doc / SME walkthrough the steps trace to}}"]
+  },
+  {
+    id:"decision-scenario", name:"Decision / Scenario",
+    titleTemplate:"{{Decision Topic, e.g. \"Routing a Transfer When Beds Are Tight\"}}",
+    whenToUse:"The learner must APPLY a rule/judgment to a situation (not just know it). The KC sits mid-unit; the debrief follows it.",
+    slides:[
+      {role:"Learning Objectives", heading:"Learning Objectives", guidance:"3–5 concrete, learner-facing outcomes (\"you will be able to…\"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual.", visual:{type:"graphic", desc:"Objectives illustration", slot:"{{slug}}_1_objectives.svg"}, body:"By the end of this microlearning, you will be able to:\n- {{objective 1}}\n- {{objective 2}}\n- {{objective 3}}"},
+      {role:"The rule / principle", heading:"The rule", guidance:"State the decision rule in one or two sentences.", body:"{{Rule prose.}}"},
+      {role:"When it applies (criteria)", heading:"When it applies", guidance:"The signals/triggers that tell the learner this rule is in play. A list works.", body:"- {{trigger / criterion}}\n- {{trigger / criterion}}"},
+      {role:"The scenario", heading:"A situation you'll recognize", guidance:"Paint a concrete, realistic case. Give enough detail to decide. DO NOT reveal the answer.", visual:{type:"screenshot", desc:"The relevant Nova screen / scenario illustration", slot:"{{slug}}_3_scenario.png"}, body:"{{Scenario prose — set the scene and the pressure, then pose the decision.}}"},
+      {role:"Knowledge Check (the decision)", isKC:true, guidance:"The options ARE the candidate actions for the scenario above.", question:"{{Given the situation above, what's the right move?}}", options:["{{candidate action}}","{{candidate action}}","{{candidate action}}","{{candidate action}}"], correct:"{{letter}}", fbCorrect:"{{tie the choice back to the rule and the criteria}}", fbIncorrect:"{{name what that action would cost and which signal was missed}}"},
+      {role:"Debrief", heading:"Why that was right", guidance:"Walk the reasoning from rule → criteria → action. Reinforce the judgment, not the memorized answer.", body:"{{Debrief prose.}}"},
+      {role:"Edge cases / exceptions (optional)", heading:"When it's different", guidance:"The exception(s) where the rule bends or yields to another.", body:"{{Exception prose.}}"},
+      {role:"Takeaway", heading:"The takeaway", guidance:"The portable rule of thumb.", body:"{{Takeaway prose.}}"}
+    ],
+    buildNotes:{objectives:["- The learner can apply {{rule}} to decide {{action}} under realistic conditions."], confidence:"{{High | Medium | Low}}", media:["Slide 3: IMAGE — scenario illustration / the relevant Nova screen; slot `{{slug}}_3_scenario.png`"]},
+    sources:["- {{source — the policy/SME judgment the rule traces to}}"]
+  },
+  {
+    id:"policy-acceptable-use", name:"Policy / Acceptable-Use",
+    titleTemplate:"{{Policy Name, e.g. \"Acceptable Use of AI at TeleTracking\"}}",
+    whenToUse:"Compliance/governance — what's allowed, what's not, and what to do when unsure. Proven by Responsible AI \"Acceptable Use\".",
+    slides:[
+      {role:"Learning Objectives", heading:"Learning Objectives", guidance:"3–5 concrete, learner-facing outcomes (\"you will be able to…\"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual.", visual:{type:"graphic", desc:"Objectives illustration", slot:"{{slug}}_1_objectives.svg"}, body:"By the end of this microlearning, you will be able to:\n- {{objective 1}}\n- {{objective 2}}\n- {{objective 3}}"},
+      {role:"The core rule", heading:"The core rule", guidance:"One unambiguous sentence. The thing they must remember if they remember nothing else.", body:"{{Core rule prose.}}"},
+      {role:"Why it exists (rationale)", heading:"Why this rule exists", guidance:"The risk it guards against. Compliance sticks when it makes sense.", body:"{{Rationale prose.}}"},
+      {role:"Do vs. Don't", heading:"What you can and can't do", guidance:"A two-column table of concrete, behavioral examples — not abstractions.", visual:{type:"graphic", desc:"Do / Don't visual or approved-tools list", slot:"{{slug}}_4_dodont.svg"}, body:"| Do | Don't |\n|---|---|\n| {{allowed behavior}} | {{prohibited behavior}} |\n| {{allowed behavior}} | {{prohibited behavior}} |"},
+      {role:"When you're unsure (escalation)", heading:"When you're not sure", guidance:"The exact path — who to ask, which channel. Remove all guesswork.", body:"{{Escalation prose — name the role/channel to consult.}}"},
+      {role:"What's at stake (optional)", heading:"What's at stake", guidance:"What getting it wrong costs — for the patient, the data, the company.", body:"{{Consequences prose.}}"},
+      {role:"Knowledge Check", isKC:true, guidance:"A realistic \"is this OK?\" judgment — describe an action and ask if it's acceptable.", question:"{{Describe an action and ask if it's acceptable.}}", options:["{{option}}","{{option}}","{{option}}","{{option}}"], correct:"{{letter}}", fbCorrect:"{{tie back to the core rule}}", fbIncorrect:"{{name the line that was crossed and the right move}}"},
+      {role:"Takeaway", heading:"The takeaway", guidance:"Restate the rule as a default behavior.", body:"{{Takeaway prose.}}"}
+    ],
+    buildNotes:{objectives:["- The learner can distinguish acceptable from unacceptable {{behavior}} and knows where to escalate."], confidence:"{{High | Medium | Low}}", media:["Slide 3: IMAGE — do/don't visual or the approved-tools list; slot `{{slug}}_3_dodont.png`"]},
+    sources:["- {{source — the governing policy document this traces to}}"]
+  }
+]};
+
+/* ============================ COMPONENT LIBRARY ============================ */
+/* The pickable styles. Add an entry here and it appears in the editor's style dropdowns —
+   this is the "swap in another button/card from the library" mechanism. */
+const LIBRARY = {
+  buttonStyles: [
+    { id:"primary",   name:"Primary — filled, gradient sweep" },
+    { id:"secondary", name:"Secondary — outlined, fills on hover" }
+  ],
+  cardStyles: [
+    { id:"elevated",  name:"Elevated content card — expands into a modal" }
+  ]
+};
+
+/* ============================ BLOCK SHOWCASE / PALETTE ============================ */
+/* Every block the engine renders. `preview` is brand-rendered in an iframe; `md` is the
+   markdown inserted into a slide body; `kind:true` blocks insert as their own slide. */
+const PH = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='150'%3E%3Crect width='400' height='150' fill='%23dfe7e9'/%3E%3Ctext x='50%25' y='50%25' fill='%235d6b70' font-family='sans-serif' font-size='15' text-anchor='middle' dominant-baseline='middle'%3Eimage%3C/text%3E%3C/svg%3E";
+const BLOCKS = [
+  { id:"heading", name:"Heading band", cat:"Text", desc:"A section heading on a brand band. Inserts a new slide.",
+    preview:`<div class="nv-block nv-band"><div class="nv-h2">Section heading</div></div>`,
+    kind:true, make:()=>({role:"New section", heading:"{{Heading}}", guidance:"{{What goes here}}", visual:{type:"",desc:"",slot:""}, body:"{{Body.}}"}) },
+  { id:"paragraph", name:"Paragraph", cat:"Text", desc:"Plain body copy.",
+    preview:`<div class="nv-block nv-p"><p>Body copy renders in Open Sans, sized for comfortable reading.</p></div>`,
+    md:"Your paragraph text goes here." },
+  { id:"note", name:"Note / callout", cat:"Text", desc:"A highlighted callout for important information.",
+    preview:`<div class="nv-block nv-note">Heads up — this is a callout for something important.</div>`,
+    md:"*Note:* Heads up — something important." },
+  { id:"statement", name:"Statement", cat:"Text", desc:"A big, centered emphasis line.",
+    preview:`<div class="nv-block nv-statement">A bold idea, centered.</div>`,
+    md:"*Statement:* A bold idea, centered." },
+  { id:"list", name:"List", cat:"Text", desc:"A bulleted (or numbered) list.",
+    preview:`<ul class="nv-block nv-list"><li>First point</li><li>Second point</li></ul>`,
+    md:"- First point\n- Second point" },
+  { id:"table", name:"Table", cat:"Text", desc:"A simple data table.",
+    preview:`<div class="nv-block nv-table-wrap"><table><thead><tr><th>Step</th><th>Action</th></tr></thead><tbody><tr><td>1</td><td>Do this</td></tr><tr><td>2</td><td>Then that</td></tr></tbody></table></div>`,
+    md:"| Step | Action |\n|---|---|\n| 1 | Do this |\n| 2 | Then that |" },
+  { id:"image", name:"Image", cat:"Media", desc:"A full-width image with an optional caption.",
+    preview:`<figure class="nv-block nv-figure"><img src="${PH}"><figcaption>Caption text</figcaption></figure>`,
+    md:"*Visual:* graphic · short description · slot: `image_name.png`" },
+  { id:"imageText", name:"Image + text (2-col)", cat:"Media", desc:"An image beside a column of text; stacks on phones.",
+    preview:`<div class="nv-block nv-aside"><img src="${PH}"><div class="nv-p"><p>Text sits beside the image on wide screens.</p></div></div>`,
+    md:"*Visual:* graphic · short description · slot: `image_name.png` · side: left\nText that sits beside the image." },
+  { id:"video", name:"Video", cat:"Media", desc:"Self-hosted or embedded video.",
+    preview:`<figure class="nv-block nv-embed" style="--nv-aspect:16/9"><div class="nv-embed-frame" style="display:flex;align-items:center;justify-content:center;color:#5d6b70;font-size:1.4rem">▶ video</div></figure>`,
+    md:"*Video:* embed · https://www.youtube.com/embed/VIDEO_ID · aspect: 16:9" },
+  { id:"audio", name:"Audio", cat:"Media", desc:"An audio clip with optional transcript.",
+    preview:`<figure class="nv-block nv-audio"><audio controls></audio></figure>`,
+    md:"*Audio:* assets/clip.mp3" },
+  { id:"embed", name:"Embed", cat:"Media", desc:"An external page or interactive in an iframe.",
+    preview:`<figure class="nv-block nv-embed" style="--nv-aspect:16/9"><div class="nv-embed-frame" style="display:flex;align-items:center;justify-content:center;color:#5d6b70;font-size:1.2rem">&lt;/&gt; embed</div></figure>`,
+    md:"*Embed:* https://example.com/widget · aspect: 16:9" },
+  { id:"divider", name:"Divider", cat:"Structure", desc:"A thin horizontal rule.", h:60,
+    preview:`<hr class="nv-divider">`, md:"---" },
+  { id:"transition", name:"Transition wave", cat:"Structure", desc:"A brand ribbon wave divider.", h:90,
+    preview:`<div class="nv-transition"><img src="../brand/transitions/green-top.png" alt=""></div>`, md:"*Transition:* green top" },
+  { id:"section", name:"Colored section", cat:"Structure", desc:"A solid brand-color band (white text), wave-bracketed.", h:210,
+    preview:`<div class="nv-transition" style="margin:0"><img src="../brand/transitions/green-top.png"></div><section class="nv-section nv-section--green"><div class="nv-block nv-p"><p>White text on brand green.</p></div></section><div class="nv-transition" style="margin:0"><img src="../brand/transitions/green-bottom.png"></div>`,
+    md:"*Section:* green\nYour section content here.\n*Section:* end" },
+  { id:"knowledgeCheck", name:"Knowledge check", cat:"Interactive", desc:"An unscored multiple-choice question with feedback.", h:210,
+    preview:`<div class="nv-block nv-kc"><div class="nv-kc-prompt">Which option is correct?</div><button class="nv-kc-opt">Option A</button><button class="nv-kc-opt">Option B</button></div>`,
+    kind:true, make:()=>({role:"Knowledge Check",isKC:true,guidance:"{{What it tests}}",question:"{{prompt}}",options:["{{option}}","{{option}}","{{option}}","{{option}}"],correct:"{{letter}}",fbCorrect:"{{why right}}",fbIncorrect:"{{redirect}}"}) },
+  { id:"button", name:"Button (CTA)", cat:"Interactive", desc:"A branded button — link out or open a modal.", h:110,
+    preview:`<div class="nv-block nv-cta-wrap"><a class="nv-cta nv-cta--primary nv-cta--arrow">Explore <span class="nv-cta-arrow">→</span></a></div>`,
+    kind:true, make:()=>({role:"Button",kind:"button",heading:"",label:"Learn more",style:"primary",arrow:true,action:"link",href:"https://"}) },
+  { id:"cardGrid", name:"Card grid", cat:"Interactive", desc:"A row of cards that expand into modals.", h:210,
+    preview:`<div class="nv-block nv-cardgrid" style="--nv-cols:2"><button class="nv-card nv-card--interactive"><div class="nv-card-icon">📦</div><h3 class="nv-card-title">Card</h3><p class="nv-card-teaser">Click to expand</p><span class="nv-card-cue">+</span></button><button class="nv-card nv-card--interactive"><div class="nv-card-icon">📊</div><h3 class="nv-card-title">Card</h3><p class="nv-card-teaser">Click to expand</p><span class="nv-card-cue">+</span></button></div>`,
+    kind:true, make:()=>({role:"Card grid",kind:"cardGrid",heading:"Explore",cardStyle:"elevated",requireOpen:false,columns:3,cards:[{title:"Card 1",icon:"",teaser:"",modal:{link:{}}},{title:"Card 2",icon:"",teaser:"",modal:{link:{}}},{title:"Card 3",icon:"",teaser:"",modal:{link:{}}}]}) }
+];
+
+/* ============================ MARKDOWN GENERATION (the contract) ============================ */
+function colLetter(i){ return String.fromCharCode(65 + i); }
+
+function buttonMd(s){
+  const parts = [s.label || "Learn more", s.style || "primary"];
+  if (s.arrow) parts.push("arrow");
+  if (s.action === "modal") parts.push("modal");
+  else parts.push("link: " + (s.href || "https://"));
+  let md = "*Button:* " + parts.join(" · ");
+  if (s.action === "modal"){
+    const m = s.modal || {};
+    md += "\n::: modal";
+    if (m.heading) md += "\nheading: " + m.heading;
+    if (m.body)    md += "\nbody: " + m.body;
+    if (m.link && m.link.href) md += "\nlink: " + m.link.href + (m.link.label ? " · " + m.link.label : "");
+    md += "\n:::";
+  }
+  return md;
+}
+
+function cardGridMd(s){
+  const opts = [];
+  if (s.requireOpen) opts.push("requireOpen");
+  if (s.columns)     opts.push("columns: " + s.columns);
+  const L = ["*Cards:*" + (opts.length ? " " + opts.join(" · ") : "")];
+  (s.cards || []).forEach(c=>{
+    L.push("::: card");
+    if (c.title)  L.push("title: " + c.title);
+    if (c.icon)   L.push("icon: " + c.icon);
+    if (c.teaser) L.push("teaser: " + c.teaser);
+    const m = c.modal || {};
+    if (m.heading || m.body || (m.link && m.link.href)){
+      if (m.heading) L.push("modal-heading: " + m.heading);
+      if (m.body)    L.push("modal-body: " + m.body);
+      if (m.link && m.link.href) L.push("modal-link: " + m.link.href + (m.link.label ? " · " + m.link.label : ""));
+    } else if (c.href){
+      L.push("href: " + c.href);
+    }
+  });
+  L.push(":::");
+  return L.join("\n");
+}
+
+function generateMd(a){
+  const L = [];
+  L.push("<!--");
+  L.push("  ARCHETYPE: " + a.name);
+  L.push("  WHEN TO USE: " + a.whenToUse);
+  L.push("  SLIDE-ROLE PLAN (auto-generated from the slides below):");
+  a.slides.forEach((s,i)=> L.push("    " + (i+1) + ". " + s.role));
+  L.push("  Fill the {{...}} placeholders and delete these guidance lines before returning.");
+  L.push("-->");
+  L.push("");
+  L.push("## Microlearning {{N}}: " + a.titleTemplate);
+  L.push("");
+  a.slides.forEach((s,i)=>{
+    const k = i + 1;
+    if (s.isKC){
+      L.push("**Slide " + k + " — Knowledge Check**");
+      if (s.guidance) L.push("<!-- role: " + s.role + ". " + s.guidance + " -->");
+      L.push("*Question:* " + (s.question||""));
+      (s.options||[]).forEach((o,oi)=> L.push("- " + colLetter(oi) + ") " + o));
+      L.push("*Correct Answer:* " + (s.correct||""));
+      L.push("*Feedback — Correct:* " + (s.fbCorrect||""));
+      L.push("*Feedback — Incorrect:* " + (s.fbIncorrect||""));
+    } else if (s.kind === "button"){
+      L.push("**Slide " + k + " — " + (s.heading || s.label || "Button") + "**");
+      if (s.guidance) L.push("<!-- role: " + (s.role||"Button") + ". " + s.guidance + " -->");
+      if (s.body) L.push(s.body);
+      L.push(buttonMd(s));
+    } else if (s.kind === "cardGrid"){
+      L.push("**Slide " + k + " — " + (s.heading || "Explore") + "**");
+      if (s.guidance) L.push("<!-- role: " + (s.role||"Card grid") + ". " + s.guidance + " -->");
+      if (s.body) L.push(s.body);
+      L.push(cardGridMd(s));
+    } else {
+      L.push("**Slide " + k + " — " + (s.heading||"") + "**");
+      if (s.guidance) L.push("<!-- role: " + s.role + ". " + s.guidance + " -->");
+      if (s.visual && (s.visual.slot || s.visual.desc)){
+        const v = s.visual;
+        L.push("*Visual:* " + (v.type||"graphic") + " · " + (v.desc||"") + " · slot: `" + (v.slot||"") + "`");
+      }
+      if (s.body) L.push(s.body);
+    }
+    L.push("");
+  });
+  L.push("**Articulate Build Notes:**");
+  L.push("Subject: {{one line}}");
+  L.push("Estimated Length: {{e.g. 11 min}}");
+  L.push("Learning Objectives:");
+  (a.buildNotes.objectives||[]).forEach(o=> L.push(o));
+  L.push("Confidence Score: " + a.buildNotes.confidence);
+  L.push("Visuals / Media plan:");
+  (a.buildNotes.media||[]).forEach(m=> L.push("- " + m));
+  L.push("Build Notes: {{notes}}");
+  L.push("");
+  L.push("**Sources & Further Reading:**");
+  (a.sources||[]).forEach(s=> L.push(s));
+  return L.join("\n") + "\n";
+}
+
+/* ============================ BEST-EFFORT .md IMPORT ============================ */
+function parseMd(text){
+  const a = {id:"imported", name:"Imported Template", titleTemplate:"{{Title}}", whenToUse:"", slides:[], buildNotes:{objectives:[],confidence:"{{High | Medium | Low}}",media:[]}, sources:[]};
+  const mName = text.match(/ARCHETYPE:\s*(.+)/);      if (mName) a.name = mName[1].trim();
+  const mWhen = text.match(/WHEN TO USE:\s*(.+)/);     if (mWhen) a.whenToUse = mWhen[1].trim();
+  const mTitle= text.match(/##\s*Microlearning[^:]*:\s*(.+)/); if (mTitle) a.titleTemplate = mTitle[1].trim();
+  if (mTitle) a.id = (a.name||"imported").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  // slide blocks
+  const slideRe = /\*\*Slide\s+\d+\s*[—–-]\s*(.+?)\*\*/g;
+  const idxs = []; let m;
+  while ((m = slideRe.exec(text))) idxs.push({pos:m.index, head:m[1].trim(), after:slideRe.lastIndex});
+  const metaPos = (text.search(/\*\*Articulate Build Notes/) + 1) || text.length;
+  for (let i=0;i<idxs.length;i++){
+    const start = idxs[i].after;
+    const end = (i+1<idxs.length) ? idxs[i+1].pos : (metaPos>0?metaPos-1:text.length);
+    let block = text.slice(start, end);
+    let role = idxs[i].head, guidance = "";
+    const g = block.match(/<!--\s*role:\s*([^.]+)\.\s*([\s\S]*?)-->/);
+    if (g){ role = g[1].trim(); guidance = g[2].trim(); block = block.replace(g[0], ""); }
+    block = block.replace(/^\s+|\s+$/g,"");
+    if (/knowledge check/i.test(idxs[i].head) || /\*Question:\*/.test(block)){
+      const q = block.match(/\*Question:\*\s*(.+)/);
+      const opts = [...block.matchAll(/^\s*-\s*[A-Z]\)\s*(.+)$/gm)].map(x=>x[1].trim());
+      const cor = block.match(/\*Correct Answer:\*\s*(.+)/);
+      const fc = block.match(/\*Feedback\s*[—–-]\s*Correct:\*\s*(.+)/);
+      const fi = block.match(/\*Feedback\s*[—–-]\s*Incorrect:\*\s*(.+)/);
+      a.slides.push({role, isKC:true, guidance, question:q?q[1].trim():"", options:opts.length?opts:["{{option}}","{{option}}"], correct:cor?cor[1].trim():"{{letter}}", fbCorrect:fc?fc[1].trim():"", fbIncorrect:fi?fi[1].trim():""});
+    } else {
+      let visual = {type:"", desc:"", slot:""};
+      const vm = block.match(/\*Visual:\*\s*(.+)/);
+      if (vm){
+        const spec = vm[1];
+        const sl = spec.match(/slot:\s*`?([^`·|]+?)`?\s*(?:[·|]|$)/);
+        const rest = spec.replace(/slot:\s*`?[^`·|]+`?/,"");
+        const segs = rest.split(/[·|]/).map(x=>x.trim().replace(/^`|`$/g,"")).filter(Boolean);
+        visual = {type:(segs[0]||""), desc:(segs[1]||""), slot:(sl?sl[1].trim():"")};
+        block = block.replace(vm[0],"").trim();
+      }
+      a.slides.push({role, heading:idxs[i].head, guidance, visual, body:block});
+    }
+  }
+  const objs = text.match(/Learning Objectives:\s*\n([\s\S]*?)\nConfidence/);
+  if (objs) a.buildNotes.objectives = objs[1].split("\n").map(s=>s.trim()).filter(Boolean);
+  const conf = text.match(/Confidence Score:\s*(.+)/); if (conf) a.buildNotes.confidence = conf[1].trim();
+  const med = text.match(/Visuals \/ Media plan:\s*\n([\s\S]*?)\nBuild Notes:/);
+  if (med) a.buildNotes.media = med[1].split("\n").map(s=>s.replace(/^\s*-\s*/,"").trim()).filter(Boolean);
+  const src = text.match(/\*\*Sources & Further Reading:\*\*\s*\n([\s\S]*)$/);
+  if (src) a.sources = src[1].split("\n").map(s=>s.trim()).filter(Boolean);
+  return a;
+}
+
+/* ============================ STATE + UI ============================ */
+const LS_KEY = "nova-template-editor-v1";
+let state, currentId;
+
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function loadState(){
+  try{ const s = localStorage.getItem(LS_KEY); if (s) return JSON.parse(s); }catch(e){}
+  return clone(DEFAULTS);
+}
+function save(flash){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+  if (flash){ const el=document.getElementById("saved"); el.textContent="✓ saved in this browser"; setTimeout(()=>el.textContent="",1600); }
+}
+function current(){ return state.archetypes.find(a=>a.id===currentId) || state.archetypes[0]; }
+
+function refreshPreview(){ document.getElementById("preview").textContent = generateMd(current()); }
+
+function fieldText(label, value, oninput, hint, multiline){
+  const f = document.createElement("div"); f.className="field";
+  const l = document.createElement("label"); l.textContent=label; f.appendChild(l);
+  const inp = document.createElement(multiline?"textarea":"input");
+  if (!multiline) inp.type="text";
+  inp.value = value||"";
+  inp.addEventListener("input", ()=>{ oninput(inp.value); refreshPreview(); save(true); });
+  f.appendChild(inp);
+  if (hint){ const h=document.createElement("p"); h.className="hint"; h.textContent=hint; f.appendChild(h); }
+  return f;
+}
+
+function fieldSelect(label, value, options, oninput, hint){
+  const f = document.createElement("div"); f.className="field";
+  const l = document.createElement("label"); l.textContent=label; f.appendChild(l);
+  const sel = document.createElement("select"); sel.style.width="100%";
+  options.forEach(o=>{ const op=document.createElement("option"); op.value=o.id; op.textContent=o.name; sel.appendChild(op); });
+  sel.value = value || options[0].id;
+  sel.addEventListener("change", ()=>{ oninput(sel.value); refreshPreview(); save(true); });
+  f.appendChild(sel);
+  if (hint){ const h=document.createElement("p"); h.className="hint"; h.textContent=hint; f.appendChild(h); }
+  return f;
+}
+
+function fieldCheck(label, value, oninput){
+  const f = document.createElement("label"); f.className="toggle";
+  const cb = document.createElement("input"); cb.type="checkbox"; cb.checked=!!value;
+  cb.addEventListener("change", ()=>{ oninput(cb.checked); refreshPreview(); save(true); });
+  const sp = document.createElement("span"); sp.textContent=label; sp.style.cssText="color:var(--ink);font-weight:600";
+  f.appendChild(cb); f.appendChild(sp);
+  return f;
+}
+
+function renderForm(){
+  const a = current();
+  const root = document.getElementById("formBody");
+  root.innerHTML = "";
+
+  root.appendChild(fieldText("Template name", a.name, v=>a.name=v));
+  root.appendChild(fieldText("When to use this template", a.whenToUse, v=>a.whenToUse=v, "Tells the author when to pick this archetype.", true));
+  root.appendChild(fieldText("Unit title pattern", a.titleTemplate, v=>a.titleTemplate=v, "Becomes “## Microlearning N: …”. Keep a {{placeholder}}."));
+
+  const st = document.createElement("div"); st.className="section-title"; st.textContent="Slides ("+a.slides.length+")"; root.appendChild(st);
+
+  a.slides.forEach((s, i)=>{
+    const card = document.createElement("div"); card.className = "card" + (s.isKC?" kc":"");
+    const row = document.createElement("div"); row.className="row";
+    const num = document.createElement("div"); num.className="num"; num.textContent=(i+1); row.appendChild(num);
+    const ri = document.createElement("div"); ri.className="roleinput";
+    const rin = document.createElement("input"); rin.type="text"; rin.value=s.role||""; rin.placeholder="Slide role (e.g. How it works)";
+    rin.addEventListener("input", ()=>{ s.role=rin.value; refreshPreview(); save(true); }); ri.appendChild(rin); row.appendChild(ri);
+    if (s.isKC){ const b=document.createElement("span"); b.className="kc-badge"; b.textContent="Check"; row.appendChild(b); }
+    else if (s.kind){ const b=document.createElement("span"); b.className="kc-badge"; b.style.background="var(--navy)"; b.textContent=(s.kind==="cardGrid"?"Cards":"Button"); row.appendChild(b); }
+    const tools = document.createElement("div"); tools.className="tools";
+    tools.appendChild(mkBtn("↑","mini",()=>moveSlide(i,-1)));
+    tools.appendChild(mkBtn("↓","mini",()=>moveSlide(i,1)));
+    tools.appendChild(mkBtn("✕","mini danger",()=>{ if(confirm("Delete this slide?")){a.slides.splice(i,1);renderForm();refreshPreview();save(true);} }));
+    row.appendChild(tools); card.appendChild(row);
+
+    if (s.isKC){
+      card.appendChild(fieldText("Question guidance / stub", s.question, v=>s.question=v, "What the question should test.", true));
+      card.appendChild(fieldText("Answer options (one per line)", (s.options||[]).join("\n"), v=>s.options=v.split("\n").map(x=>x.trim()).filter(Boolean), "Rendered as A) B) C) D). Keep at least two.", true));
+      card.appendChild(fieldText("Correct answer (letter)", s.correct, v=>s.correct=v));
+      card.appendChild(fieldText("Feedback — Correct", s.fbCorrect, v=>s.fbCorrect=v, "", true));
+      card.appendChild(fieldText("Feedback — Incorrect", s.fbIncorrect, v=>s.fbIncorrect=v, "", true));
+    } else if (s.kind === "button"){
+      card.appendChild(fieldText("Section heading (optional)", s.heading, v=>s.heading=v, "Shown above the button. Leave blank for just the button."));
+      card.appendChild(fieldText("Button label", s.label, v=>s.label=v));
+      card.appendChild(fieldSelect("Button style (from library)", s.style, LIBRARY.buttonStyles, v=>s.style=v, "Swap in any branded button style."));
+      card.appendChild(fieldCheck("Show the animated arrow", s.arrow, v=>s.arrow=v));
+      card.appendChild(fieldSelect("Action", s.action, [{id:"link",name:"Link out (opens a new tab)"},{id:"modal",name:"Open a modal"}], v=>{ s.action=v; renderForm(); }));
+      if (s.action === "modal"){
+        if (!s.modal) s.modal={}; if (!s.modal.link) s.modal.link={};
+        card.appendChild(fieldText("Modal — heading", s.modal.heading, v=>s.modal.heading=v));
+        card.appendChild(fieldText("Modal — body", s.modal.body, v=>s.modal.body=v, "", true));
+        card.appendChild(fieldText("Modal — link URL (optional)", s.modal.link.href, v=>s.modal.link.href=v));
+        card.appendChild(fieldText("Modal — link label", s.modal.link.label, v=>s.modal.link.label=v));
+      } else {
+        card.appendChild(fieldText("Link URL", s.href, v=>s.href=v, "Opens in a new tab."));
+      }
+    } else if (s.kind === "cardGrid"){
+      card.appendChild(fieldText("Section heading", s.heading, v=>s.heading=v, "Shown above the card row."));
+      card.appendChild(fieldSelect("Card style (from library)", s.cardStyle, LIBRARY.cardStyles, v=>s.cardStyle=v, "Swap in any branded card style."));
+      card.appendChild(fieldCheck("Require opening every card to complete the course", s.requireOpen, v=>s.requireOpen=v));
+      card.appendChild(fieldText("Columns (1–4; still reflows to 1 on phones)", String(s.columns||3), v=>s.columns=Math.max(1,Math.min(4,parseInt(v)||3))));
+      if (!s.cards) s.cards=[];
+      const ct=document.createElement("div"); ct.style.cssText="font-size:.74rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 4px"; ct.textContent="Cards ("+s.cards.length+")"; card.appendChild(ct);
+      s.cards.forEach((c,ci)=>{
+        const sub=document.createElement("div"); sub.style.cssText="border:1px dashed var(--line);border-radius:9px;padding:10px 11px;margin-bottom:8px;background:#fafcfc";
+        const hdr=document.createElement("div"); hdr.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px";
+        const lab=document.createElement("strong"); lab.textContent="Card "+(ci+1); lab.style.fontSize=".85rem"; hdr.appendChild(lab);
+        hdr.appendChild(mkBtn("✕","mini danger",()=>{ s.cards.splice(ci,1); renderForm(); refreshPreview(); save(true); }));
+        sub.appendChild(hdr);
+        sub.appendChild(fieldText("Title", c.title, v=>c.title=v));
+        sub.appendChild(fieldText("Icon (emoji, optional)", c.icon, v=>c.icon=v));
+        sub.appendChild(fieldText("Teaser (card face)", c.teaser, v=>c.teaser=v));
+        if (!c.modal) c.modal={}; if (!c.modal.link) c.modal.link={};
+        sub.appendChild(fieldText("Modal — body (fill this to make the card expand)", c.modal.body, v=>c.modal.body=v, "", true));
+        sub.appendChild(fieldText("Modal — link URL (optional)", c.modal.link.href, v=>c.modal.link.href=v));
+        sub.appendChild(fieldText("Plain link URL (only if no modal body)", c.href, v=>c.href=v, "Makes the whole card a link instead of an expander."));
+        card.appendChild(sub);
+      });
+      card.appendChild(mkBtn("+ Add card","mini",()=>{ s.cards.push({title:"New card",icon:"",teaser:"",modal:{link:{}}}); renderForm(); refreshPreview(); save(true); }));
+    } else {
+      card.appendChild(fieldText("Slide heading", s.heading, v=>s.heading=v, "Shown to the learner. May hold a {{placeholder}}."));
+      card.appendChild(fieldText("Guidance for Claude (not shown to learners)", s.guidance, v=>s.guidance=v, "The help text that steers what gets written here.", true));
+      if (!s.visual) s.visual = {type:"", desc:"", slot:""};
+      const vt = document.createElement("div"); vt.style.cssText="margin:2px 0 6px;font-size:.74rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.4px"; vt.textContent="🖼 Visual (leave type blank for none)"; card.appendChild(vt);
+      card.appendChild(fieldText("Visual — type", s.visual.type, v=>s.visual.type=v, "screenshot · graphic · diagram · photo · decorative"));
+      card.appendChild(fieldText("Visual — description (alt text)", s.visual.desc, v=>s.visual.desc=v));
+      card.appendChild(fieldText("Visual — slot filename", s.visual.slot, v=>s.visual.slot=v, "The labelled asset file, e.g. {{slug}}_3_screen.png (.svg for Figma art)"));
+      const bodyField = fieldText("Body scaffold", s.body, v=>s.body=v, "Starter content with {{placeholders}}. Insert blocks here from 🧱 Blocks.", true);
+      const bodyTa = bodyField.querySelector("textarea");
+      if (bodyTa) bodyTa.addEventListener("focus", ()=>{ activeSlideIndex = i; });
+      card.appendChild(bodyField);
+    }
+    root.appendChild(card);
+  });
+
+  const add = document.createElement("div"); add.className="addrow";
+  add.appendChild(mkBtn("+ Add content slide","",()=>{ a.slides.push({role:"New slide",heading:"{{Heading}}",guidance:"{{What goes here}}",visual:{type:"",desc:"",slot:""},body:"{{Body.}}"}); renderForm(); refreshPreview(); save(true); }));
+  add.appendChild(mkBtn("+ Add knowledge check","",()=>{ a.slides.push({role:"Knowledge Check",isKC:true,guidance:"{{What it tests}}",question:"{{prompt}}",options:["{{option}}","{{option}}","{{option}}","{{option}}"],correct:"{{letter}}",fbCorrect:"{{why right}}",fbIncorrect:"{{redirect}}"}); renderForm(); refreshPreview(); save(true); }));
+  add.appendChild(mkBtn("+ Add button","",()=>{ a.slides.push({role:"Button",kind:"button",heading:"",label:"Learn more",style:"primary",arrow:true,action:"link",href:"https://"}); renderForm(); refreshPreview(); save(true); }));
+  add.appendChild(mkBtn("+ Add card grid","",()=>{ a.slides.push({role:"Card grid",kind:"cardGrid",heading:"Explore",cardStyle:"elevated",requireOpen:false,columns:3,cards:[{title:"Card 1",icon:"",teaser:"",modal:{link:{}}},{title:"Card 2",icon:"",teaser:"",modal:{link:{}}},{title:"Card 3",icon:"",teaser:"",modal:{link:{}}}]}); renderForm(); refreshPreview(); save(true); }));
+  root.appendChild(add);
+
+  const bt = document.createElement("div"); bt.className="section-title"; bt.textContent="Build Notes (author-meta — never shown to learners)"; root.appendChild(bt);
+  root.appendChild(fieldText("Learning objectives (one per line, start with -)", (a.buildNotes.objectives||[]).join("\n"), v=>a.buildNotes.objectives=v.split("\n").filter(x=>x.trim()), "", true));
+  root.appendChild(fieldText("Confidence score default", a.buildNotes.confidence, v=>a.buildNotes.confidence=v));
+  root.appendChild(fieldText("Visuals / media plan (one per line, no dash)", (a.buildNotes.media||[]).join("\n"), v=>a.buildNotes.media=v.split("\n").map(x=>x.trim()).filter(Boolean), "Each becomes an IR image/video/audio/embed block at build. Use slot names.", true));
+  root.appendChild(fieldText("Sources (one per line, start with -)", (a.sources||[]).join("\n"), v=>a.sources=v.split("\n").filter(x=>x.trim()), "", true));
+
+  const adv = document.createElement("details"); adv.className="adv";
+  adv.innerHTML = "<summary>Advanced</summary>";
+  const j = mkBtn("Export all templates (.json backup)","mini",exportJson); j.style.marginTop="8px";
+  adv.appendChild(j);
+  root.appendChild(adv);
+}
+
+function mkBtn(label, cls, fn){ const b=document.createElement("button"); if(cls)b.className=cls; b.textContent=label; b.addEventListener("click",fn); return b; }
+function moveSlide(i, d){ const a=current(); const j=i+d; if(j<0||j>=a.slides.length)return; const t=a.slides[i]; a.slides[i]=a.slides[j]; a.slides[j]=t; renderForm(); refreshPreview(); save(true); }
+
+function download(name, text, type){
+  const blob=new Blob([text],{type:type||"text/markdown"}); const u=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),500);
+}
+function exportMd(){ const a=current(); download(a.id+".md", generateMd(a)); }
+function exportJson(){ download("templates-backup.json", JSON.stringify(state,null,2), "application/json"); }
+
+function doImport(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    const txt=r.result;
+    if (file.name.endsWith(".json")){
+      try{ const obj=JSON.parse(txt); if(obj.archetypes){ state=obj; currentId=state.archetypes[0].id; rebuildPicker(); renderForm(); refreshPreview(); save(true); return; } }catch(e){ alert("Couldn't read that JSON."); return; }
+    }
+    const a=parseMd(txt);
+    const ex=state.archetypes.findIndex(x=>x.id===a.id);
+    if (ex>=0) state.archetypes[ex]=a; else state.archetypes.push(a);
+    currentId=a.id; rebuildPicker(); renderForm(); refreshPreview(); save(true);
+    alert("Imported “"+a.name+"”. Review it — .md import is best-effort; check each slide.");
+  };
+  r.readAsText(file);
+}
+
+function rebuildPicker(){
+  const p=document.getElementById("picker"); p.innerHTML="";
+  state.archetypes.forEach(a=>{ const o=document.createElement("option"); o.value=a.id; o.textContent=a.name; p.appendChild(o); });
+  p.value=currentId;
+}
+
+/* ---- Block palette ---- */
+let activeSlideIndex = null;
+
+function lastContentIndex(a){
+  for (let i=a.slides.length-1;i>=0;i--){ if(!a.slides[i].isKC && !a.slides[i].kind) return i; }
+  return null;
+}
+
+function buildPalette(){
+  const body=document.getElementById("paletteBody"); body.innerHTML="";
+  ["Text","Media","Structure","Interactive"].forEach(cat=>{
+    const items=BLOCKS.filter(b=>b.cat===cat); if(!items.length) return;
+    const h=document.createElement("div"); h.className="palette-cat"; h.textContent=cat; body.appendChild(h);
+    const grid=document.createElement("div"); grid.className="palette-grid"; body.appendChild(grid);
+    items.forEach(b=>{
+      const card=document.createElement("div"); card.className="blockcard";
+      const fr=document.createElement("iframe"); fr.className="frame"; if(b.h) fr.style.height=b.h+"px"; fr.setAttribute("scrolling","no"); fr.setAttribute("title",b.name+" preview");
+      fr.srcdoc='<!doctype html><meta charset=utf-8><link rel="stylesheet" href="../brand/tokens.css"><link rel="stylesheet" href="../player/player.css"><style>html,body{margin:0;background:#fff}body{padding:14px}.nv-block{margin:8px 0}.nv-main{padding:0;max-width:none}</style><div class="nv-main">'+b.preview+'</div>';
+      const meta=document.createElement("div"); meta.className="meta";
+      const nm=document.createElement("div"); nm.className="nm"; nm.textContent=b.name;
+      const ds=document.createElement("div"); ds.className="ds"; ds.textContent=b.desc;
+      const ins=mkBtn("+ Insert","",()=>insertBlock(b)); ins.className="ins";
+      meta.appendChild(nm); meta.appendChild(ds); meta.appendChild(ins);
+      card.appendChild(fr); card.appendChild(meta); grid.appendChild(card);
+    });
+  });
+}
+
+function openPalette(){ buildPalette(); document.getElementById("paletteOverlay").classList.remove("hidden"); }
+function closePalette(){ document.getElementById("paletteOverlay").classList.add("hidden"); }
+
+function insertBlock(b){
+  const a=current();
+  let where;
+  if (b.kind){ a.slides.push(b.make()); where="as a new slide"; }
+  else {
+    let idx=(activeSlideIndex!=null && a.slides[activeSlideIndex] && !a.slides[activeSlideIndex].isKC && !a.slides[activeSlideIndex].kind)
+            ? activeSlideIndex : lastContentIndex(a);
+    if (idx==null){ a.slides.push({role:"Content", heading:"{{Heading}}", guidance:"", visual:{type:"",desc:"",slot:""}, body:""}); idx=a.slides.length-1; }
+    const s=a.slides[idx];
+    s.body=(s.body && s.body.trim() ? s.body.replace(/\s+$/,"")+"\n\n" : "")+b.md;
+    where='into “'+(a.slides[idx].role||"slide")+'”';
+  }
+  closePalette(); renderForm(); refreshPreview(); save(true);
+  const el=document.getElementById("saved"); el.textContent="✓ inserted "+b.name+" "+where; setTimeout(()=>el.textContent="",2200);
+}
+
+function init(){
+  state=loadState(); currentId=state.archetypes[0].id;
+  rebuildPicker(); renderForm(); refreshPreview();
+  document.getElementById("picker").addEventListener("change", e=>{ currentId=e.target.value; renderForm(); refreshPreview(); });
+  document.getElementById("btnExport").addEventListener("click", exportMd);
+  document.getElementById("btnBlocks").addEventListener("click", openPalette);
+  document.getElementById("btnClosePalette").addEventListener("click", closePalette);
+  document.getElementById("paletteOverlay").addEventListener("click", e=>{ if(e.target.id==="paletteOverlay") closePalette(); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") closePalette(); });
+  document.getElementById("btnCopy").addEventListener("click", ()=>{ navigator.clipboard.writeText(generateMd(current())); const el=document.getElementById("saved"); el.textContent="✓ copied"; setTimeout(()=>el.textContent="",1400); });
+  document.getElementById("fileImport").addEventListener("change", e=>{ if(e.target.files[0]) doImport(e.target.files[0]); e.target.value=""; });
+  document.getElementById("btnReset").addEventListener("click", ()=>{ if(confirm("Reset ALL templates to the built-in defaults? Your edits in this browser will be lost.")){ state=clone(DEFAULTS); currentId=state.archetypes[0].id; rebuildPicker(); renderForm(); refreshPreview(); save(true); } });
+}
+
+if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>

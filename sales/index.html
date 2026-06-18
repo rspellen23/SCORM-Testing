@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CourseCraft — Branded Microlearning, Built in Minutes</title>
+<style>
+  :root {
+    --green: #1EB16A;
+    --green-dark: #178f55;
+    --navy: #0B2C37;
+    --navy2: #103040;
+    --ink: #1d2b30;
+    --soft: #4e6068;
+    --line: #d9e0e2;
+    --bg: #f4f7f8;
+    --white: #ffffff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--white);
+    line-height: 1.65;
+  }
+
+  /* --- NAV --- */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--navy);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 5%;
+    height: 62px;
+  }
+  .nav-logo {
+    font-size: 1.25rem; font-weight: 800; color: var(--white);
+    letter-spacing: -.3px;
+  }
+  .nav-logo span { color: var(--green); }
+  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links a {
+    color: rgba(255,255,255,.75); text-decoration: none;
+    font-size: .9rem; font-weight: 500;
+    transition: color .15s;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-cta {
+    background: var(--green); color: var(--white);
+    padding: 8px 20px; border-radius: 8px;
+    font-size: .9rem; font-weight: 700; text-decoration: none;
+    transition: background .15s;
+  }
+  .nav-cta:hover { background: var(--green-dark); }
+
+  /* --- HERO --- */
+  .hero {
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy2) 100%);
+    color: var(--white);
+    text-align: center;
+    padding: 96px 5% 88px;
+  }
+  .hero-eyebrow {
+    display: inline-block;
+    background: rgba(30,177,106,.18);
+    color: var(--green);
+    border: 1px solid rgba(30,177,106,.35);
+    border-radius: 99px;
+    font-size: .8rem; font-weight: 700; letter-spacing: .6px;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    margin-bottom: 22px;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    font-weight: 800; line-height: 1.15;
+    max-width: 760px; margin: 0 auto 20px;
+    letter-spacing: -.5px;
+  }
+  .hero h1 em { color: var(--green); font-style: normal; }
+  .hero p {
+    font-size: 1.15rem; color: rgba(255,255,255,.78);
+    max-width: 580px; margin: 0 auto 38px;
+  }
+  .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--green); color: var(--white);
+    padding: 14px 32px; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; text-decoration: none;
+    transition: background .15s, transform .1s;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: var(--green-dark); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent; color: var(--white);
+    border: 1.5px solid rgba(255,255,255,.35);
+    padding: 14px 32px; border-radius: 10px;
+    font-size: 1rem; font-weight: 600; text-decoration: none;
+    transition: border-color .15s, background .15s;
+    display: inline-block;
+  }
+  .btn-ghost:hover { border-color: rgba(255,255,255,.7); background: rgba(255,255,255,.06); }
+
+  /* --- SOCIAL PROOF BAR --- */
+  .proof-bar {
+    background: var(--bg);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 18px 5%;
+    text-align: center;
+  }
+  .proof-bar p { font-size: .85rem; color: var(--soft); font-weight: 500; }
+  .proof-bar strong { color: var(--ink); }
+
+  /* --- SECTIONS --- */
+  section { padding: 80px 5%; }
+  .section-label {
+    font-size: .75rem; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase; color: var(--green);
+    margin-bottom: 10px;
+  }
+  .section-title {
+    font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+    font-weight: 800; line-height: 1.2;
+    letter-spacing: -.3px;
+    max-width: 640px;
+    margin-bottom: 16px;
+  }
+  .section-sub {
+    font-size: 1.05rem; color: var(--soft);
+    max-width: 560px; margin-bottom: 52px;
+  }
+
+  /* --- PROBLEM --- */
+  .problem { background: var(--white); }
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+  }
+  .problem-card {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px;
+  }
+  .problem-card .icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: rgba(30,177,106,.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; margin-bottom: 16px;
+  }
+  .problem-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+  .problem-card p { font-size: .9rem; color: var(--soft); }
+
+  /* --- HOW IT WORKS --- */
+  .how { background: var(--bg); }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 32px;
+  }
+  .step { text-align: center; }
+  .step-num {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--navy); color: var(--white);
+    font-size: 1.2rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 18px;
+  }
+  .step h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+  .step p { font-size: .9rem; color: var(--soft); max-width: 240px; margin: 0 auto; }
+
+  /* --- FEATURES --- */
+  .features { background: var(--white); }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .feature {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 26px;
+    transition: box-shadow .15s, border-color .15s;
+  }
+  .feature:hover { box-shadow: 0 4px 20px rgba(11,44,55,.08); border-color: #b6cdd4; }
+  .feature-icon { font-size: 1.5rem; margin-bottom: 12px; }
+  .feature h3 { font-size: .95rem; font-weight: 700; margin-bottom: 6px; }
+  .feature p { font-size: .875rem; color: var(--soft); }
+
+  /* --- TEMPLATES --- */
+  .templates { background: var(--navy); color: var(--white); }
+  .templates .section-title { color: var(--white); }
+  .templates .section-sub { color: rgba(255,255,255,.65); }
+  .templates .section-label { color: var(--green); }
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .template-card {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    padding: 20px;
+    transition: background .15s, border-color .15s;
+  }
+  .template-card:hover {
+    background: rgba(255,255,255,.1);
+    border-color: rgba(30,177,106,.5);
+  }
+  .template-card h3 { font-size: .9rem; font-weight: 700; margin-bottom: 6px; }
+  .template-card p { font-size: .8rem; color: rgba(255,255,255,.55); }
+  .template-badge {
+    display: inline-block;
+    background: rgba(30,177,106,.2);
+    color: var(--green);
+    font-size: .7rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 99px;
+    margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: .4px;
+  }
+
+  /* --- CTA SECTION --- */
+  .cta-section {
+    background: var(--green);
+    color: var(--white);
+    text-align: center;
+    padding: 80px 5%;
+  }
+  .cta-section h2 {
+    font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+    font-weight: 800; margin-bottom: 14px;
+    letter-spacing: -.3px;
+  }
+  .cta-section p {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,.85);
+    max-width: 480px; margin: 0 auto 36px;
+  }
+
+  /* --- DEMO FORM --- */
+  .demo-form {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    max-width: 520px; margin: 0 auto;
+  }
+  .demo-form input[type="email"] {
+    flex: 1; min-width: 220px;
+    padding: 13px 16px;
+    border-radius: 10px; border: none;
+    font-size: .95rem;
+    outline: none;
+  }
+  .demo-form input[type="email"]:focus { box-shadow: 0 0 0 3px rgba(255,255,255,.4); }
+  .btn-dark {
+    background: var(--navy); color: var(--white);
+    padding: 13px 26px; border-radius: 10px;
+    font-size: .95rem; font-weight: 700;
+    border: none; cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+  }
+  .btn-dark:hover { background: var(--navy2); }
+  .form-note { font-size: .78rem; color: rgba(255,255,255,.65); margin-top: 10px; }
+
+  /* --- FOOTER --- */
+  footer {
+    background: var(--navy);
+    color: rgba(255,255,255,.5);
+    text-align: center;
+    padding: 28px 5%;
+    font-size: .82rem;
+  }
+  footer a { color: rgba(255,255,255,.5); text-decoration: none; }
+  footer a:hover { color: var(--white); }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .hero { padding: 72px 5% 64px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Course<span>Craft</span></div>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#templates">Templates</a></li>
+  </ul>
+  <a href="#demo" class="nav-cta">Request a Demo</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Built for L&amp;D teams</div>
+  <h1>Turn Your Training Ideas Into <em>Branded Courses</em> — In Minutes, Not Months.</h1>
+  <p>CourseCraft converts a plain-language script into a polished, LMS-ready microlearning module. No design skills. No developers. No six-week production cycle.</p>
+  <div class="hero-actions">
+    <a href="#demo" class="btn-primary">Request a Demo</a>
+    <a href="#how-it-works" class="btn-ghost">See How It Works</a>
+  </div>
+</section>
+
+<!-- PROOF BAR -->
+<div class="proof-bar">
+  <p>Outputs <strong>SCORM 1.2 · SCORM 2004 · cmi5/xAPI</strong> — compatible with Intellum, Cornerstone, Docebo, Workday Learning, and most major LMSes.</p>
+</div>
+
+<!-- PROBLEM -->
+<section class="problem" id="problem">
+  <div class="section-label">The Problem</div>
+  <h2 class="section-title">Your team has the knowledge. The tools are what's slowing you down.</h2>
+  <p class="section-sub">Most L&D teams at mid-size companies are stuck between two bad options.</p>
+  <div class="problem-grid">
+    <div class="problem-card">
+      <div class="icon">💸</div>
+      <h3>Enterprise tools are overkill</h3>
+      <p>Articulate 360 costs $1,499/seat/year and takes weeks to learn. That's a lot of overhead for a team of two.</p>
+    </div>
+    <div class="problem-card">
+      <div class="icon">📊</div>
+      <h3>DIY isn't LMS-trackable</h3>
+      <p>PowerPoint and Canva are fast — but they don't report completion, can't be uploaded to your LMS, and never look quite on-brand.</p>
+    </div>
+    <div class="problem-card">
+      <div class="icon">⏳</div>
+      <h3>Long cycles mean training gaps</h3>
+      <p>When a course takes 4–8 weeks to ship, new hires ramp slower, compliance gaps grow, and the business moves on without the training.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how-it-works">
+  <div class="section-label">How It Works</div>
+  <h2 class="section-title">Three steps from idea to LMS-ready course.</h2>
+  <p class="section-sub">No authoring tool. No design software. No back-and-forth with an agency.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Write</h3>
+      <p>Draft your course content using one of our plain-language templates. Fill in the topic, the objectives, and the key points — no coding required.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Build</h3>
+      <p>CourseCraft packages your script into a branded, interactive HTML course — complete with knowledge checks and completion tracking — in seconds.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Upload</h3>
+      <p>Drop the zip file into your LMS. Done. Completion, pass/fail, and time-on-course are all reported back automatically.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Everything your team needs. Nothing you don't.</h2>
+  <p class="section-sub">Every course CourseCraft builds comes standard with:</p>
+  <div class="features-grid">
+    <div class="feature">
+      <div class="feature-icon">🎨</div>
+      <h3>Your brand, built in</h3>
+      <p>Logo, colors, and fonts applied automatically to every course — no manual styling, no off-brand slides.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">✅</div>
+      <h3>Interactive knowledge checks</h3>
+      <p>Multiple-choice questions with instant feedback, tracked by the LMS as individual interaction records.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📱</div>
+      <h3>Responsive design</h3>
+      <p>Every course looks right on desktop, tablet, and mobile — no extra work, no separate mobile version.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔌</div>
+      <h3>SCORM 1.2, 2004 &amp; cmi5</h3>
+      <p>Works with virtually every LMS on the market. If it accepts SCORM or cmi5, it accepts CourseCraft output.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📋</div>
+      <h3>Ready-to-use templates</h3>
+      <p>Start from a proven structure — onboarding, compliance, software walkthroughs, sales training, and more.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <h3>Fast to learn, faster to ship</h3>
+      <p>If you can write a document, you can build a CourseCraft course. No certification required.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TEMPLATES -->
+<section class="templates" id="templates">
+  <div class="section-label">Template Library</div>
+  <h2 class="section-title">Don't start from a blank page.</h2>
+  <p class="section-sub">Every license includes a growing library of authoring templates built around the content types L&D teams build most.</p>
+  <div class="template-grid">
+    <div class="template-card">
+      <div class="template-badge">Sales</div>
+      <h3>Sales Rep Onboarding</h3>
+      <p>Role, product, ICP, sales process, and tools — in one 10–15 min microlearning.</p>
+    </div>
+    <div class="template-card">
+      <div class="template-badge">Sales</div>
+      <h3>Objection Handling</h3>
+      <p>The LAER framework applied to competitor, price, and timing pushback — scenario-first format.</p>
+    </div>
+    <div class="template-card">
+      <div class="template-badge">Compliance</div>
+      <h3>Policy &amp; Acceptable Use</h3>
+      <p>Compliance-ready format with built-in acknowledgment tracking and attestation slide.</p>
+    </div>
+    <div class="template-card">
+      <div class="template-badge">Software</div>
+      <h3>Software Procedure</h3>
+      <p>Step-by-step task training for any platform — with annotated screenshots and a demo slot.</p>
+    </div>
+    <div class="template-card">
+      <div class="template-badge">Concept</div>
+      <h3>Concept Explainer</h3>
+      <p>Teach an idea, a model, or a term in 10 minutes or less — hook, definition, mechanism, example.</p>
+    </div>
+    <div class="template-card">
+      <div class="template-badge">Decision</div>
+      <h3>Decision Scenario</h3>
+      <p>Apply a rule or judgment to a realistic situation — KC mid-unit with a full debrief.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="demo">
+  <h2>See CourseCraft Build a Course — Live.</h2>
+  <p>Book a 20-minute demo and we'll build a course from your content, in front of you.</p>
+  <form class="demo-form" onsubmit="handleSubmit(event)">
+    <input type="email" placeholder="your@email.com" required aria-label="Work email">
+    <button type="submit" class="btn-dark">Request a Demo</button>
+  </form>
+  <p class="form-note">No commitment. We'll reach out within one business day.</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>&copy; 2026 CourseCraft &nbsp;·&nbsp; <a href="mailto:{{contact-email}}">{{contact-email}}</a></p>
+</footer>
+
+<script>
+  function handleSubmit(e) {
+    e.preventDefault();
+    const email = e.target.querySelector('input[type="email"]').value;
+    // TODO: wire to your form backend / CRM (Mailchimp, HubSpot, Airtable, etc.)
+    // For now, open a mailto as a placeholder.
+    window.location.href = 'mailto:{{contact-email}}?subject=CourseCraft Demo Request&body=Hi, I\'d like to request a demo. My email is ' + encodeURIComponent(email);
+  }
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+</script>
+
+</body>
+</html>

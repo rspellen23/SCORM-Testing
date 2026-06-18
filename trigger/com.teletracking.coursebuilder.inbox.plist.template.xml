@@ -7,7 +7,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.teletracking.coursebuilder.inbox</string>
+    <string>com.coursecraft.inbox</string>
 
     <key>ProgramArguments</key>
     <array>

@@ -11,7 +11,7 @@ set -euo pipefail
 
 TRIG="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATE="$TRIG/com.teletracking.coursebuilder.inbox.plist.template"
-LABEL="com.teletracking.coursebuilder.inbox"
+LABEL="com.coursecraft.inbox"
 DEST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 DISPATCH="$TRIG/bin/dispatch.sh"

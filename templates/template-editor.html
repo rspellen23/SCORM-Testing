@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Microlearning Template Editor — TeleTracking</title>
+<title>Microlearning Template Editor</title>
 <style>
   :root{
     --navy:#0B2C37; --navy2:#003E51; --green:#1EB16A; --ink:#1d2b30; --soft:#5d6b70;
@@ -120,7 +120,7 @@ const DEFAULTS = { archetypes: [
       {role:"Hook / why this matters", heading:"{{Hook heading, e.g. \"Why <concept> matters to you\"}}", guidance:"Open with the learner's stake — the problem this concept solves or the decision it informs. 2–4 sentences.", body:"{{Hook prose.}}"},
       {role:"What it is (definition)", heading:"What is {{Concept}}?", guidance:"One clear definition in plain language. Define any sub-term you introduce.", body:"{{Definition prose.}}"},
       {role:"How it works (mechanism)", heading:"How it works", guidance:"Explain the moving parts. A numbered list or a comparison table works well here.", visual:{type:"diagram", desc:"Diagram of how it works", slot:"{{slug}}_3_diagram.svg"}, body:"{{Mechanism prose.}}\n- {{step or component}}\n- {{step or component}}"},
-      {role:"Why it matters here", heading:"Why this matters at TeleTracking", guidance:"Tie the concept to a real Nova/operations context. Concrete, not abstract.", body:"{{Application prose.}}"},
+      {role:"Why it matters here", heading:"Why this matters here", guidance:"Tie the concept to a real product/operations context. Concrete, not abstract.", body:"{{Application prose.}}"},
       {role:"Example or analogy (optional)", heading:"{{An example or analogy}}", guidance:"One concrete instance that makes it stick. Optional — cut to stay in budget.", body:"{{Example/analogy prose.}}"},
       {role:"Takeaway / recap", heading:"The takeaway", guidance:"The single idea to carry away. Short.", body:"{{Takeaway prose.}}"},
       {role:"Knowledge Check", isKC:true, guidance:"Test understanding of HOW/WHY the concept works — avoid pure definition recall.", question:"{{Test understanding of the concept's mechanism}}", options:["{{option}}","{{option}}","{{option}}","{{option}}"], correct:"{{letter}}", fbCorrect:"{{reinforce the mechanism}}", fbIncorrect:"{{name the misconception and correct it}}"}
@@ -130,19 +130,19 @@ const DEFAULTS = { archetypes: [
   },
   {
     id:"software-procedure", name:"Software Procedure / Walkthrough",
-    titleTemplate:"{{Task Name, e.g. \"Creating a Transfer Request\"}}",
-    whenToUse:"Teach the learner to DO a task in Nova (a click-path/workflow they execute). Proven by Managing Bed Requests.",
+    titleTemplate:"{{Task Name, e.g. \"Resetting Your Password\"}}",
+    whenToUse:"Teach the learner to DO a task in the product (a click-path/workflow they execute). Proven by Managing Bed Requests.",
     slides:[
       {role:"Learning Objectives", heading:"Learning Objectives", guidance:"3–5 concrete, learner-facing outcomes (\"you will be able to…\"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual.", visual:{type:"graphic", desc:"Objectives illustration", slot:"{{slug}}_1_objectives.svg"}, body:"By the end of this microlearning, you will be able to:\n- {{objective 1}}\n- {{objective 2}}\n- {{objective 3}}"},
       {role:"The goal / when you'd do this", heading:"{{When you'll do this}}", guidance:"State the task, who does it, and the real trigger (\"when a bed becomes available, you…\").", body:"{{Framing prose.}}"},
-      {role:"Before you start (optional)", heading:"Before you start", guidance:"Access/role needed, where in Nova to begin. Cut if trivial.", body:"{{Prereq prose.}}"},
+      {role:"Before you start (optional)", heading:"Before you start", guidance:"Access/role needed, where in the product to begin. Cut if trivial.", body:"{{Prereq prose.}}"},
       {role:"Step by step", heading:"Step by step", guidance:"NUMBERED list, one action per step, name the exact UI element. Keep ≤7; split if longer.", visual:{type:"screenshot", desc:"Annotated screenshot of the key screen", slot:"{{slug}}_3_screen.png"}, body:"1. {{Action — click/select/enter, naming the exact field/button.}}\n2. {{Action.}}\n3. {{Action.}}\n4. {{Action.}}"},
       {role:"See it in action (demo)", heading:"See it in action", guidance:"The visual goes in via the Build Notes Media plan (a demo GIF or self-hosted video). Body = 1–2 sentence orientation.", body:"{{One or two sentences orienting the learner to the demo below.}}"},
       {role:"Common mistakes / edge cases", heading:"Common mistakes", guidance:"The 2–3 errors people actually make and how to avoid/recover.", body:"- {{mistake → consequence → fix}}\n- {{mistake → consequence → fix}}"},
       {role:"Quick reference / recap", heading:"Quick reference", guidance:"The steps condensed to a scannable list or table.", body:"| Step | Action |\n|---|---|\n| 1 | {{...}} |\n| 2 | {{...}} |"},
       {role:"Knowledge Check (scenario)", isKC:true, guidance:"A realistic situation — \"You're at <screen> and need to <goal>. What do you do?\"", question:"{{You're at <screen> and need to <goal>. What do you do?}}", options:["{{plausible wrong path}}","{{the correct action}}","{{plausible wrong path}}","{{plausible wrong path}}"], correct:"{{letter}}", fbCorrect:"{{confirm and reinforce why this is the right path}}", fbIncorrect:"{{point to the right step without a click-by-click crutch}}"}
     ],
-    buildNotes:{objectives:["- The learner can {{perform the task}} in Nova unaided."], confidence:"{{High | Medium | Low}}", media:["Slide 4: VIDEO (file) — screen demo of the full flow; slot `{{slug}}_4_demo.mp4`; requireComplete: true","Slide 3: IMAGE — annotated screenshot of the key screen; slot `{{slug}}_3_screen.png`"]},
+    buildNotes:{objectives:["- The learner can {{perform the task}} in the product unaided."], confidence:"{{High | Medium | Low}}", media:["Slide 4: VIDEO (file) — screen demo of the full flow; slot `{{slug}}_4_demo.mp4`; requireComplete: true","Slide 3: IMAGE — annotated screenshot of the key screen; slot `{{slug}}_3_screen.png`"]},
     sources:["- {{source — the product doc / SME walkthrough the steps trace to}}"]
   },
   {
@@ -153,18 +153,18 @@ const DEFAULTS = { archetypes: [
       {role:"Learning Objectives", heading:"Learning Objectives", guidance:"3–5 concrete, learner-facing outcomes (\"you will be able to…\"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual.", visual:{type:"graphic", desc:"Objectives illustration", slot:"{{slug}}_1_objectives.svg"}, body:"By the end of this microlearning, you will be able to:\n- {{objective 1}}\n- {{objective 2}}\n- {{objective 3}}"},
       {role:"The rule / principle", heading:"The rule", guidance:"State the decision rule in one or two sentences.", body:"{{Rule prose.}}"},
       {role:"When it applies (criteria)", heading:"When it applies", guidance:"The signals/triggers that tell the learner this rule is in play. A list works.", body:"- {{trigger / criterion}}\n- {{trigger / criterion}}"},
-      {role:"The scenario", heading:"A situation you'll recognize", guidance:"Paint a concrete, realistic case. Give enough detail to decide. DO NOT reveal the answer.", visual:{type:"screenshot", desc:"The relevant Nova screen / scenario illustration", slot:"{{slug}}_3_scenario.png"}, body:"{{Scenario prose — set the scene and the pressure, then pose the decision.}}"},
+      {role:"The scenario", heading:"A situation you'll recognize", guidance:"Paint a concrete, realistic case. Give enough detail to decide. DO NOT reveal the answer.", visual:{type:"screenshot", desc:"The relevant product screen / scenario illustration", slot:"{{slug}}_3_scenario.png"}, body:"{{Scenario prose — set the scene and the pressure, then pose the decision.}}"},
       {role:"Knowledge Check (the decision)", isKC:true, guidance:"The options ARE the candidate actions for the scenario above.", question:"{{Given the situation above, what's the right move?}}", options:["{{candidate action}}","{{candidate action}}","{{candidate action}}","{{candidate action}}"], correct:"{{letter}}", fbCorrect:"{{tie the choice back to the rule and the criteria}}", fbIncorrect:"{{name what that action would cost and which signal was missed}}"},
       {role:"Debrief", heading:"Why that was right", guidance:"Walk the reasoning from rule → criteria → action. Reinforce the judgment, not the memorized answer.", body:"{{Debrief prose.}}"},
       {role:"Edge cases / exceptions (optional)", heading:"When it's different", guidance:"The exception(s) where the rule bends or yields to another.", body:"{{Exception prose.}}"},
       {role:"Takeaway", heading:"The takeaway", guidance:"The portable rule of thumb.", body:"{{Takeaway prose.}}"}
     ],
-    buildNotes:{objectives:["- The learner can apply {{rule}} to decide {{action}} under realistic conditions."], confidence:"{{High | Medium | Low}}", media:["Slide 3: IMAGE — scenario illustration / the relevant Nova screen; slot `{{slug}}_3_scenario.png`"]},
+    buildNotes:{objectives:["- The learner can apply {{rule}} to decide {{action}} under realistic conditions."], confidence:"{{High | Medium | Low}}", media:["Slide 3: IMAGE — scenario illustration / the relevant product screen; slot `{{slug}}_3_scenario.png`"]},
     sources:["- {{source — the policy/SME judgment the rule traces to}}"]
   },
   {
     id:"policy-acceptable-use", name:"Policy / Acceptable-Use",
-    titleTemplate:"{{Policy Name, e.g. \"Acceptable Use of AI at TeleTracking\"}}",
+    titleTemplate:"{{Policy Name, e.g. \"Acceptable Use of AI\"}}",
     whenToUse:"Compliance/governance — what's allowed, what's not, and what to do when unsure. Proven by Responsible AI \"Acceptable Use\".",
     slides:[
       {role:"Learning Objectives", heading:"Learning Objectives", guidance:"3–5 concrete, learner-facing outcomes (\"you will be able to…\"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual.", visual:{type:"graphic", desc:"Objectives illustration", slot:"{{slug}}_1_objectives.svg"}, body:"By the end of this microlearning, you will be able to:\n- {{objective 1}}\n- {{objective 2}}\n- {{objective 3}}"},
@@ -403,7 +403,7 @@ function parseMd(text){
 }
 
 /* ============================ STATE + UI ============================ */
-const LS_KEY = "nova-template-editor-v1";
+const LS_KEY = "course-template-editor-v1";
 let state, currentId;
 
 function clone(o){ return JSON.parse(JSON.stringify(o)); }

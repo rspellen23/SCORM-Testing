@@ -34,7 +34,7 @@ By the end of this microlearning, you will be able to:
 
 **Slide 4 — A situation you'll recognize**
 <!-- role: The scenario. Paint a concrete, realistic case. Give enough detail to decide. DO NOT reveal the answer. -->
-*Visual:* screenshot · The relevant Nova screen / scenario illustration · slot: `{{slug}}_3_scenario.png`
+*Visual:* screenshot · The relevant product screen / scenario illustration · slot: `{{slug}}_3_scenario.png`
 {{Scenario prose — set the scene and the pressure, then pose the decision.}}
 
 **Slide 5 — Knowledge Check**
@@ -67,7 +67,7 @@ Learning Objectives:
 - The learner can apply {{rule}} to decide {{action}} under realistic conditions.
 Confidence Score: {{High | Medium | Low}}
 Visuals / Media plan:
-- Slide 3: IMAGE — scenario illustration / the relevant Nova screen; slot `{{slug}}_3_scenario.png`
+- Slide 3: IMAGE — scenario illustration / the relevant product screen; slot `{{slug}}_3_scenario.png`
 Build Notes: {{notes}}
 
 **Sources & Further Reading:**

@@ -1,4 +1,4 @@
-/* Nova Course Player runtime.
+/* Course Player runtime.
    Reveals gated content, runs knowledge checks, and reports to the LMS through a
    pluggable runtime that auto-detects:
      - SCORM 1.2 / 2004  (window.API / API_1484_11)
@@ -62,7 +62,7 @@
       save: function (state) {
         lastState = state;
         var s = JSON.stringify(state);
-        if (ver!=="2004" && s.length>4000) s = JSON.stringify({g:state.g,k:state.k,m:state.m,o:state.o});
+        if (ver!=="2004" && s.length>4000) s = JSON.stringify({g:state.g,k:state.k,m:state.m,o:state.o,s:state.s});
         set(K.suspend(), s); commit();
       },
       complete: function (score) {
@@ -152,7 +152,7 @@
         }).then(function(r){ return r && r.ok ? r.json() : {}; }).then(function(ld){
           ctxT = ld.contextTemplate || {}; mode = ld.launchMode || "Normal";
           mastery = (typeof ld.masteryScore==="number") ? ld.masteryScore : null; returnURL = ld.returnURL || null;
-          return lrs("GET", "activities/state", stateParams("nova.progress"));
+          return lrs("GET", "activities/state", stateParams("course.progress"));
         }).then(function(r){ return r && r.ok ? r.json().catch(function(){return null;}) : null; }).then(function(prog){
           finished = !!(prog && prog.done); lastState = prog && prog.state || null;
           return sendStmt(stmt(CMI5.V.init, "initialized")).then(function(){ return { resumed:lastState, finished:finished }; });
@@ -161,7 +161,7 @@
       isFinished: function(){ return finished; },
       returnURL: function(){ return returnURL; },
       save: function (state) { lastState = state;
-        lrs("PUT", "activities/state", stateParams("nova.progress"), { state:state, done:finished }); },
+        lrs("PUT", "activities/state", stateParams("course.progress"), { state:state, done:finished }); },
       complete: function (score) {
         if (mode !== "Normal" || completedSent) return; completedSent = true; finished = true;
         var dur = isoDur(Date.now()-started);
@@ -169,7 +169,7 @@
         if (score) { var sc = { scaled:Number(score.scaled), raw:score.raw, min:score.min, max:score.max };
           sendStmt(stmt(score.passed?CMI5.V.passed:CMI5.V.failed, score.passed?"passed":"failed",
                     { success:!!score.passed, score:sc, duration:dur }, true)); }
-        lrs("PUT", "activities/state", stateParams("nova.progress"), { state:lastState, done:true });
+        lrs("PUT", "activities/state", stateParams("course.progress"), { state:lastState, done:true });
       },
       interaction: function(){ /* cmi5 captures KC outcomes in the score/statements; per-item xAPI optional */ },
       quit: function () { if (terminated) return; terminated = true;
@@ -199,6 +199,8 @@
       var kcs   = Array.prototype.slice.call(document.querySelectorAll(".nv-kc"));
       var media = Array.prototype.slice.call(document.querySelectorAll("[data-require='1']"));
       var reqOpens = Array.prototype.slice.call(document.querySelectorAll('[data-require-open="1"]'));
+      var sorts = Array.prototype.slice.call(document.querySelectorAll("[data-sort]"));
+      var flips = Array.prototype.slice.call(document.querySelectorAll(".nv-flip"));
       var bar   = document.querySelector(".nv-progress > span");
       var endEl = document.querySelector(".nv-course-end");
       var exitBtn = document.querySelector(".nv-exit");
@@ -210,13 +212,13 @@
       var lessonCount = parseInt(document.body.getAttribute("data-lessons") || "1", 10);
       var notLast = lessonCount > 1 && lessonIdx < lessonCount;
 
-      var hasInteractive = gates.length + kcs.length + media.length + reqOpens.length > 0;
-      var kcSeen = {}, kcTries = {}, mediaSeen = {}, openSeen = {}, reachedEnd = false, loc = null;
+      var hasInteractive = gates.length + kcs.length + media.length + reqOpens.length + sorts.length > 0;
+      var kcSeen = {}, kcTries = {}, mediaSeen = {}, openSeen = {}, sortSeen = {}, reachedEnd = false, loc = null;
       var completed = !!(sel.info && sel.info.finished);
       var restoring = false;
 
       function save(){ if (!restoring && RT) RT.save({ g:gates.reduce(function(a,g,i){ if(g.dataset.passed==="1")a.push(i); return a; },[]),
-        k:kcSeen, m:Object.keys(mediaSeen), o:Object.keys(openSeen), loc:loc }); }
+        k:kcSeen, m:Object.keys(mediaSeen), o:Object.keys(openSeen), s:sortSeen, loc:loc }); }
       function gradedScore(){ var correct=0; Object.keys(kcSeen).forEach(function(i){ if(kcSeen[i]&&kcSeen[i].ok) correct++; });
         var raw = kcs.length ? Math.round(correct/kcs.length*100) : 0;
         return { raw:raw, min:0, max:100, scaled:(raw/100).toFixed(2), passed: raw>=passMark }; }
@@ -227,9 +229,10 @@
         exitBtn.textContent = notLast ? "Next lesson →" : "Finish course";
       }
       function updateProgress(){
-        var total = gates.length + kcs.length + media.length + reqOpens.length || 1;
+        var total = gates.length + kcs.length + media.length + reqOpens.length + sorts.length || 1;
         var done = gates.filter(function(g){return g.dataset.passed==="1";}).length
-          + Object.keys(kcSeen).length + Object.keys(mediaSeen).length + Object.keys(openSeen).length;
+          + Object.keys(kcSeen).length + Object.keys(mediaSeen).length + Object.keys(openSeen).length
+          + Object.keys(sortSeen).length;
         if (bar) bar.style.width = Math.min(100, Math.round(done/total*100)) + "%";
         save(); maybeComplete();
       }
@@ -237,7 +240,8 @@
         if (completed) { enableEndButton(); return; }
         var ok = gates.every(function(g){return g.dataset.passed==="1";})
           && kcs.length===Object.keys(kcSeen).length && media.length===Object.keys(mediaSeen).length
-          && reqOpens.length===Object.keys(openSeen).length && (hasInteractive || reachedEnd);
+          && reqOpens.length===Object.keys(openSeen).length && sorts.length===Object.keys(sortSeen).length
+          && (hasInteractive || reachedEnd);
         if (ok) { completed = true; if (RT) RT.complete(graded ? gradedScore() : null);
           if (graded && RT && RT.interaction) { var n=0; kcs.forEach(function(kc,i){ var r=kcSeen[i]; if(r) RT.interaction(n++, kc.getAttribute("data-kc-id")||("kc"+i), String(r.opt), r.ok); }); }
           if (bar) bar.style.width = "100%"; enableEndButton(); }
@@ -284,6 +288,30 @@
           }
         }); }); });
 
+      /* Flashcards — flip toggles aria-pressed (button => Enter/Space free); non-gating */
+      flips.forEach(function(fc){ fc.addEventListener("click", function(){
+        fc.setAttribute("aria-pressed", fc.getAttribute("aria-pressed")==="true" ? "false" : "true"); }); });
+
+      /* Categorize / sorting — Check validates each select against its target, then locks + folds into completion */
+      function lockSort(sort, i){
+        var items = Array.prototype.slice.call(sort.querySelectorAll(".nv-sort-item"));
+        var allOk = true;
+        items.forEach(function(li){
+          var pick = li.querySelector(".nv-sort-pick");
+          var ok = pick && pick.value === li.getAttribute("data-target");
+          li.classList.remove("correct","incorrect"); li.classList.add(ok ? "correct" : "incorrect", "is-locked");
+          if (!ok) allOk = false;
+        });
+        var fb = sort.querySelector(".nv-sort-fb");
+        if (fb){ var m = allOk ? fb.getAttribute("data-fb-correct") : fb.getAttribute("data-fb-incorrect");
+          fb.innerHTML = m || (allOk ? "Correct!" : "Some items aren't in the right category."); fb.classList.remove("ok","no"); fb.classList.add("show", allOk ? "ok" : "no"); }
+        var btn = sort.querySelector(".nv-sort-check"); if (btn) btn.disabled = true;
+        sortSeen["s"+i] = { ok: allOk, picks: items.map(function(li){ var p=li.querySelector(".nv-sort-pick"); return p?p.value:""; }) };
+        loc = { t:"s", i:i };
+      }
+      sorts.forEach(function(sort,i){ var btn = sort.querySelector(".nv-sort-check");
+        if (btn) btn.addEventListener("click", function(){ if (sortSeen["s"+i]) return; lockSort(sort,i); updateProgress(); }); });
+
       /* Completion floor */
       if (endEl && "IntersectionObserver" in window) { var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ reachedEnd=true; updateProgress(); } }); }); io.observe(endEl); }
       else { reachedEnd = true; }
@@ -308,6 +336,11 @@
         Object.keys(resumed.k||{}).forEach(function(ki){ var r=resumed.k[ki]; if(kcs[ki]&&r) lockKc(kcs[ki],+ki,r.opt,r.ok); });
         (resumed.m||[]).forEach(function(mk){ mediaSeen[mk]=true; });
         (resumed.o||[]).forEach(function(ok){ openSeen[ok]=true; });
+        Object.keys(resumed.s||{}).forEach(function(sk){ var idx=+sk.slice(1), st=resumed.s[sk];
+          if (sorts[idx] && st){ var picks=st.picks||[];
+            Array.prototype.slice.call(sorts[idx].querySelectorAll(".nv-sort-item")).forEach(function(li,n){
+              var p=li.querySelector(".nv-sort-pick"); if(p&&picks[n]!=null) p.value=picks[n]; });
+            lockSort(sorts[idx], idx); } });
         loc = resumed.loc || null; restoring = false;
         if (loc){ var tgt = loc.t==="g"?gates[loc.i]:(loc.t==="kc"?kcs[loc.i]:null); if(tgt) try{ tgt.scrollIntoView({block:"start"}); }catch(e){} }
       }

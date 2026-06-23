@@ -1,7 +1,7 @@
 """Image-prompt generator — emit ready-to-use ChatGPT image prompts per course asset.
 
 Leadership generates course art (covers, Learning Objectives plates, in-lesson illustrations)
-with ChatGPT using a fixed TeleTracking style preamble + a per-asset description. This module
+with ChatGPT using a fixed brand style preamble + a per-asset description. This module
 turns each asset a course needs into a complete, paste-ready prompt with the correct ORIENTATION
 (portrait art sits beside a text column; landscape art is a banner/cover).
 
@@ -18,14 +18,14 @@ only the per-image specifics. Three orthogonal dimensions, locked in order:
 
 For us the mapping is:
 
-  * Rendering  → the STYLE preamble (our calm healthcare-SaaS vector look — already deck-wide).
+  * Rendering  → the STYLE preamble (our calm professional vector look — already deck-wide).
   * Palette    → DEFAULT_HIERARCHY *plus* PALETTE_BEHAVIOR (NEW): not just *which* colors, but *how*
                  they are distributed (proportion / role / temperament). A usage contract, not a list.
   * Type/role  → ROLE_DEFAULT_ORIENT + ROLE_CONCEPT (per asset — cover / objectives / aside / …).
 
 Two more harvests, applied as closing GLOBAL_RULES on every prompt:
 
-  * HEX-as-text guard (ppt-master §5.1): image models sometimes paint "#1EB16A" as visible text and
+  * HEX-as-text guard (ppt-master §5.1): image models sometimes paint "#1A2B3C" as visible text and
     ruin the asset. We pass HEX codes in the prompt, so this is a live failure mode for us — guarded.
   * Simplified figures (ppt-master §5.2): humans as calm stylized figures, no photorealistic faces.
 
@@ -39,23 +39,20 @@ A CourseImageLock bundles the deck-wide choices so a whole course's assets are g
 from collections import namedtuple
 
 # --- The constant style preamble (verbatim from leadership's working prompt) ---------------------
+# Neutral default style preamble — the active brand's `promptStyle` overrides this at runtime.
 STYLE = (
-    "Use a clean, calm healthcare SaaS illustration style with soft vector shapes, rounded edges, "
-    "gentle gradients, minimal shadows, and plenty of whitespace. Use TeleTracking-inspired colors: "
-    "TeleGreen #1EB16A, Blue #539BD2, Deep Navy #0B2C37, Teal #069696, Navy #003E51, Black #0C0E0F, "
-    "and White #FFFFFF. Use Yellow, Orange, and Red only as small accents. {hierarchy} "
-    "Show one clear idea related to the topic. Use simple healthcare, workflow, medical staff, or "
-    "learning elements only if they support the main idea. Keep the image simple, centered, spacious, "
-    "and easy to understand. Avoid clutter, busy backgrounds, too many icons, complex screens, "
-    "readable text, photorealism, anime, glossy 3D, and childish mascots."
+    "Use a clean, calm, professional illustration style with soft vector shapes, rounded edges, "
+    "gentle gradients, minimal shadows, and plenty of whitespace. Use the brand accent as the dominant "
+    "color with one or two neutral supporting tones; small bright accents only. {hierarchy} "
+    "Show one clear idea related to the topic, using simple workflow, people, or learning elements only "
+    "if they support the main idea. Keep the image simple, centered, spacious, and easy to understand. "
+    "Avoid clutter, busy backgrounds, too many icons, complex screens, readable text, photorealism, "
+    "anime, glossy 3D, and childish mascots."
 )
 
-# Default color hierarchy (overridable per course/section).
-# Primary/secondary are interchangeable across this palette and may be mixed freely, but
-# TeleGreen must always be present in some capacity (James, 2026-06-09).
-DEFAULT_HIERARCHY = ("The primary and secondary colors are interchangeable among TeleGreen #1EB16A, "
-                     "Teal #069696, Deep Navy #0B2C37, and Blue #539BD2 — mix them freely, but "
-                     "TeleGreen #1EB16A must always be present in some capacity.")
+# Default color hierarchy — the active brand's `promptHierarchy` overrides this at runtime.
+DEFAULT_HIERARCHY = ("Use the brand accent as the dominant color with one or two neutral supporting "
+                     "tones; the accent should always be present in some capacity.")
 
 # --- Palette USAGE behavior (NEW — ppt-master harvest) --------------------------------------------
 # DEFAULT_HIERARCHY says *which* colors; PALETTE_BEHAVIOR says *how they are distributed*. Giving the
@@ -91,7 +88,7 @@ TEXT_POLICY = {
 
 # --- Global hard rules appended as closing sentences to EVERY prompt (ppt-master §5.1 / §5.2) ------
 GLOBAL_RULES = (
-    "Color values (HEX codes like #1EB16A) and color names are rendering guidance only — do NOT draw "
+    "Color values (HEX codes) and color names are rendering guidance only — do NOT draw "
     "HEX codes, color names, or palette labels as visible text anywhere in the image. "
     "Any people appear as simplified, stylized figures conveying role and tone through posture and "
     "gesture — no photorealistic faces, no detailed anatomy, no celebrity likeness."
@@ -112,11 +109,11 @@ ROLE_DEFAULT_ORIENT = {
 # a good prompt. {desc}/{title} are filled when present; otherwise the concept stands on its own.
 ROLE_CONCEPT = {
     "objectives": ("An in-lesson illustration representing the learning objectives for this module — a "
-                   "single calm healthcare professional looking toward a small set of simple goal or "
+                   "single calm person looking toward a small set of simple goal or "
                    "checklist markers (circles / checkmarks, no readable text), conveying focus, growth, "
                    "and readiness to learn."),
     "cover": ("Course cover illustration for '{title}' — one clear, welcoming idea that represents the "
-              "module's topic, with a healthcare professional or workflow element as the focal point."),
+              "module's topic, with a person or workflow element as the focal point."),
 }
 
 # Authored descriptions this generic are treated as "no real description" → use the role concept.
@@ -202,7 +199,7 @@ def build_manifest(title, items, lock):
     """Assemble the image_prompts.json structure for a course (deck-wide lock + per-asset items)."""
     return {
         "course": title,
-        "rendering": "teletracking-calm-vector",   # the deck-wide STYLE family
+        "rendering": "calm-vector",   # the deck-wide STYLE family
         "palette_hierarchy": lock.hierarchy,
         "palette_behavior": lock.palette_behavior,
         "items": items,

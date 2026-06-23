@@ -5,11 +5,11 @@ renderer + packager consume it. One IR JSON file + an `assets/` folder = a compl
 
 ```jsonc
 {
-  "schema": "nova-course-ir/v1",
+  "schema": "course-ir/v1",
   "id": "managing-bed-requests",        // slug; used for filenames + SCORM identifier
   "title": "Managing Bed Requests",
   "locale": "en",                        // "en" | "en-GB"
-  "accent": "#1EB16A",                   // course accent (defaults to TeleGreen)
+  "accent": "#1EB16A",                   // course accent (defaults to the brand accent)
   "hero": {                              // optional cover
     "image": "assets/hero.jpg",
     "title": "Managing Bed Requests",
@@ -40,16 +40,24 @@ Every block is `{ "type": "...", ...fields, "gated": false }`.
 | `list`        | `ordered` (bool), `items` ([html,…]) | numbered/bulleted |
 | `table`       | `html` | passthrough `<table>` HTML (sanitized) |
 | `divider`     | — | spacer rule |
-| `transition`  | `color` (green/gold/dark/blue/teal), `band` (top/bottom) | brand "ribbon" wave divider; reusable, color-swappable. Renders a pre-cropped band from `brand/transitions/<color>-<band>.png` (`green`=TeleGreen default). Decorative (`aria-hidden`). md grammar: `*Transition:* <color> <band>` |
+| `transition`  | `color` (green/gold/dark/blue/teal), `band` (top/bottom) | brand "ribbon" wave divider; reusable, color-swappable. Renders a pre-cropped band from `brand/transitions/<color>-<band>.png` (`green`=brand-accent default). Decorative (`aria-hidden`). md grammar: `*Transition:* <color> <band>` |
 | `continue`    | `text` (default "CONTINUE") | gate; reveals the next gated run |
-| `knowledgeCheck` | `prompt`, `multi` (bool), `options` [{`html`,`correct`}], `feedback` | interactive, **unscored** |
+| `knowledgeCheck` | `prompt`, `multi` (bool), `options` [{`html`,`correct`}], `feedback`, `feedbackIncorrect` | interactive, **unscored** |
+| `quote`       | `html` (quote text), `attribution`, `src` (optional bg image) | pull-quote; with `src` the image is a tinted full-bleed background. md: `*Quote:* <text> · by: <name> · slot:`bg`` |
+| `accordion`   | `entries` [{`title`, `html`, `src?`}] | native `<details>` disclosure (a11y for free, no JS). md: `*Accordion:*` + `::: item` (title:/body:/slot:) groups, lone `:::` closes |
+| `process`     | `entries` [{`title`, `html`, `src?`, `kind?`}] | numbered ordered-step list (static, accessible). md: `*Process:*` + `::: step` groups |
+| `flashcard`   | `entries` [{`frontHtml`, `frontSrc?`, `backHtml`, `backSrc?`}] | CSS 3D-flip cards; click/Enter/Space toggles `aria-pressed`, both faces in DOM, reduced-motion safe. Non-gating. md: `*Flashcard:*` + `::: card` (front:/back:/frontslot:/backslot:) |
+| `categorize`  | `buckets` [{`id`, `title`}], `pool` [{`html`, `target`}], `prompt?`, `feedback`, `feedbackIncorrect` | sort each pool item into its correct bucket. Accessible **select-to-place** base (a Check button validates + locks); drag is a future enhancement. **Gates completion** once checked. md: `*Categorize:*` + `bucket:`/`item: <text> -> <bucket>` lines, lone `:::` closes |
+| `scenario`    | `scenes` [{`title`, `html`, `responses` [{`html`, `feedback`, `preferred?`}]}] | **linear fallback** for Rise branching scenarios — renders each scene's narrative + response options with their feedback (preferred path highlighted). True branching is a future track. Import-only (no authoring grammar yet) |
+
+> **Fence convention (shared with `cardGrid`):** inside `*Accordion:*`/`*Process:*`/`*Flashcard:*`, each entry opens with `::: item`/`::: step`/`::: card` and a **single lone `:::` closes the whole block** — there is **no per-entry closer**. (Adding one closes the block early — the known cardGrid gotcha.)
 
 ## Importer responsibilities
 - Resolve Rise media references → a real filename copied into `assets/`.
 - Sanitize block HTML: drop `data-editor-id`, unwrap the editor `<div>`, strip
   Rise-theme-coupled inline `color`/`font-size` styles (our brand CSS owns those),
   keep semantic tags (`strong`, `em`, `a`, `ul`/`ol`/`li`, `table`, `br`).
-- Carry the course accent from the Rise `theme.colorAccent` if present (else TeleGreen).
+- Carry the course accent from the Rise `theme.colorAccent` if present (else the brand accent).
 
 ## Renderer responsibilities
 - Emit one self-contained HTML page (no external CDN), link `brand/tokens.css`,

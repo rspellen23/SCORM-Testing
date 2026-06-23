@@ -1,0 +1,25 @@
+#!/bin/sh
+# CourseCraft — self-contained edition.
+# The full engine lives in ./src; this runs it with the CourseCraft brand (./brand).
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ENGINE="$HERE/src/cli.py"
+BRAND="$HERE/brand"
+case "$1" in
+  from-docx|from-md|from-md-course|from-rise|from-ir|import-rise|cover|to-pptx)
+    exec python3 "$ENGINE" "$@" --brand "$BRAND" ;;
+  ""|-h|--help)
+    echo "CourseCraft build — self-contained (engine in ./src), runs with this brand."
+    echo "  ./build from-md-course <script.md> --images <dir> --out <out.zip> [--format cmi5]"
+    echo "  ./build from-md <script.md> --which N --images <dir> --out <out.zip>"
+    echo "  ./build from-docx <doc.docx> --images <dir> --out <out.zip>"
+    echo "  ./build from-rise <raw.zip> --out <out.zip>"
+    echo "  ./build to-pptx <script.md> --images <dir> --out <deck.pptx>   # PowerPoint export"
+    echo "  ./build cover --title '...' --out <dir>"
+    echo "  (lint / repackage: run python3 ./src/cli.py directly)"
+    echo ""
+    echo "  Dashboard (GUI):  ./dashboard/launch.command   (or: python3 ./dashboard/server.py)"
+    echo "  Requires: python3, python-pptx (PowerPoint), python-docx (SME .docx review)."
+    exit 0 ;;
+  *)
+    exec python3 "$ENGINE" "$@" ;;
+esac

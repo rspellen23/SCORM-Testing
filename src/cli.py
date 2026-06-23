@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nova Course Builder — CLI.
+"""Course Builder — CLI.
 
   python src/cli.py from-rise  <rise-raw.zip>           --out build/course.zip
   python src/cli.py from-docx  <course.docx> --images <dir>  --out build/course.zip
@@ -8,15 +8,17 @@
 import os, sys, json, argparse, zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import render, scorm, cmi5  # noqa: E402
+import render, scorm, cmi5, brand  # noqa: E402
 
 
-def _emit(ir, asset_blobs, out_zip, keep_dir=False, validate=False, fmt="scorm"):
+def _emit(ir, asset_blobs, out_zip, keep_dir=False, validate=False, fmt="scorm", brand_name="_default"):
+    b = brand.load_brand(brand_name)
     course_dir = os.path.splitext(out_zip)[0] + ".course"
-    render.render_course(ir, course_dir, asset_blobs)
+    render.render_course(ir, course_dir, asset_blobs, brand=b)
     if fmt == "cmi5":
         cmi5.package(course_dir, out_zip, ir["id"], ir["title"], lang=ir.get("locale", "en"),
-                     graded=ir.get("graded", False), passing=ir.get("passingScore", 80))
+                     graded=ir.get("graded", False), passing=ir.get("passingScore", 80),
+                     id_base=b.get("cmi5IdBase"))
     else:
         scorm.package(course_dir, out_zip, ir["id"], ir["title"])
     if not keep_dir:
@@ -44,26 +46,27 @@ def _run_lint(out_zip):
 
 def cmd_from_rise(a):
     from rise_import import import_rise
-    ir, copy_map, src_zip = import_rise(a.zip)
+    b = brand.load_brand(getattr(a, "brand", "_default"))
+    ir, copy_map, src_zip = import_rise(a.zip, brand=b)
     blobs = {}
     with zipfile.ZipFile(src_zip) as zf:
         for in_path, rel in copy_map.items():
             blobs[rel] = zf.read(in_path)
-    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"))
+    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"), getattr(a, "brand", "_default"))
 
 
 def cmd_from_docx(a):
     from docx_import import import_docx
     ir, used = import_docx(a.docx, a.images)
     blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
-    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"))
+    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"), getattr(a, "brand", "_default"))
 
 
 def cmd_from_md(a):
     from md_import import import_md
     ir, used = import_md(a.md, which=a.which, hero=a.hero, image_dir=a.images)
     blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
-    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"))
+    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"), getattr(a, "brand", "_default"))
 
 
 def cmd_from_md_course(a):
@@ -83,19 +86,21 @@ def cmd_from_md_course(a):
     if os.path.exists(course_dir):
         shutil.rmtree(course_dir)
     os.makedirs(course_dir)
-    render.copy_shared(course_dir)                          # brand/ + player/ once at the root
+    b = brand.load_brand(getattr(a, "brand", "_default"))
+    render.copy_shared(course_dir, b)                       # active brand + player/ once at the root
     scos, graded, passing, lang = [], False, 80, "en"
     for k in range(1, n + 1):
         ir, used = import_md(a.md, which=k, image_dir=a.images)
         blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
         render.render_course(ir, os.path.join(course_dir, f"sco_{k}"), blobs,
                              asset_base="../", bundle_brand_player=False,
-                             lesson_index=k, lesson_count=n)
+                             lesson_index=k, lesson_count=n, brand=b)
         scos.append({"id": ir["id"], "title": ir["title"], "href": f"sco_{k}/index.html"})
         graded, passing, lang = ir.get("graded", False), ir.get("passingScore", 80), ir.get("locale", "en")
     fmt = getattr(a, "format", "scorm")
     if fmt == "cmi5":
-        cmi5.package_multi(course_dir, a.out, cid, title, scos, lang=lang, graded=graded, passing=passing)
+        cmi5.package_multi(course_dir, a.out, cid, title, scos, lang=lang, graded=graded, passing=passing,
+                           id_base=b.get("cmi5IdBase"))
     else:
         scorm.package_multi(course_dir, a.out, cid, title, scos)
     print(f"✓ {title} — {n} lesson(s) [{fmt}]")
@@ -146,7 +151,8 @@ def cmd_gen_prompts(a):
 
 def cmd_import_rise(a):
     from rise_import import import_rise
-    ir, _copy, _src = import_rise(a.zip)
+    b = brand.load_brand(getattr(a, "brand", "_default"))
+    ir, _copy, _src = import_rise(a.zip, brand=b)
     with open(a.out, "w", encoding="utf-8") as f:
         json.dump(ir, f, indent=2, ensure_ascii=False)
     print(f"✓ IR → {a.out}  (blocks={ir['_stats']['blocks']}, "
@@ -162,7 +168,7 @@ def cmd_from_ir(a):
             fp = os.path.join(a.images, n)
             if os.path.isfile(fp):
                 blobs["assets/" + n] = open(fp, "rb").read()
-    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"))
+    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"), getattr(a, "brand", "_default"))
 
 
 def cmd_repackage(a):
@@ -178,31 +184,83 @@ def cmd_lint(a):
     raise SystemExit(scorm_lint.main(["scorm_lint", a.zip]))
 
 
+def cmd_to_pptx(a):
+    """Render a microlearning to a STATIC PowerPoint deck.
+
+    Reuses the from-md import path so image resolution is identical to a SCORM
+    build, then walks the IR into slides. Interactive blocks are flattened or
+    dropped (logged) -- see src/pptx_export.py for the mapping."""
+    from md_import import import_md
+    import pptx_export
+    ir, used = import_md(a.md, which=a.which, hero=a.hero, image_dir=a.images)
+    blobs = {rel: src for rel, src in used.items()}      # rel -> on-disk path
+    b = brand.load_brand(getattr(a, "brand", "_default"))
+    stats = pptx_export.export_pptx(ir, blobs, a.out, brand=b)
+    print(f"✓ {ir['title']}")
+    print(f"  slides={stats['slides']} dropped={stats['dropped']}")
+    print(f"  PPTX → {a.out} ({os.path.getsize(a.out)//1024} KB)")
+
+
+def cmd_cover(a):
+    """Composite cover/hero/mobile art (background + icon + title) for one course or a batch."""
+    import cover
+    from common import slugify
+    b = brand.load_brand(getattr(a, "brand", "_default"))
+
+    def resolve(folder_key, val):
+        if not val:
+            return None
+        if os.path.isfile(val):
+            return val
+        d = b.asset(folder_key)                    # the brand's backgrounds/ or icons/ folder
+        if d:
+            for ext in ("", ".png", ".jpg", ".jpeg"):
+                p = os.path.join(d, val + ext)
+                if os.path.isfile(p):
+                    return p
+        print(f"  note: '{val}' not found as a file or in the brand's {folder_key}/ — synthesizing")
+        return None
+
+    if a.map:
+        items = json.load(open(a.map, encoding="utf-8"))
+    else:
+        items = [{"name": a.name or slugify(a.title or "cover"), "title": a.title or "",
+                  "background": a.bg, "icon": a.icon, "accent": a.accent,
+                  "layout": a.layout, "subtitle": a.subtitle}]
+    for it in items:
+        name = it.get("name") or slugify(it.get("title") or "cover")
+        out = cover.render_set(b, a.out, name, it.get("title", ""),
+                               background=resolve("backgrounds", it.get("background")),
+                               icon=resolve("icons", it.get("icon")), accent=it.get("accent"),
+                               layout=it.get("layout"), subtitle=it.get("subtitle"))
+        print(f"✓ {name}: " + " · ".join(f"{k} {os.path.basename(v)}" for k, v in out.items()))
+
+
 def main():
-    p = argparse.ArgumentParser(prog="nova-course-builder")
+    p = argparse.ArgumentParser(prog="course-builder")
     sub = p.add_subparsers(required=True)
 
     r = sub.add_parser("from-rise"); r.add_argument("zip")
     r.add_argument("--out", required=True); r.add_argument("--keep-dir", action="store_true")
-    r.add_argument("--validate", action="store_true"); r.set_defaults(fn=cmd_from_rise)
+    r.add_argument("--validate", action="store_true"); r.add_argument("--brand", default="_default"); r.set_defaults(fn=cmd_from_rise)
 
     d = sub.add_parser("from-docx"); d.add_argument("docx")
     d.add_argument("--images", required=True); d.add_argument("--out", required=True)
     d.add_argument("--keep-dir", action="store_true")
-    d.add_argument("--validate", action="store_true"); d.set_defaults(fn=cmd_from_docx)
+    d.add_argument("--validate", action="store_true"); d.add_argument("--brand", default="_default"); d.set_defaults(fn=cmd_from_docx)
 
     md = sub.add_parser("from-md"); md.add_argument("md")
     md.add_argument("--which", type=int, default=1); md.add_argument("--images", default=None)
     md.add_argument("--hero", default=None); md.add_argument("--out", required=True)
     md.add_argument("--keep-dir", action="store_true")
     md.add_argument("--format", choices=["scorm", "cmi5"], default="scorm")
-    md.add_argument("--validate", action="store_true"); md.set_defaults(fn=cmd_from_md)
+    md.add_argument("--validate", action="store_true"); md.add_argument("--brand", default="_default"); md.set_defaults(fn=cmd_from_md)
 
     mc = sub.add_parser("from-md-course"); mc.add_argument("md")
     mc.add_argument("--images", default=None); mc.add_argument("--title", default=None)
     mc.add_argument("--out", required=True); mc.add_argument("--keep-dir", action="store_true")
     mc.add_argument("--format", choices=["scorm", "cmi5"], default="scorm")
-    mc.add_argument("--validate", action="store_true"); mc.set_defaults(fn=cmd_from_md_course)
+    mc.add_argument("--validate", action="store_true"); mc.add_argument("--brand", default="_default"); mc.set_defaults(fn=cmd_from_md_course)
 
     gp = sub.add_parser("gen-prompts"); gp.add_argument("md")
     gp.add_argument("--which", type=int, default=1); gp.add_argument("--hero", default=None)
@@ -211,13 +269,14 @@ def main():
     gp.set_defaults(fn=cmd_gen_prompts)
 
     i = sub.add_parser("import-rise"); i.add_argument("zip")
-    i.add_argument("--out", required=True); i.set_defaults(fn=cmd_import_rise)
+    i.add_argument("--out", required=True); i.add_argument("--brand", default="_default")
+    i.set_defaults(fn=cmd_import_rise)
 
     fi = sub.add_parser("from-ir"); fi.add_argument("ir")
     fi.add_argument("--images", default=None); fi.add_argument("--out", required=True)
     fi.add_argument("--keep-dir", action="store_true")
     fi.add_argument("--format", choices=["scorm", "cmi5"], default="scorm")
-    fi.add_argument("--validate", action="store_true"); fi.set_defaults(fn=cmd_from_ir)
+    fi.add_argument("--validate", action="store_true"); fi.add_argument("--brand", default="_default"); fi.set_defaults(fn=cmd_from_ir)
 
     rp = sub.add_parser("repackage"); rp.add_argument("dir")
     rp.add_argument("--out", required=True); rp.add_argument("--id", default=None)
@@ -225,6 +284,22 @@ def main():
 
     ln = sub.add_parser("lint"); ln.add_argument("zip")
     ln.set_defaults(fn=cmd_lint)
+
+    pp = sub.add_parser("to-pptx"); pp.add_argument("md")
+    pp.add_argument("--which", type=int, default=1); pp.add_argument("--images", default=None)
+    pp.add_argument("--hero", default=None); pp.add_argument("--out", required=True)
+    pp.add_argument("--brand", default="_default"); pp.set_defaults(fn=cmd_to_pptx)
+
+    cv = sub.add_parser("cover")
+    cv.add_argument("--title", default=None); cv.add_argument("--name", default=None)
+    cv.add_argument("--bg", default=None); cv.add_argument("--icon", default=None)
+    cv.add_argument("--accent", default=None); cv.add_argument("--map", default=None,
+        help="JSON list of {name,title,subtitle,background,icon,accent,layout} for a batch")
+    cv.add_argument("--layout", default=None, choices=["topic", "path"],
+        help="cover layout (default: brand's cover.layout)")
+    cv.add_argument("--subtitle", default=None, help="audience/subtitle line (path layout)")
+    cv.add_argument("--out", required=True, help="output directory")
+    cv.add_argument("--brand", default="_default"); cv.set_defaults(fn=cmd_cover)
 
     a = p.parse_args()
     a.fn(a)

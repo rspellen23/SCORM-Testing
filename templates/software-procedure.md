@@ -1,6 +1,6 @@
 <!--
   ARCHETYPE: Software Procedure / Walkthrough
-  WHEN TO USE: Teach the learner to DO a task in Nova (a click-path/workflow they execute). Proven by Managing Bed Requests.
+  WHEN TO USE: Teach the learner to DO a task in the product (a click-path/workflow they execute). Proven by Managing Bed Requests.
   SLIDE-ROLE PLAN (auto-generated from the slides below):
     1. Learning Objectives
     2. The goal / when you'd do this
@@ -13,7 +13,7 @@
   Fill the {{...}} placeholders and delete these guidance lines before returning.
 -->
 
-## Microlearning {{N}}: {{Task Name, e.g. "Creating a Transfer Request"}}
+## Microlearning {{N}}: {{Task Name, e.g. "Resetting Your Password"}}
 
 **Slide 1 — Learning Objectives**
 <!-- role: Learning Objectives. 3–5 concrete, learner-facing outcomes ("you will be able to…"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual. -->
@@ -28,7 +28,7 @@ By the end of this microlearning, you will be able to:
 {{Framing prose.}}
 
 **Slide 3 — Before you start**
-<!-- role: Before you start (optional). Access/role needed, where in Nova to begin. Cut if trivial. -->
+<!-- role: Before you start (optional). Access/role needed, where in the product to begin. Cut if trivial. -->
 {{Prereq prose.}}
 
 **Slide 4 — Step by step**
@@ -70,7 +70,7 @@ By the end of this microlearning, you will be able to:
 Subject: {{one line}}
 Estimated Length: {{e.g. 11 min}}
 Learning Objectives:
-- The learner can {{perform the task}} in Nova unaided.
+- The learner can {{perform the task}} in the product unaided.
 Confidence Score: {{High | Medium | Low}}
 Visuals / Media plan:
 - Slide 4: VIDEO (file) — screen demo of the full flow; slot `{{slug}}_4_demo.mp4`; requireComplete: true

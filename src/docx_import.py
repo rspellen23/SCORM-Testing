@@ -189,7 +189,7 @@ def import_docx(docx_path, image_dir=None):
         b["gated"] = gated
 
     title = title or os.path.splitext(os.path.basename(docx_path))[0]
-    ir = {"schema": "nova-course-ir/v1", "id": slugify(title), "title": title,
-          "locale": "en", "accent": "#1EB16A", "hero": hero, "blocks": blocks}
+    ir = {"schema": "course-ir/v1", "id": slugify(title), "title": title,
+          "locale": "en", "accent": None, "hero": hero, "blocks": blocks}
     ir["_stats"] = {"blocks": len(blocks), "assets": len(used)}
     return ir, used

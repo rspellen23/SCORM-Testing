@@ -38,8 +38,8 @@ By the end of this microlearning, you will be able to:
 - {{step or component}}
 - {{step or component}}
 
-**Slide 5 — Why this matters at TeleTracking**
-<!-- role: Why it matters here. Tie the concept to a real Nova/operations context. Concrete, not abstract. -->
+**Slide 5 — Why this matters here**
+<!-- role: Why it matters here. Tie the concept to a real product/operations context. Concrete, not abstract. -->
 {{Application prose.}}
 
 **Slide 6 — {{An example or analogy}}**

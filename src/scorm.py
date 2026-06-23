@@ -1,7 +1,7 @@
 """Wrap a rendered course directory into a SCORM 1.2 package (.zip).
 
 Runtime supports both SCORM 1.2 and 2004 (player.js detects API/API_1484_11);
-the manifest declares 1.2, which is the broadly-accepted, Intellum-validated target.
+the manifest declares 1.2, which is the broadly-accepted, widely-validated target.
 """
 import os, zipfile
 from xml.sax.saxutils import escape

@@ -1,5 +1,6 @@
 """Course IR -> a self-contained HTML course directory (brand + player bundled)."""
 import os, re, shutil, html
+import brand as brandlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -124,6 +125,11 @@ def render_block(b, ctx=None):
         if b.get("variant") == "hero":
             cap = f'<div class="nv-hero-cap"><h1>{_unwrap_p(b.get("html"))}</h1></div>' if b.get("html") else ""
             return f'<div class="nv-hero"><img src="{_esc(b["src"])}" alt="{_esc(b.get("alt"))}">{cap}</div>'
+        if b.get("variant") == "overlay":
+            # full-width image with text overlaid (Rise "text overlay") — inline, not promoted to course hero
+            cap = f'<div class="nv-hero-cap"><div class="nv-overlay-text">{b.get("html","")}</div></div>' if b.get("html") else ""
+            return (f'<figure class="nv-block nv-hero nv-overlay"><img src="{_esc(b["src"])}" '
+                    f'alt="{_esc(b.get("alt"))}">{cap}</figure>')
         cap = f'<figcaption>{_esc(b.get("caption"))}</figcaption>' if b.get("caption") else ""
         return f'<figure class="nv-block nv-figure"><img src="{_esc(b["src"])}" alt="{_esc(b.get("alt"))}">{cap}</figure>'
     if t == "imageText":
@@ -186,7 +192,9 @@ def render_block(b, ctx=None):
         return '<hr class="nv-divider">'
     if t == "transition":
         # reusable brand "ribbon" wave divider; color-swappable, band = top|bottom.
-        # Pre-cropped canonical bands live in brand/transitions/<color>-<band>.png.
+        # Skipped when the active brand ships no transitions/ art (sections still get a CSS band).
+        if ctx is not None and not ctx.get("transitions", True):
+            return ""
         color = (b.get("color") or "green").lower()
         band = "bottom" if b.get("band") == "bottom" else "top"
         ab = (ctx or {}).get("ab", "")
@@ -207,33 +215,107 @@ def render_block(b, ctx=None):
                 f'{opts}'
                 f'<div class="nv-kc-fb" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div>'
                 f'</div>')
+    if t == "quote":
+        attr = f'<figcaption class="nv-quote-by">{_unwrap_p(b.get("attribution"))}</figcaption>' if b.get("attribution") else ""
+        cls, style = "nv-block nv-quote", ""
+        if b.get("src"):
+            cls += " nv-quote--bg"
+            style = f' style="--nv-quote-bg:url(&quot;{_esc(b["src"])}&quot;)"'
+        return (f'<figure class="{cls}"{style}><blockquote class="nv-quote-text">'
+                f'{b.get("html","")}</blockquote>{attr}</figure>')
+    if t == "accordion":
+        rows = []
+        for e in b.get("entries", []):
+            img = (f'<img class="nv-acc-media" src="{_esc(e["src"])}" alt="{_esc(e.get("alt"))}">'
+                   if e.get("src") else "")
+            rows.append(f'<details class="nv-acc-item"><summary>{_unwrap_p(e.get("title"))}</summary>'
+                        f'<div class="nv-acc-body">{img}{e.get("html","")}</div></details>')
+        return f'<div class="nv-block nv-accordion">{"".join(rows)}</div>'
+    if t == "process":
+        steps = []
+        for e in b.get("entries", []):
+            if e.get("kind") == "intro" and not (e.get("title") or e.get("html")):
+                continue
+            img = (f'<img class="nv-step-media" src="{_esc(e["src"])}" alt="{_esc(e.get("alt"))}">'
+                   if e.get("src") else "")
+            title = f'<h4 class="nv-step-title">{_unwrap_p(e.get("title"))}</h4>' if e.get("title") else ""
+            steps.append(f'<li class="nv-step">{title}{img}<div class="nv-p">{e.get("html","")}</div></li>')
+        return f'<ol class="nv-block nv-process">{"".join(steps)}</ol>'
+    if t == "flashcard":
+        cards = []
+        for e in b.get("entries", []):
+            fimg = (f'<img class="nv-flip-media" src="{_esc(e["frontSrc"])}" alt="">'
+                    if e.get("frontSrc") else "")
+            bimg = (f'<img class="nv-flip-media" src="{_esc(e["backSrc"])}" alt="">'
+                    if e.get("backSrc") else "")
+            cards.append(
+                '<button class="nv-flip" type="button" aria-pressed="false">'
+                '<span class="nv-flip-inner">'
+                f'<span class="nv-flip-face nv-flip-front">{fimg}<span class="nv-flip-text">{e.get("frontHtml","")}</span></span>'
+                f'<span class="nv-flip-face nv-flip-back">{bimg}<span class="nv-flip-text">{e.get("backHtml","")}</span></span>'
+                '</span></button>')
+        return f'<div class="nv-block nv-flashgrid">{"".join(cards)}</div>'
+    if t == "categorize":
+        buckets = b.get("buckets", [])
+        opts = "".join(f'<option value="{_esc(bk.get("id"))}">{_unwrap_p(bk.get("title"))}</option>'
+                       for bk in buckets)
+        rows = []
+        for it in b.get("pool", []):
+            rows.append(
+                f'<li class="nv-sort-item" data-target="{_esc(it.get("target"))}">'
+                f'<span class="nv-sort-label">{_unwrap_p(it.get("html"))}</span>'
+                f'<select class="nv-sort-pick" aria-label="Choose a category">'
+                f'<option value="">Choose…</option>{opts}</select></li>')
+        prompt = f'<div class="nv-sort-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        return (f'<div class="nv-block nv-sort" data-sort><div class="nv-sort-instr">Match each item to its category.</div>'
+                f'{prompt}<ul class="nv-sort-items">{"".join(rows)}</ul>'
+                f'<button class="nv-btn nv-sort-check" type="button">Check</button>'
+                f'<div class="nv-sort-fb" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "scenario":
+        scenes = []
+        for sc in b.get("scenes", []):
+            head = f'<h3 class="nv-h3">{_unwrap_p(sc.get("title"))}</h3>' if sc.get("title") else ""
+            narr = f'<div class="nv-p">{sc.get("html","")}</div>' if sc.get("html") else ""
+            resp = []
+            for r in sc.get("responses", []):
+                pref = " is-preferred" if r.get("preferred") else ""
+                fb = f'<div class="nv-scn-fb">{r.get("feedback","")}</div>' if r.get("feedback") else ""
+                resp.append(f'<li class="nv-scn-resp{pref}"><div class="nv-scn-choice">{r.get("html","")}</div>{fb}</li>')
+            rlist = f'<ul class="nv-scn-responses">{"".join(resp)}</ul>' if resp else ""
+            scenes.append(f'<div class="nv-scn-scene">{head}{narr}{rlist}</div>')
+        return f'<section class="nv-block nv-scenario">{"".join(scenes)}</section>'
     return ""
 
 
-def _section_wave(color, role, ab=""):
-    """Lead-in (top of the colored section) uses the <color>-top band; lead-out (bottom) the <color>-bottom."""
+def _section_wave(color, role, ab="", have=True):
+    """Lead-in (top of the colored section) uses the <color>-top band; lead-out (bottom) the <color>-bottom.
+    Returns nothing when the active brand ships no transition art."""
+    if not have:
+        return ""
     band = "top" if role == "lead" else "bottom"
     cls = "is-section-lead" if role == "lead" else "is-section-tail"
     return (f'<div class="nv-transition {cls}" aria-hidden="true">'
             f'<img src="{ab}brand/transitions/{color}-{band}.png" alt=""></div>')
 
 
-def _body(blocks, asset_base=""):
+def _body(blocks, asset_base="", have_transitions=True):
     """Return (body_html, modals_html). Modal overlays are collected during the walk
     (button/cardGrid register them via ctx) and injected once near the end of <main>."""
-    ctx = {"modals": [], "n": [0], "ab": asset_base}
+    ctx = {"modals": [], "n": [0], "ab": asset_base, "transitions": have_transitions}
     parts, i, n = [], 0, len(blocks)
     sec_color = None
     while i < n:
         b = blocks[i]
         if b.get("type") == "sectionStart":
             sec_color = (b.get("color") or "green").lower()
-            parts.append(_section_wave(sec_color, "lead", asset_base))
+            parts.append(_section_wave(sec_color, "lead", asset_base, have_transitions))
             parts.append(f'<section class="nv-section nv-section--{sec_color}">')
             i += 1; continue
         if b.get("type") == "sectionEnd":
             parts.append('</section>')
-            parts.append(_section_wave(sec_color or "green", "tail", asset_base))
+            parts.append(_section_wave(sec_color or "green", "tail", asset_base, have_transitions))
             sec_color = None
             i += 1; continue
         if b.get("type") == "continue":
@@ -259,14 +341,14 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
-<link rel="icon" href="{ab}brand/Favicon.png">
+<link rel="icon" href="{ab}brand/{favicon}">
 <link rel="stylesheet" href="{ab}brand/tokens.css">
 <link rel="stylesheet" href="{ab}player/player.css">
-<style>:root{{ --tt-accent: {accent}; }}</style>
+<style>:root{{ --brand-accent: {accent}; }}</style>
 </head>
 <body{body_attrs}>
 <header class="nv-topbar">
-  <img src="{ab}brand/Logo.png" alt="TeleTracking">
+  <img src="{ab}brand/{logo}" alt="{logo_alt}">
   <span class="nv-title">{title}</span>
   <div class="nv-progress"><span></span></div>
 </header>
@@ -285,14 +367,30 @@ PAGE = """<!doctype html>
 """
 
 
-def copy_shared(dest_dir):
-    """Copy the bundled brand/ + player/ once (used at the package root for multi-SCO)."""
-    shutil.copytree(os.path.join(ROOT, "brand"), os.path.join(dest_dir, "brand"))
+def copy_shared(dest_dir, brand=None):
+    """Copy the active BRAND profile's assets into dest/brand + bundle player/.
+    Only course-needed brand files travel (tokens.css, logo, favicon, fonts/, transitions/);
+    brand.json + backgrounds/ + icons/ stay out of the shipped course."""
+    b = brand or brandlib.load_brand()
+    bdest = os.path.join(dest_dir, "brand")
+    os.makedirs(bdest, exist_ok=True)
+    tk = b.asset("tokens.css")
+    if tk:
+        shutil.copy(tk, os.path.join(bdest, "tokens.css"))
+    for key in ("logo", "favicon"):
+        fn = b.get(key)
+        src = b.asset(fn) if fn else None
+        if src:
+            shutil.copy(src, os.path.join(bdest, os.path.basename(fn)))
+    for sub in ("fonts", "transitions"):
+        s = b.asset(sub)
+        if s and os.path.isdir(s):
+            shutil.copytree(s, os.path.join(bdest, sub), dirs_exist_ok=True)
     shutil.copytree(os.path.join(ROOT, "player"), os.path.join(dest_dir, "player"))
 
 
 def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_player=True,
-                  lesson_index=1, lesson_count=1):
+                  lesson_index=1, lesson_count=1, brand=None):
     """Write a complete course dir: index.html + (brand/ + player/) + assets/.
 
     asset_blobs: dict {out_rel_path: bytes} for course media (from a Rise zip or
@@ -302,11 +400,12 @@ def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_pla
     bundle_brand_player: when False, the caller has placed brand/ + player/ at a
     shared location (multi-SCO); only index.html + local assets/ are written here.
     """
+    b = brand or brandlib.load_brand()
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.makedirs(out_dir)
     if bundle_brand_player:
-        copy_shared(out_dir)
+        copy_shared(out_dir, b)
     # course media (always local to this dir)
     os.makedirs(os.path.join(out_dir, "assets"), exist_ok=True)
     for rel, blob in (asset_blobs or {}).items():
@@ -320,7 +419,7 @@ def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_pla
         sub = f'<p>{_esc(h.get("subtitle"))}</p>' if h.get("subtitle") else ""
         hero_html = (f'<div class="nv-hero"><img src="{_esc(h["image"])}" alt="{_esc(h.get("title"))}">'
                      f'<div class="nv-hero-cap"><h1>{_esc(h.get("title"))}</h1>{sub}</div></div>')
-    body_html, modals_html = _body(ir.get("blocks", []), asset_base)
+    body_html, modals_html = _body(ir.get("blocks", []), asset_base, b.has_transitions())
     attrs = f' data-lesson="{int(lesson_index)}" data-lessons="{int(lesson_count)}"'
     if ir.get("graded"):
         attrs += f' data-graded="1" data-pass="{int(ir.get("passingScore", 80))}"'
@@ -328,9 +427,12 @@ def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_pla
         attrs += f' data-retry="{int(ir["retry"])}"'
     exit_label = "Next lesson →" if (lesson_count > 1 and lesson_index < lesson_count) else "Finish course"
     page = PAGE.format(lang=ir.get("locale", "en"), title=_esc(ir.get("title")),
-                       accent=ir.get("accent", "#1EB16A"), hero=hero_html,
+                       accent=ir.get("accent") or b.accent, hero=hero_html,
                        body=body_html, modals=modals_html, ab=asset_base,
-                       body_attrs=attrs, exit_label=exit_label)
+                       body_attrs=attrs, exit_label=exit_label,
+                       favicon=_esc(os.path.basename(b.get("favicon") or "favicon.svg")),
+                       logo=_esc(os.path.basename(b.get("logo") or "logo.svg")),
+                       logo_alt=_esc(b.get("logoAlt") or ""))
     with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
         f.write(page)
     return out_dir

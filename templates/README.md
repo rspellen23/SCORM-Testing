@@ -27,7 +27,7 @@ Workflow for colleagues:
 | `AUTHORING_GUIDE.md` | **Always read first.** Voice, time budget, the §8 grammar rules, the META_CUT gotcha, the Visuals/Media plan convention. Applies to every script. |
 | `_skeleton.md` | Bare conformant unit — use when no archetype fits. |
 | `concept-explainer.md` | Teach an idea/model/term (what → why → how → apply → recap → KC). |
-| `software-procedure.md` | Do a task in Nova (goal → steps → demo → mistakes → recap → KC). |
+| `software-procedure.md` | Do a task in the product (goal → steps → demo → mistakes → recap → KC). |
 | `decision-scenario.md` | Apply a rule to a situation (rule → criteria → scenario → decision KC → debrief). |
 | `policy-acceptable-use.md` | Compliance (core rule → why → do/don't → when unsure → KC). |
 

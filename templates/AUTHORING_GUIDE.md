@@ -1,6 +1,6 @@
 # Microlearning Authoring Guide — the contract I apply to every script
 
-> **What this is.** The always-on rules for drafting a TeleTracking microlearning *script*
+> **What this is.** The always-on rules for drafting a microlearning *script*
 > (the §8 markdown the build consumes). Read this **plus** one archetype file from this folder,
 > then produce a clean, conformant `## Microlearning` unit. This guide is the front-half analog of
 > the §9.1 build template: it governs *what I write*; the IR blocks govern *how it's built*.
@@ -14,7 +14,7 @@
 
 A single microlearning unit in the **§8 grammar**, ready to drop into a `.md` and build with
 `python src/cli.py from-md <file>.md --which N`. One unit ≈ **one SCORM SCO** (a multi-unit course
-is several units in one `.md`, each built separately and bundled in an Intellum Path).
+is several units in one `.md`, each built separately and bundled in an your LMS Path).
 
 ## 2. Hard grammar rules (parser-enforced — break these and the build breaks)
 
@@ -112,8 +112,8 @@ Build Notes: <anything the builder/reviewer should know>
 
 ## 5. Voice, level & length
 
-- **Voice:** TeleTracking — clear, direct, **second person ("you")**, **active voice**, healthcare-
-  operations context, concrete **Nova** examples. No hype, no filler, no "in today's fast-paced
+- **Voice:** clear, direct, **second person ("you")**, **active voice**, healthcare-
+  operations context, concrete product examples. No hype, no filler, no "in today's fast-paced
   world." Plain professional language; define a term the first time it appears.
 - **Length / time budget (the 10–15-min rule):** ~**900–1,500 body words + 2–4 KCs** per unit
   (`unit_minutes ≈ body_words/130 + 0.75·KCs + 0.25·images`). That's typically **5–8 content slides
@@ -122,7 +122,7 @@ Build Notes: <anything the builder/reviewer should know>
   **objective/gap**. Do **not** invent product behavior — this trains real software; fabrication is a
   correctness defect. If sourcing is thin, lower the Confidence Score and flag the slide.
 - **Accent/color:** don't set colors in the script. Brand styling is applied at build (renderer
-  default = TeleGreen `#1EB16A`).
+  default = the brand accent `#1EB16A`).
 
 ## 6. How to use a template
 

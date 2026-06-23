@@ -1,18 +1,18 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://teletracking.local/nova-course-ir/v1",
-  "title": "Nova Course IR",
+  "$id": "https://coursecraft.local/course-ir/v1",
+  "title": "Course IR",
   "type": "object",
   "required": ["title", "blocks"],
   "properties": {
-    "schema": { "const": "nova-course-ir/v1" },
+    "schema": { "const": "course-ir/v1" },
     "id": { "type": "string" },
     "title": { "type": "string" },
     "locale": { "enum": ["en", "en-GB"] },
     "accent": {
-      "type": "string",
-      "description": "Official TeleTracking accent hex",
-      "enum": ["#1EB16A", "#069696", "#539BD2", "#003E51", "#0B2C37", "#ECBD00", "#F27D05", "#BD362F", "#4EE89E"]
+      "type": ["string", "null"],
+      "description": "Course accent hex; null = use the active brand's default accent",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
     },
     "hero": {
       "type": ["object", "null"],
@@ -37,13 +37,14 @@
           "enum": ["heading", "paragraph", "headingParagraph", "image", "imageText",
                    "video", "audio", "embed",
                    "note", "statement", "list", "table", "divider", "continue", "knowledgeCheck",
-                   "button", "cardGrid"]
+                   "button", "cardGrid",
+                   "quote", "accordion", "process", "flashcard", "categorize", "scenario"]
         },
         "gated": { "type": "boolean", "description": "Hidden until the preceding continue gate is clicked" },
         "level": { "type": "integer", "minimum": 1, "maximum": 3 },
         "html": { "type": "string", "description": "Inline HTML (strong/em/a/ul/li kept)" },
         "headingHtml": { "type": "string" },
-        "variant": { "enum": ["full", "hero"] },
+        "variant": { "enum": ["full", "hero", "overlay"] },
         "src": { "type": "string", "description": "assets/<file> path (bundled) or an https URL (embed/streamed)" },
         "alt": { "type": "string" },
         "caption": { "type": "string" },
@@ -98,7 +99,68 @@
             }
           }
         },
-        "modal": { "$ref": "#/definitions/modal" }
+        "modal": { "$ref": "#/definitions/modal" },
+
+        "attribution": { "type": "string", "description": "quote: the speaker/source attribution line" },
+        "entries": {
+          "type": "array",
+          "description": "accordion/process/flashcard rows. accordion/process: {title, html, src?, kind?}. flashcard: {frontHtml, frontSrc?, backHtml, backSrc?}.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "html": { "type": "string" },
+              "src": { "type": "string" },
+              "alt": { "type": "string" },
+              "kind": { "enum": ["intro", "step"], "description": "process only: step role" },
+              "frontHtml": { "type": "string" },
+              "frontSrc": { "type": "string" },
+              "backHtml": { "type": "string" },
+              "backSrc": { "type": "string" }
+            }
+          }
+        },
+        "buckets": {
+          "type": "array",
+          "description": "categorize: the target categories",
+          "items": {
+            "type": "object",
+            "required": ["id", "title"],
+            "properties": { "id": { "type": "string" }, "title": { "type": "string" } }
+          }
+        },
+        "pool": {
+          "type": "array",
+          "description": "categorize: the items to sort; each carries its correct bucket id in 'target'",
+          "items": {
+            "type": "object",
+            "required": ["html", "target"],
+            "properties": { "html": { "type": "string" }, "target": { "type": "string" } }
+          }
+        },
+        "feedbackIncorrect": { "type": "string", "description": "categorize/knowledgeCheck: feedback shown on a wrong answer" },
+        "scenes": {
+          "type": "array",
+          "description": "scenario (linear fallback): each scene = narrative + response options with feedback",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "html": { "type": "string" },
+              "responses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "html": { "type": "string" },
+                    "feedback": { "type": "string" },
+                    "preferred": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "modal": {

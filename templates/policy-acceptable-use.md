@@ -13,7 +13,7 @@
   Fill the {{...}} placeholders and delete these guidance lines before returning.
 -->
 
-## Microlearning {{N}}: {{Policy Name, e.g. "Acceptable Use of AI at TeleTracking"}}
+## Microlearning {{N}}: {{Policy Name, e.g. "Acceptable Use of AI"}}
 
 **Slide 1 — Learning Objectives**
 <!-- role: Learning Objectives. 3–5 concrete, learner-facing outcomes ("you will be able to…"). Mirror the formal objectives in Build Notes. ALWAYS paired with a visual. -->

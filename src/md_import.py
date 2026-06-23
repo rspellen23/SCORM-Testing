@@ -1,6 +1,6 @@
 """Markdown microlearning drafts -> Course IR.
 
-Tuned to the TeleTracking microlearning draft format:
+Tuned to the standard microlearning draft format:
 
   ## Microlearning N: Title
   **Slide K — Heading**
@@ -59,6 +59,11 @@ VIDEO_RE = re.compile(r'^\*Video:\*\s*(.+)$', re.I)
 AUDIO_RE = re.compile(r'^\*Audio:\*\s*(.+)$', re.I)
 EMBED_RE = re.compile(r'^\*Embed:\*\s*(.+)$', re.I)
 DIVIDER_RE = re.compile(r'^(-{3,}|\*{3,}|(?:\*\s){2,}\*)$')
+QUOTE_RE = re.compile(r'^\*Quote:\*\s*(.+)$', re.I)
+ACCORDION_RE = re.compile(r'^\*Accordion:\*\s*(.*)$', re.I)
+PROCESS_RE = re.compile(r'^\*Process:\*\s*(.*)$', re.I)
+FLASHCARD_RE = re.compile(r'^\*Flashcard:\*\s*(.*)$', re.I)
+CATEGORIZE_RE = re.compile(r'^\*(?:Categorize|Sort):\*\s*(.*)$', re.I)
 
 
 def _kv_opt(segs, key):
@@ -304,6 +309,108 @@ def _parse_cards(lines, i):
     return grid, i
 
 
+def _quote_block(spec):
+    """`*Quote:* <text> · by: <name> · slot: `bg.jpg``."""
+    segs = _segs(spec)
+    text = segs[0] if segs else ""
+    by = _kv_opt(segs, "by")
+    b = {"type": "quote", "html": "<p>" + _inline(text) + "</p>"}
+    if by:
+        b["attribution"] = "<p>" + _inline(by) + "</p>"
+    slot = re.search(r'slot:\s*`?([^`·|]+?)`?\s*(?:[·|]|$)', spec, re.I)
+    if slot:
+        b["_slot"] = slot.group(1).strip()
+    return b
+
+
+def _read_fences(lines, i):
+    """Read `::: <tag>` groups (key: value lines) until a lone `:::`. Returns (groups, next_i).
+    A group with no key:value lines collects its body from a single 'body:'-less run is not
+    supported — use explicit `key: value` lines (title/body/front/back/slot)."""
+    groups, cur = [], None
+    while i < len(lines):
+        s = lines[i].strip()
+        fm = FENCE_RE.match(s)
+        if fm:
+            if fm.group(1) is None:      # lone ::: closes the block
+                i += 1
+                break
+            cur = {}
+            groups.append(cur)
+            i += 1
+            continue
+        if cur is not None and ':' in s:
+            k, v = s.split(':', 1)
+            cur[k.strip().lower()] = v.strip()
+        i += 1
+    return groups, i
+
+
+def _parse_accordion(lines, i, kind="accordion"):
+    """`*Accordion:*`/`*Process:*` then `::: item`/`::: step` (title:/body:/slot:) groups, lone `:::` closes."""
+    i += 1
+    groups, i = _read_fences(lines, i)
+    entries = []
+    for g in groups:
+        e = {"title": g.get("title", ""),
+             "html": ("<p>" + _inline(g["body"]) + "</p>") if g.get("body") else ""}
+        if g.get("slot"):
+            e["src"] = g["slot"]
+        if kind == "process":
+            e["kind"] = g.get("kind", "step")
+        entries.append(e)
+    return {"type": kind, "entries": entries}, i
+
+
+def _parse_flashcard(lines, i):
+    """`*Flashcard:*` then `::: card` (front:/back:/frontslot:/backslot:) groups, lone `:::` closes."""
+    i += 1
+    groups, i = _read_fences(lines, i)
+    entries = []
+    for g in groups:
+        e = {"frontHtml": "<p>" + _inline(g.get("front", "")) + "</p>",
+             "backHtml": "<p>" + _inline(g.get("back", "")) + "</p>"}
+        if g.get("frontslot"):
+            e["frontSrc"] = g["frontslot"]
+        if g.get("backslot"):
+            e["backSrc"] = g["backslot"]
+        entries.append(e)
+    return {"type": "flashcard", "entries": entries}, i
+
+
+def _parse_categorize(lines, i):
+    """`*Categorize:* [prompt: ...]` then `bucket: <title>` / `item: <text> -> <bucket title>` lines, lone `:::` closes."""
+    header = CATEGORIZE_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "categorize", "buckets": [], "pool": []}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    name2id = {}
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mb = re.match(r'bucket:\s*(.+)$', s, re.I)
+        mi = re.match(r'item:\s*(.+?)\s*(?:->|=>|»)\s*(.+)$', s, re.I)
+        if mb:
+            bid = "b" + str(len(block["buckets"]) + 1)
+            title = mb.group(1).strip()
+            name2id[title.lower()] = bid
+            block["buckets"].append({"id": bid, "title": _inline(title)})
+        elif mi:
+            block["pool"].append({"html": _inline(mi.group(1).strip()),
+                                  "_target_name": mi.group(2).strip().lower()})
+        i += 1
+    for p in block["pool"]:
+        p["target"] = name2id.get(p.pop("_target_name", ""), "")
+    return block, i
+
+
 def _body_blocks(text):
     lines = text.split('\n')
     blocks, para, tbl, lst, lst_ord = [], [], [], [], False
@@ -349,6 +456,22 @@ def _body_blocks(text):
         if mvis:
             flush_para(); flush_lst()
             blocks.append(_visual_block(mvis.group(1))); i += 1; continue
+        mq = QUOTE_RE.match(s)
+        if mq:
+            flush_para(); flush_lst()
+            blocks.append(_quote_block(mq.group(1))); i += 1; continue
+        if ACCORDION_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_accordion(lines, i, "accordion"); blocks.append(block); continue
+        if PROCESS_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_accordion(lines, i, "process"); blocks.append(block); continue
+        if FLASHCARD_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_flashcard(lines, i); blocks.append(block); continue
+        if CATEGORIZE_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_categorize(lines, i); blocks.append(block); continue
         mnote = NOTE_RE.match(s)
         if mnote:
             flush_para(); flush_lst()
@@ -540,6 +663,12 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
         if b.get("type") in ("video", "audio", "embed") and b.get("mode") != "embed":
             _resolve(b, "src")
             _resolve(b, "poster")
+    # interactive-block entry media (accordion/process/flashcard)
+    for b in blocks:
+        for e in b.get("entries", []) or []:
+            for key in ("src", "frontSrc", "backSrc"):
+                if e.get(key):
+                    _resolve(e, key)
 
     hero_block = None
     if hero and image_dir:
@@ -548,8 +677,8 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
             used["assets/" + actual] = os.path.join(image_dir, actual)
             hero_block = {"image": "assets/" + actual, "title": title, "subtitle": ""}
 
-    ir = {"schema": "nova-course-ir/v1", "id": slugify(title), "title": title,
-          "locale": "en", "accent": "#1EB16A", "hero": hero_block, "blocks": blocks,
+    ir = {"schema": "course-ir/v1", "id": slugify(title), "title": title,
+          "locale": "en", "accent": None, "hero": hero_block, "blocks": blocks,
           "graded": graded, "passingScore": passing, "retry": retry}
     ir["_stats"] = {"blocks": len(blocks), "assets": len(used)}
     return ir, used

@@ -9,7 +9,7 @@ same shared-asset directory layout (brand/+player/ at the root, sco_k/ per lesso
 import os, zipfile
 from xml.sax.saxutils import escape, quoteattr
 
-ID_BASE = "https://teletracking.example/cmi5"   # identifier IRIs (not resolvable URLs)
+ID_BASE = "https://example.org/cmi5"   # neutral default; the active brand's cmi5IdBase overrides (identifier IRIs, not resolvable URLs)
 MOVEON = {True: "CompletedAndPassed", False: "Completed"}
 
 COURSE_TMPL = """<?xml version="1.0" encoding="UTF-8"?>
@@ -30,9 +30,9 @@ AU_TMPL = """  <au id={au} moveOn="{moveon}"{mastery}>
   </au>"""
 
 
-def _au(course_id, k, title, url, lang, graded, passing):
+def _au(course_id, k, title, url, lang, graded, passing, id_base=ID_BASE):
     mastery = ' masteryScore="%.4f"' % (max(0, min(100, passing)) / 100.0) if graded else ""
-    return AU_TMPL.format(au=quoteattr("%s/%s/au/%d" % (ID_BASE, course_id, k)),
+    return AU_TMPL.format(au=quoteattr("%s/%s/au/%d" % (id_base, course_id, k)),
                           moveon=MOVEON[graded], mastery=mastery,
                           lang=lang, title=escape(title), url=escape(url))
 
@@ -58,20 +58,22 @@ def _write_pif(course_dir, out_zip, xml, files):
     return out_zip
 
 
-def package(course_dir, out_zip, course_id, title, lang="en", graded=False, passing=80):
+def package(course_dir, out_zip, course_id, title, lang="en", graded=False, passing=80, id_base=None):
     """Single-AU cmi5 package (one lesson at index.html)."""
+    id_base = id_base or ID_BASE
     files = list(_all_files(course_dir))
-    aus = _au(course_id, 1, title, "index.html", lang, graded, passing)
-    xml = COURSE_TMPL.format(cid=quoteattr("%s/%s" % (ID_BASE, course_id)),
+    aus = _au(course_id, 1, title, "index.html", lang, graded, passing, id_base)
+    xml = COURSE_TMPL.format(cid=quoteattr("%s/%s" % (id_base, course_id)),
                              lang=lang, title=escape(title), aus=aus)
     return _write_pif(course_dir, out_zip, xml, files)
 
 
-def package_multi(course_dir, out_zip, course_id, title, aus, lang="en", graded=False, passing=80):
+def package_multi(course_dir, out_zip, course_id, title, aus, lang="en", graded=False, passing=80, id_base=None):
     """Multi-AU cmi5 package. aus = [{title, href}] (href like 'sco_1/index.html')."""
+    id_base = id_base or ID_BASE
     files = list(_all_files(course_dir))
-    au_xml = "\n".join(_au(course_id, k, a["title"], a["href"], lang, graded, passing)
+    au_xml = "\n".join(_au(course_id, k, a["title"], a["href"], lang, graded, passing, id_base)
                        for k, a in enumerate(aus, 1))
-    xml = COURSE_TMPL.format(cid=quoteattr("%s/%s" % (ID_BASE, course_id)),
+    xml = COURSE_TMPL.format(cid=quoteattr("%s/%s" % (id_base, course_id)),
                              lang=lang, title=escape(title), aus=au_xml)
     return _write_pif(course_dir, out_zip, xml, files)

@@ -1,69 +1,54 @@
-# Nova Course Builder
+# CourseCraft
 
-Turns course content into **TeleTracking-branded HTML microlearnings packaged as SCORM**
-that track completion in Intellum. Built 2026-06-04.
+A self-contained course-building system. The **full engine ships inside this
+folder** (`./src`) — nothing outside it is required, so you can copy or move this
+folder anywhere (e.g. Google Drive) and it still runs.
 
-Two front doors into the same pipeline:
+One Markdown (or Word) source → branded, tracked **SCORM 1.2 / cmi5**, an editable
+**PowerPoint**, or an SME-review **Word** doc. Carries no client data.
 
-```
-[.docx + image folder] ─┐
-                        ├─→ Course IR ─→ branded HTML ─→ SCORM 1.2/2004 zip
-[Rise -raw- export]   ─┘
-```
-
-- **Architecture:** our own static template (Option A), styled from the TeleTracking
-  brand kit — not Rise's runtime. (Option B = emit Rise JSON, deferred research thread.)
-- **Brand:** Open Sans / Open Sans Condensed fonts + the official color palette, both
-  bundled in `brand/`. Accents snap to the nearest official brand hex.
-- **Knowledge checks:** interactive multiple-choice with feedback, **unscored**
-  (completion-only to the LMS).
-
-## Usage
-
+## Build
 ```bash
-# Author a new course from Word + a folder of named images
-python3 src/cli.py from-docx course.docx --images ./images --out build/course.zip
-
-# Re-skin an existing Rise export into our branded SCORM
-python3 src/cli.py from-rise rise-raw.zip --out build/course.zip
-
-# Just inspect the IR an importer produces
-python3 src/cli.py import-rise rise-raw.zip --out build/course.ir.json
+./build from-md-course script.md --images ./imgs --out course.zip   # SCORM
+./build from-md-course script.md --images ./imgs --out course.zip --format cmi5
+./build to-pptx        script.md --images ./imgs --out deck.pptx     # PowerPoint
+./build from-docx      doc.docx  --images ./imgs --out course.zip
+./build from-rise      raw.zip                   --out course.zip    # import a Rise export
+./build cover --title '...' --out ./art
+./build --help
 ```
 
-Then upload `build/course.zip` to Intellum as a `CourseScorm`.
+## Dashboard (GUI)
+```bash
+./dashboard/launch.command         # double-click on macOS
+# or: python3 ./dashboard/server.py
+```
 
-## Authoring grammar (.docx)
-
-See the header of [`src/docx_import.py`](src/docx_import.py). Heading 1/2/3 map to
-title/section/subheading; normal paragraphs and lists pass through; line markers add
-structure: `[HERO: file | title | subtitle]`, `[IMG: file | alt | caption]`,
-`[IMG-LEFT/RIGHT: file | alt]`, `[NOTE] …`, `[STATEMENT] …`, `[CONTINUE]`, and a
-`[KC] … [/KC]` block (`Q:` prompt, `*` correct option, `-` wrong option, `FB:` feedback).
+## Customize the brand
+Edit `brand/brand.json` (name, `defaultAccent`, `palette`, `accentSnap`,
+`cmi5IdBase`, fonts) and drop assets into `brand/` (`logo`, `favicon`, optional
+`fonts/`, `transitions/`, `backgrounds/`, `icons/`). Anything you omit falls back
+to `brands/_default`. The profile shipped here is a neutral **starter** — make it
+yours.
 
 ## Layout
-
 ```
-brand/      tokens.css (palette + @font-face), fonts/, Logo.png, Favicon.png
-player/     player.css (block styles), player.js (nav + KC + SCORM 1.2/2004 API)
-schema/     IR_SCHEMA.md
-src/        common.py, rise_import.py, docx_import.py, render.py, scorm.py, cli.py
-examples/   sample_course.docx + sample_images/
-build/      output
+src/         the engine (CLI, importers, renderer, SCORM/cmi5/PPTX/DOCX exporters)
+player/      runtime JS/CSS for built courses
+schema/      IR schema + docs
+scorm_schema/ bundled SCORM conformance XSDs
+templates/   authoring guide + archetypes + browser template editor
+brands/      _default neutral fallback brand
+brand/       this edition's brand profile (override _default here)
+dashboard/   local GUI server (no external services)
+build        the launcher wrapper
 ```
 
-## Validated (2026-06-04)
-- **51/51** Rise courses (EN+UK) import with **0 failures**, 713 blocks, **0 unresolved images**.
-- Full round-trip `Managing Bed Requests`: Rise → IR → branded HTML → 22 MB SCORM,
-  valid `imsmanifest.xml`, sanitized HTML (0 editor cages, 0 stranded white-on-navy text).
-- `.docx` authoring path: hero, bands, note, list, continue-gating, KC all render.
+## Requirements
+- `python3` (engine is standard library only)
+- `python-pptx` — only for `to-pptx` (`pip install python-pptx`)
+- `python-docx` — only for `.docx` import / SME-review export (`pip install python-docx`)
 
-## Known gaps / next steps
-- **`mondrian` blocks are skipped** (188 across the library). They store content by
-  reference (`blockumentId`/`globalBlockId`) outside the inline tree; some are decorative,
-  some may carry primary copy. Importer logs the count per course so content-heavy ones
-  are visible. Recovering them = the deferred Option-B research thread.
-- **Tier-3 blocks** (accordion, tabs, flashcard, fullscreen process) skipped in v1.
-- **Not yet uploaded to Intellum** — needs James's manual upload + completion-tracking test.
-- **SCORM schema `.xsd` files** are referenced, not bundled (matches the working v6 packages);
-  add them if any target LMS rejects the manifest.
+> The private **operating layer** (agent runbooks, prompt library, LLM setup) is
+> what makes this edition more capable than a stripped company fork — it is not
+> stored in this folder.

@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CourseCraft</title>
+<style>
+  :root { --accent:#1EB16A; --navy:#003E51; --grey:#444; --line:#dfe3e5; --bg:#f6f8f9; --mut:#778; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--grey); background:var(--bg); }
+  header { background:var(--navy); color:#fff; padding:18px 26px; display:flex; align-items:center; gap:14px; }
+  header h1 { font-size:20px; margin:0; font-weight:700; } header .accent { color:var(--accent); }
+  header .sub { margin-left:auto; font-size:13px; opacity:.85; }
+  .wrap { max-width:940px; margin:22px auto 60px; padding:0 20px; }
+  .topbar { display:flex; align-items:center; gap:12px; justify-content:flex-end; margin-bottom:14px; }
+  .topbar label { font-size:13px; font-weight:600; color:var(--navy); }
+  select { padding:8px 10px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit; }
+  .stage { background:#fff; border:1px solid var(--line); border-radius:10px; padding:0; margin-bottom:16px; overflow:hidden; }
+  .stage-head { display:flex; align-items:center; gap:14px; padding:15px 22px; }
+  .num { flex:none; width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+  .stage-head h2 { margin:0; font-size:16px; color:var(--navy); }
+  .stage-head .desc { font-size:12.5px; color:var(--mut); margin-top:2px; }
+  .pill { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; margin-left:auto; }
+  .pill.ready { background:#eef7f1; color:#1d6b48; } .pill.wait { background:#eef1f3; color:#667; }
+  .stage-body { padding:0 22px 20px 66px; }
+  label.fld { display:block; font-size:12.5px; font-weight:600; color:var(--navy); margin:12px 0 5px; }
+  .req { color:#a32019; }
+  .pathrow { display:flex; gap:8px; } .pathrow input, .pathrow select { flex:1; }
+  input, textarea { padding:9px 11px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit; }
+  input[readonly] { background:#fafdfb; }
+  .full { width:100%; }
+  button.btn { background:var(--accent); color:#fff; border:none; border-radius:7px; padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer; }
+  button.btn:disabled { background:#b7c2c0; cursor:not-allowed; }
+  button.ghost { background:#fff; color:var(--navy); border:1px solid var(--line); border-radius:7px; padding:8px 13px; font-size:13px; cursor:pointer; }
+  .detected { background:#eef7f1; border:1px solid #cfe9da; color:#1d6b48; padding:9px 12px; border-radius:7px; font-size:13px; margin:12px 0; }
+  .filelist { font-size:12.5px; color:var(--mut); margin:8px 0; max-height:120px; overflow:auto; }
+  .row { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; margin:12px 0; }
+  .row .grow { flex:1; min-width:240px; } .row strong { font-size:13px; color:var(--navy); } .row label { font-size:13.5px; cursor:pointer; }
+  .result { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; font-size:13px; margin:7px 0; flex-wrap:wrap; }
+  .result.ok { background:#eef7f1; color:#1d6b48; } .result.err { background:#fdecea; color:#a32019; }
+  .result .name { font-weight:600; } .result .file { color:#666; } .result .sp { margin-left:auto; }
+  details.log { font-size:12px; margin:4px 0 10px; } details.log pre { background:#0d2530; color:#cfe; padding:10px; border-radius:6px; overflow:auto; max-height:220px; }
+  .hint { font-size:12.5px; color:var(--mut); margin:6px 0; }
+  code { background:#eef2f3; padding:1px 5px; border-radius:4px; font-size:12px; }
+  /* picker modal */
+  .modal-bg { position:fixed; inset:0; background:rgba(0,30,40,.45); display:none; align-items:center; justify-content:center; }
+  .modal-bg.show { display:flex; }
+  .modal { background:#fff; width:560px; max-width:92vw; max-height:80vh; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
+  .modal h3 { margin:0; padding:16px 20px; background:var(--navy); color:#fff; font-size:15px; }
+  .crumb { padding:10px 18px; font-size:12px; color:#567; background:#eef2f3; word-break:break-all; }
+  .listing { flex:1; overflow:auto; padding:6px 0; }
+  .item { padding:9px 20px; cursor:pointer; font-size:14px; display:flex; gap:9px; align-items:center; }
+  .item:hover { background:#eef7f1; } .item .ic { width:18px; text-align:center; } .item.file { color:var(--navy); }
+  .modal-foot { padding:12px 18px; border-top:1px solid var(--line); display:flex; gap:10px; align-items:center; }
+  .modal-foot .sel { font-size:12px; color:#678; flex:1; word-break:break-all; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="accent">Course</span>Craft</h1>
+  <span class="sub" id="hdr_project">No project open</span>
+</header>
+
+<div class="wrap">
+  <div class="topbar"><label>Brand</label><select id="brand"></select></div>
+
+  <!-- STEP 1 — PROJECT -->
+  <div class="stage" id="s1">
+    <div class="stage-head"><div class="num">1</div>
+      <div><h2>Project</h2><div class="desc">Every project keeps all its files in its own folder, so you can reopen and continue it any time.</div></div></div>
+    <div class="stage-body">
+      <label class="fld" style="margin-top:0">Projects location (parent folder that holds all projects)</label>
+      <div class="pathrow"><input id="ws" placeholder="Choose a folder…" readonly>
+        <button class="ghost" onclick="pick('dir','ws')">Browse…</button>
+        <button class="btn" onclick="setWorkspace()">Use</button></div>
+      <div class="row">
+        <div class="grow"><label class="fld" style="margin-top:0">Start a new project</label>
+          <div class="pathrow"><input id="newproj" placeholder="Project name…">
+            <button class="btn" onclick="newProject()">Create</button></div></div>
+        <div class="grow"><label class="fld" style="margin-top:0">Open an existing project</label>
+          <div class="pathrow"><select id="projlist"></select>
+            <button class="ghost" onclick="openProject()">Open</button></div></div>
+      </div>
+      <div id="proj_current"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 — AI ACCOUNT -->
+  <div class="stage" id="s2">
+    <div class="stage-head"><div class="num">2</div>
+      <div><h2>AI account</h2><div class="desc">Generation runs on your subscription (no API cost). Connect by logging into its CLI once.</div></div>
+      <span class="pill wait" id="ai_pill">—</span></div>
+    <div class="stage-body">
+      <div id="ai_status" class="hint"></div>
+      <label class="fld">Account to use</label>
+      <div class="pathrow" style="max-width:420px"><select id="gen_provider"></select>
+        <button class="ghost" onclick="refreshAI()">Re-check</button></div>
+    </div>
+  </div>
+
+  <!-- STEP 3 — SOURCE MATERIALS -->
+  <div class="stage" id="s3">
+    <div class="stage-head"><div class="num">3</div>
+      <div><h2>Source materials</h2><div class="desc">The documents and images the course is built from. Filled in from your project; change if needed.</div></div></div>
+    <div class="stage-body">
+      <label class="fld" style="margin-top:0">Source documents folder (.docx / .md / .txt)</label>
+      <div class="pathrow"><input id="src" placeholder="Choose a folder…" readonly>
+        <button class="ghost" onclick="pick('dir','src')">Browse…</button>
+        <button class="ghost" onclick="refreshSrc()">Refresh</button></div>
+      <div id="src_files" class="filelist"></div>
+      <label class="fld">Images folder</label>
+      <div class="pathrow"><input id="img" placeholder="Choose a folder…" readonly>
+        <button class="ghost" onclick="pick('dir','img')">Browse…</button></div>
+    </div>
+  </div>
+
+  <!-- STEP 4 — GENERATE SCRIPTS -->
+  <div class="stage" id="s4">
+    <div class="stage-head"><div class="num">4</div>
+      <div><h2>Generate microlearning scripts</h2><div class="desc">Draft the script + an SME review document into the project folder.</div></div></div>
+    <div class="stage-body">
+      <label class="fld" style="margin-top:0">Course title</label>
+      <input id="gen_title" class="full" placeholder="e.g. Performance Management — Giving Feedback">
+      <label class="fld">Learning objective <span class="req">(required)</span></label>
+      <textarea id="gen_obj" class="full" rows="2" placeholder="What should the learner be able to do afterward?"></textarea>
+      <label class="fld">Audience <span class="req">(required)</span></label>
+      <textarea id="gen_aud" class="full" rows="1" placeholder="Who is this for? e.g. front-line nurse managers"></textarea>
+      <div class="row">
+        <div><label class="fld" style="margin-top:0">Teaching pattern</label><select id="gen_arch"></select></div>
+        <div><label class="fld" style="margin-top:0"># of microlearnings</label>
+          <input id="gen_units" placeholder="auto" style="width:90px"></div>
+      </div>
+      <p style="margin:14px 0 0"><button class="btn" id="gen_go" onclick="generate()">Generate scripts</button>
+        <span class="hint" style="margin-left:10px">Runs on your subscription — may take a minute.</span></p>
+      <div id="gen_results"></div>
+    </div>
+  </div>
+
+  <!-- STEP 5 — APPLY REVIEW -->
+  <div class="stage" id="s5">
+    <div class="stage-head"><div class="num">5</div>
+      <div><h2>Apply the SME review</h2><div class="desc">Upload the reviewed document (edits + comments); the script is updated and re-saved.</div></div></div>
+    <div class="stage-body">
+      <div id="script_status" class="hint"></div>
+      <label class="fld" style="margin-top:0">Reviewed document (.docx)</label>
+      <div class="pathrow"><input id="rev_doc" placeholder="Choose the reviewed .docx…" readonly>
+        <button class="ghost" onclick="pick('file','rev_doc',null,['docx'])">Browse…</button></div>
+      <p style="margin:14px 0 0"><button class="btn" id="rev_go" onclick="applyReview()">Update script from review</button>
+        <span class="hint" style="margin-left:10px">Optional — skip if no changes were requested.</span></p>
+      <div id="rev_results"></div>
+    </div>
+  </div>
+
+  <!-- STEP 6 — OUTPUT FORMAT -->
+  <div class="stage" id="s6">
+    <div class="stage-head"><div class="num">6</div>
+      <div><h2>Output format</h2><div class="desc">Choose the formats and scope to produce.</div></div></div>
+    <div class="stage-body">
+      <div class="row" style="margin-top:4px"><strong>Formats:</strong>
+        <label><input type="checkbox" class="b_fmt" value="scorm" checked> SCORM 1.2 (LMS)</label>
+        <label><input type="checkbox" class="b_fmt" value="cmi5"> cmi5 / xAPI</label>
+        <label><input type="checkbox" class="b_fmt" value="pptx"> PowerPoint</label>
+        <label style="margin-left:10px"><input type="checkbox" id="b_validate" checked> Run lint</label></div>
+      <div class="row"><strong>Scope:</strong>
+        <label><input type="radio" name="b_scope" value="single" checked> Single unit</label>
+        <label><input type="radio" name="b_scope" value="course"> Entire course (multi-SCO)</label>
+        <select id="b_which"></select></div>
+    </div>
+  </div>
+
+  <!-- STEP 7 — GENERATE PREVIEW -->
+  <div class="stage" id="s7">
+    <div class="stage-head"><div class="num">7</div>
+      <div><h2>Generate preview</h2><div class="desc">Build the courses to a preview area and review each before publishing — nothing reaches the output folder yet.</div></div></div>
+    <div class="stage-body">
+      <p style="margin-top:0"><button class="btn" id="b_go" onclick="generateCourses()">Generate preview</button></p>
+      <div id="b_results"></div>
+    </div>
+  </div>
+
+  <!-- STEP 8 — PUBLISH -->
+  <div class="stage" id="s8">
+    <div class="stage-head"><div class="num">8</div>
+      <div><h2>Publish final courses</h2><div class="desc">Publish the approved packages into the project's output folder — ready to upload to the LMS.</div></div></div>
+    <div class="stage-body">
+      <div id="b_publish"><div class="hint">Generate a preview in step 7 first, then publish the courses you approve.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- picker modal -->
+<div class="modal-bg" id="picker">
+  <div class="modal">
+    <h3 id="pk_title">Choose…</h3>
+    <div class="crumb" id="pk_crumb"></div>
+    <div class="listing" id="pk_list"></div>
+    <div class="modal-foot"><span class="sel" id="pk_sel"></span>
+      <button class="ghost" onclick="closePicker()">Cancel</button>
+      <button class="btn" id="pk_use" onclick="usePicker()">Use this folder</button></div>
+  </div>
+</div>
+
+<script>
+let pk={mode:'dir', exts:['md'], path:'', target:null, cb:null};
+let CURRENT_PROJECT=null, FOLDERS={}, CURRENT_SCRIPT=null, STAGED=[];
+
+function val(id){ return document.getElementById(id).value; }
+function setv(id,v){ const el=document.getElementById(id); if(el) el.value=(v==null?'':v); }
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function brand(){ return val('brand'); }
+async function reveal(path){ await fetch('/api/reveal?path='+encodeURIComponent(path)); }
+
+async function init(){
+  const r = await (await fetch('/api/init')).json();
+  document.getElementById('brand').innerHTML =
+    r.brands.map(b=>`<option ${''}>${b}</option>`).join('');
+  pk.path = r.home;
+  document.getElementById('gen_arch').innerHTML =
+    (r.archetypes||[]).map(a=>`<option value="${a.key}">${a.key} — ${a.desc}</option>`).join('');
+  applyProviders(r.providers||{});
+  setv('ws', r.workspace||''); setProjects(r.projects||[]);
+  if(!r.workspace_set)
+    document.getElementById('proj_current').innerHTML =
+      `<div class="hint">Pick a projects location above and click <b>Use</b>, then create or open a project.</div>`;
+  scriptStatus();
+}
+function applyProviders(provs){
+  document.getElementById('gen_provider').innerHTML = Object.entries(provs).map(([k,v])=>
+    `<option value="${k}" ${v.available?'':'disabled'}>${v.label}${v.available?'':' — not connected'}</option>`).join('');
+  const avail=Object.values(provs).filter(v=>v.available), unavail=Object.values(provs).filter(v=>!v.available);
+  document.getElementById('ai_pill').textContent = avail.length? 'Connected':'Not connected';
+  document.getElementById('ai_pill').className = 'pill '+(avail.length?'ready':'wait');
+  document.getElementById('ai_status').innerHTML = avail.length
+    ? '✓ '+avail.map(v=>v.label).join(', ')+(unavail.length?'<br>To add another: '+unavail.map(v=>v.install).join('<br>'):'')
+    : '⚠ No subscription connected.<br>'+unavail.map(v=>v.install).join('<br>');
+}
+async function refreshAI(){ applyProviders((await (await fetch('/api/ai-status')).json()).providers||{}); }
+
+/* ---- picker (folders + .md/.docx files) ---- */
+async function pick(mode, targetId, cb, exts){
+  pk.mode=mode; pk.target=targetId; pk.cb=cb||null; pk.exts=exts||['md'];
+  document.getElementById('pk_title').textContent = mode==='file'?('Choose a .'+pk.exts.join('/.')+' file'):'Choose a folder';
+  document.getElementById('pk_use').style.display = mode==='dir'?'inline-block':'none';
+  await loadDir(val(targetId) || pk.path);
+  document.getElementById('picker').classList.add('show');
+}
+function closePicker(){ document.getElementById('picker').classList.remove('show'); }
+async function loadDir(path){
+  const r = await (await fetch('/api/ls?path='+encodeURIComponent(path))).json();
+  pk.path=r.path;
+  document.getElementById('pk_crumb').textContent=r.path;
+  document.getElementById('pk_sel').textContent = pk.mode==='dir'?('Selected: '+r.path):'';
+  const list=document.getElementById('pk_list'); list.innerHTML='';
+  if(r.parent) list.appendChild(rowEl('⬆️','.. (up one level)',()=>loadDir(r.parent),false));
+  r.dirs.forEach(d=> list.appendChild(rowEl('📁',d,()=>loadDir(joinp(r.path,d)),false)));
+  if(pk.mode==='file'){
+    const files=[]; if(pk.exts.includes('md')) files.push(...(r.mds||[])); if(pk.exts.includes('docx')) files.push(...(r.docx||[]));
+    files.sort().forEach(f=> list.appendChild(rowEl('📄',f,()=>setTarget(joinp(r.path,f)),true)));
+  }
+}
+function rowEl(ic,name,onclick,isFile){ const d=document.createElement('div');
+  d.className='item'+(isFile?' file':''); d.innerHTML=`<span class="ic">${ic}</span><span>${name}</span>`; d.onclick=onclick; return d; }
+function joinp(a,b){ return a.endsWith('/')?a+b:a+'/'+b; }
+function usePicker(){ setTarget(pk.path); }
+function setTarget(v){ setv(pk.target,v); closePicker(); if(pk.cb) pk.cb(); if(pk.target==='src') refreshSrc(); }
+
+/* ---- step 1: projects ---- */
+function setProjects(list){
+  const sel=document.getElementById('projlist');
+  sel.innerHTML = (list&&list.length)? list.map(p=>`<option value="${p.path.replace(/"/g,'&quot;')}">${p.name}${p.updated?(' — '+p.updated.slice(0,10)):''}</option>`).join('')
+                                     : '<option value="">(no projects yet)</option>';
+}
+async function setWorkspace(){
+  if(!val('ws')){ alert('Pick a projects location first.'); return; }
+  const r=await (await fetch('/api/workspace',{method:'POST',body:JSON.stringify({path:val('ws')})})).json();
+  setv('ws',r.workspace); setProjects(r.projects);
+}
+async function newProject(){
+  const name=val('newproj').trim(); if(!name){ alert('Name the project first.'); return; }
+  const r=await (await fetch('/api/project/new',{method:'POST',body:JSON.stringify({name})})).json();
+  if(r.error){ alert(r.error); return; }
+  setProjects(r.projects); setv('newproj',''); loadProject(r);
+}
+async function openProject(){
+  const path=document.getElementById('projlist').value; if(!path){ alert('No project selected.'); return; }
+  const r=await (await fetch('/api/project/open',{method:'POST',body:JSON.stringify({path})})).json();
+  if(r.error){ alert(r.error); return; } loadProject(r);
+}
+function loadProject(r){
+  CURRENT_PROJECT=r.path; FOLDERS=r.folders||{};
+  setv('src',FOLDERS.source||''); setv('img',FOLDERS.images||'');
+  const m=r.meta||{};
+  setv('gen_title',m.title||''); setv('gen_obj',m.objective||''); setv('gen_aud',m.audience||''); setv('gen_units',m.units||'');
+  if(m.archetype){ const a=document.getElementById('gen_arch'); if([...a.options].some(o=>o.value===m.archetype)) a.value=m.archetype; }
+  if(m.brand){ const b=document.getElementById('brand'); if([...b.options].some(o=>o.value===m.brand)) b.value=m.brand; }
+  if(m.provider){ const p=document.getElementById('gen_provider'); if([...p.options].some(o=>o.value===m.provider&&!o.disabled)) p.value=m.provider; }
+  CURRENT_SCRIPT = m.script || null;
+  document.getElementById('hdr_project').textContent = 'Project: '+r.name;
+  document.getElementById('proj_current').innerHTML =
+    `<div class="detected">✓ Open: <b>${r.name}</b> — files live in <code>${r.path}</code>
+     &nbsp;<button class="ghost" onclick="saveProject(false)">Save details</button></div>`;
+  STAGED=[]; document.getElementById('b_results').innerHTML='';
+  document.getElementById('b_publish').innerHTML='<div class="hint">Generate a preview in step 7 first, then publish.</div>';
+  refreshSrc(); scriptStatus(); scanScript();
+}
+async function saveProject(silent){
+  if(!CURRENT_PROJECT){ if(!silent) alert('Create or open a project first.'); return; }
+  const meta={ title:val('gen_title'), objective:val('gen_obj'), audience:val('gen_aud'), units:val('gen_units'),
+    archetype:document.getElementById('gen_arch').value, brand:brand(), provider:document.getElementById('gen_provider').value };
+  await fetch('/api/project/save',{method:'POST',body:JSON.stringify({path:CURRENT_PROJECT,meta})});
+  if(!silent){ const el=document.getElementById('proj_current');
+    el.insertAdjacentHTML('beforeend','<span style="color:#1d6b48;font-size:12px;margin-left:8px">saved ✓</span>');
+    setTimeout(()=>{const s=el.querySelector('span');if(s)s.remove();},1500); }
+}
+
+/* ---- step 3: list source docs ---- */
+async function refreshSrc(){
+  const p=val('src'); if(!p){ document.getElementById('src_files').innerHTML=''; return; }
+  const r=await (await fetch('/api/listfiles?path='+encodeURIComponent(p))).json();
+  document.getElementById('src_files').innerHTML = r.files.length
+    ? 'Source documents ('+r.files.length+'): '+r.files.join(', ')
+    : 'No documents yet — drop source materials in this folder.';
+}
+
+/* ---- shared: which script is in use + unit count ---- */
+function scriptStatus(){
+  const el=document.getElementById('script_status'); if(!el) return;
+  el.innerHTML = CURRENT_SCRIPT
+    ? 'Current script: <code>'+CURRENT_SCRIPT.split('/').pop()+'</code>'
+    : 'No script yet — generate one in step 4 (or open a project that has one).';
+}
+async function scanScript(){
+  const sel=document.getElementById('b_which');
+  if(!CURRENT_SCRIPT){ sel.innerHTML='<option value="1">1</option>'; return; }
+  const r=await (await fetch('/api/scan?md='+encodeURIComponent(CURRENT_SCRIPT))).json();
+  const mls=r.mls||[];
+  sel.innerHTML = mls.length? mls.map(m=>`<option value="${m.which}">${m.which}. ${m.title}</option>`).join('') : '<option value="1">1</option>';
+}
+
+/* ---- step 4: generate ---- */
+async function generate(){
+  if(!CURRENT_PROJECT){ alert('Create or open a project first (step 1).'); return; }
+  const prov=document.getElementById('gen_provider').value;
+  if(!prov){ alert('Connect an AI account first (step 2).'); return; }
+  if(!val('src')){ alert('Pick a source documents folder (step 3).'); return; }
+  if(!val('gen_obj')||!val('gen_aud')){ alert('Objective and audience are required.'); return; }
+  const payload={ provider:prov, source:val('src'), out:FOLDERS.drafts, title:val('gen_title'),
+    objective:val('gen_obj'), audience:val('gen_aud'), archetype:document.getElementById('gen_arch').value,
+    units:val('gen_units'), brand:brand(), project:CURRENT_PROJECT };
+  const go=document.getElementById('gen_go'); go.disabled=true; go.textContent='Generating…';
+  let res; try{ res=await (await fetch('/api/generate',{method:'POST',body:JSON.stringify(payload)})).json(); }
+  catch(e){ res={error:String(e)}; }
+  go.disabled=false; go.textContent='Generate scripts'; saveProject(true);
+  const box=document.getElementById('gen_results');
+  if(res.error){ box.innerHTML=`<div class="result err">✗ ${esc(res.error)}</div>`; return; }
+  const bad=res.lint_ok===false; let html='';
+  html+=`<div class="result ${res.ok&&!bad?'ok':'err'}"><span>${res.ok&&!bad?'✓':'✗'}</span>
+    <span class="name">${res.ok?`Drafted ${res.units} unit(s) → ${res.out.split('/').pop()}`:'Generation failed'}</span>
+    <span class="sp"></span>${res.out?`<button class="ghost" onclick="reveal('${res.out.replace(/'/g,"\\'")}')">Show in Finder</button>`:''}</div>`;
+  if(res.skipped&&res.skipped.length) html+=`<div class="result err">Skipped (unsupported, e.g. PDF): ${res.skipped.join(', ')}</div>`;
+  if(bad) html+=`<div class="result err">⚠ Saved but failed the §8 lint — fix before building:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
+  if(res.review_docx&&res.review_docx.length) html+=`<div class="result ok">✓ Review doc(s): ${res.review_docx.map(d=>d.split('/').pop()).join(', ')}</div>`;
+  box.innerHTML=html;
+  if(res.ok){ CURRENT_SCRIPT=res.out; scriptStatus(); scanScript(); }
+}
+
+/* ---- step 5: apply review ---- */
+async function applyReview(){
+  if(!CURRENT_SCRIPT){ alert('No script to update — generate one first (step 4).'); return; }
+  if(!val('rev_doc')){ alert('Choose the reviewed .docx.'); return; }
+  const payload={ provider:document.getElementById('gen_provider').value, script:CURRENT_SCRIPT,
+    reviewed:val('rev_doc'), approved_dir:FOLDERS.approved, brand:brand(), project:CURRENT_PROJECT };
+  const go=document.getElementById('rev_go'); go.disabled=true; go.textContent='Updating…';
+  let res; try{ res=await (await fetch('/api/revise',{method:'POST',body:JSON.stringify(payload)})).json(); }
+  catch(e){ res={error:String(e)}; }
+  go.disabled=false; go.textContent='Update script from review';
+  const box=document.getElementById('rev_results');
+  if(res.error){ box.innerHTML=`<div class="result err">✗ ${esc(res.error)}</div>`; return; }
+  const bad=res.lint_ok===false; let html='';
+  html+=`<div class="result ${res.ok&&!bad?'ok':'err'}"><span>${res.ok&&!bad?'✓':'✗'}</span>
+    <span class="name">${res.ok?`Updated script (${res.comments_found} comment(s) applied) → ${res.out.split('/').pop()}`:'Update failed'}</span>
+    <span class="sp"></span>${res.out?`<button class="ghost" onclick="reveal('${res.out.replace(/'/g,"\\'")}')">Show in Finder</button>`:''}</div>`;
+  if(bad) html+=`<div class="result err">⚠ Saved but failed the §8 lint:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
+  if(res.review_docx&&res.review_docx.length) html+=`<div class="result ok">✓ Updated review doc(s): ${res.review_docx.map(d=>d.split('/').pop()).join(', ')}</div>`;
+  box.innerHTML=html;
+  if(res.ok){ CURRENT_SCRIPT=res.out; scriptStatus(); scanScript(); }
+}
+
+/* ---- step 7: generate preview ---- */
+async function generateCourses(){
+  if(!CURRENT_SCRIPT){ alert('No script yet — do step 4 (and step 5 if reviewed).'); return; }
+  if(!val('img')){ alert('Pick an images folder (step 3).'); return; }
+  const formats=[...document.querySelectorAll('.b_fmt:checked')].map(c=>c.value);
+  if(!formats.length){ alert('Pick at least one output format (step 6).'); return; }
+  const payload={ md:CURRENT_SCRIPT, images:val('img'), out:FOLDERS.output, brand:brand(),
+    scope:document.querySelector('input[name=b_scope]:checked').value, which:val('b_which'),
+    formats, validate:document.getElementById('b_validate').checked, stage:true };
+  const go=document.getElementById('b_go'); go.disabled=true; go.textContent='Generating preview…';
+  let res; try{ res=await (await fetch('/api/build',{method:'POST',body:JSON.stringify(payload)})).json(); }
+  catch(e){ res={error:String(e)}; }
+  go.disabled=false; go.textContent='Generate preview';
+  if(res.error){ document.getElementById('b_results').innerHTML=`<div class="result err">Error: ${esc(res.error)}</div>`; return; }
+  STAGED=(res.results||[]).map((r,i)=>({...r,idx:i,published:null}));
+  renderStaged();
+}
+function renderStaged(){
+  const box=document.getElementById('b_results'), pub=document.getElementById('b_publish');
+  if(!STAGED.length){ box.innerHTML=''; pub.innerHTML='<div class="hint">Generate a preview in step 7 first, then publish.</div>'; return; }
+  // step 7: previews
+  let h='<div class="hint">Preview each course below. When you’re happy, publish in step 8.</div>';
+  STAGED.forEach(r=>{
+    const fname=r.out?r.out.split('/').pop():''; let a='';
+    if(r.ok){
+      if(r.preview){ const dir=r.preview.substring(0,r.preview.lastIndexOf('/'));
+        a+=`<button class="ghost" onclick="window.open('/preview?dir=${encodeURIComponent(dir)}&file=index.html','_blank')">👁 Preview</button>`; }
+      else if(r.fmt==='pptx'){ a+=`<button class="ghost" onclick="reveal('${r.out.replace(/'/g,"\\'")}')">Open</button>`; }
+    }
+    h+=`<div class="result ${r.ok?'ok':'err'}"><span>${r.ok?'✓':'✗'}</span><span class="name">${r.label}</span>
+      ${r.ok?`<span class="file">→ ${fname} (preview)</span>`:''}<span class="sp"></span>${a}</div>`;
+    if(r.log&&!r.ok) h+=`<details class="log"><summary>log · ${r.label}</summary><pre>${esc(r.log)}</pre></details>`;
+  });
+  box.innerHTML=h;
+  // step 8: publish
+  const pending=STAGED.filter(r=>r&&r.ok&&!r.published), done=STAGED.filter(r=>r&&r.published&&r.published.ok);
+  let p='';
+  if(pending.length){
+    p+='<div class="hint">Publish the courses you approve — they move into the output folder, ready to upload.</div>';
+    pending.forEach(r=>{ p+=`<div class="result ok"><span>•</span><span class="name">${r.label}</span><span class="sp"></span>
+      <button class="btn" style="padding:6px 12px" onclick="publishItems([${r.idx}])">Publish ▸</button></div>`; });
+    if(pending.length>1) p+=`<p><button class="btn" onclick="publishItems('all')">Publish all approved</button></p>`;
+  }
+  if(done.length){
+    p+='<div style="font-size:12.5px;color:#1d6b48;margin:10px 0 4px"><b>Published — ready to upload to the LMS:</b></div>';
+    p+=done.map(r=>`<div class="result ok"><span>📦</span><span class="name">${r.published.out.split('/').pop()}</span><span class="sp"></span>
+      <button class="ghost" onclick="reveal('${r.published.out.replace(/'/g,"\\'")}')">Show in Finder</button></div>`).join('');
+    p+=`<p style="font-size:13px"><button class="ghost" onclick="reveal('${(FOLDERS.output||'').replace(/'/g,"\\'")}')">Open output folder</button></p>`;
+  }
+  if(!pending.length && !done.length) p='<div class="hint">No successful preview to publish yet.</div>';
+  pub.innerHTML=p;
+}
+async function publishItems(sel){
+  const idxs = sel==='all' ? STAGED.filter(r=>r&&r.ok&&!r.published).map(r=>r.idx) : sel;
+  const items = idxs.map(i=>STAGED[i]).filter(Boolean).map(r=>({path:r.out,label:r.label,fmt:r.fmt}));
+  if(!items.length) return;
+  let res; try{ res=await (await fetch('/api/publish',{method:'POST',body:JSON.stringify({out:FOLDERS.output,items,project:CURRENT_PROJECT})})).json(); }
+  catch(e){ alert('Publish failed: '+e); return; }
+  (res.published||[]).forEach(pd=>{ const r=STAGED.find(s=>s.label===pd.label&&!s.published); if(r) r.published=pd; });
+  saveProject(true); renderStaged();
+}
+
+init();
+</script>
+</body>
+</html>

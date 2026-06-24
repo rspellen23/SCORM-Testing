@@ -1,6 +1,8 @@
 """Course IR -> a self-contained HTML course directory (brand + player bundled)."""
 import os, re, shutil, html
 import brand as brandlib
+import chart_svg
+import layouts
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -67,6 +69,18 @@ def _modal_panel(mid, modal, title_fallback=""):
 def _cta_classes(b):
     variant = "secondary" if b.get("buttonVariant") == "secondary" else "primary"
     return "nv-cta nv-cta--" + variant + (" nv-cta--arrow" if b.get("arrow") else "")
+
+
+# Brand accent roles -> the tokens.css variables they map to (same 4 roles the
+# slide layouts use). Omit a role to auto-cycle, matching the slide renderer.
+_ACCENT_VAR = {"primary": "var(--brand-accent)", "secondary": "var(--brand-accent2)",
+               "tertiary": "var(--brand-accent-ink)", "dark": "var(--brand-heading)"}
+_ACCENT_CYCLE = ("primary", "secondary", "tertiary", "dark")
+
+
+def _accent_var(role, i=0):
+    role = role or _ACCENT_CYCLE[i % 4]
+    return _ACCENT_VAR.get(role, "var(--brand-accent)")
 
 
 def render_block(b, ctx=None):
@@ -213,7 +227,7 @@ def render_block(b, ctx=None):
         kcid = f' data-kc-id="{_esc(b.get("id"))}"' if b.get("id") else ""
         return (f'<div class="nv-block nv-kc"{kcid}><div class="nv-kc-prompt">{_unwrap_p(b.get("prompt"))}</div>'
                 f'{opts}'
-                f'<div class="nv-kc-fb" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div>'
+                f'<div class="nv-kc-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div>'
                 f'</div>')
     if t == "quote":
         attr = f'<figcaption class="nv-quote-by">{_unwrap_p(b.get("attribution"))}</figcaption>' if b.get("attribution") else ""
@@ -250,9 +264,10 @@ def render_block(b, ctx=None):
                     if e.get("backSrc") else "")
             cards.append(
                 '<button class="nv-flip" type="button" aria-pressed="false">'
+                '<span class="nv-sr-only nv-flip-hint">Flashcard — activate to flip.</span>'
                 '<span class="nv-flip-inner">'
                 f'<span class="nv-flip-face nv-flip-front">{fimg}<span class="nv-flip-text">{e.get("frontHtml","")}</span></span>'
-                f'<span class="nv-flip-face nv-flip-back">{bimg}<span class="nv-flip-text">{e.get("backHtml","")}</span></span>'
+                f'<span class="nv-flip-face nv-flip-back" aria-hidden="true">{bimg}<span class="nv-flip-text">{e.get("backHtml","")}</span></span>'
                 '</span></button>')
         return f'<div class="nv-block nv-flashgrid">{"".join(cards)}</div>'
     if t == "categorize":
@@ -272,7 +287,7 @@ def render_block(b, ctx=None):
         return (f'<div class="nv-block nv-sort" data-sort><div class="nv-sort-instr">Match each item to its category.</div>'
                 f'{prompt}<ul class="nv-sort-items">{"".join(rows)}</ul>'
                 f'<button class="nv-btn nv-sort-check" type="button">Check</button>'
-                f'<div class="nv-sort-fb" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+                f'<div class="nv-sort-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
     if t == "scenario":
         scenes = []
         for sc in b.get("scenes", []):
@@ -286,7 +301,112 @@ def render_block(b, ctx=None):
             rlist = f'<ul class="nv-scn-responses">{"".join(resp)}</ul>' if resp else ""
             scenes.append(f'<div class="nv-scn-scene">{head}{narr}{rlist}</div>')
         return f'<section class="nv-block nv-scenario">{"".join(scenes)}</section>'
+    if t == "timeline":
+        # vertical roadmap: a brand axis with milestone cards (HTML parity with the timeline slide layout)
+        tl = layouts.normalize_timeline(b)     # accept slide `body` as well as course `html`
+        block_accent = b.get("accent")
+        items = []
+        for i, m in enumerate(tl["milestones"]):
+            av = _accent_var(m.get("accent") or block_accent, i)
+            phase = f'<span class="nv-tl-phase">{_esc(m.get("phase"))}</span>' if m.get("phase") else ""
+            title = f'<h4 class="nv-tl-title">{_unwrap_p(m.get("title"))}</h4>' if m.get("title") else ""
+            body = f'<div class="nv-p">{m.get("html","")}</div>' if m.get("html") else ""
+            items.append(f'<li class="nv-tl-item" style="--nv-accent:{av}">'
+                         f'<span class="nv-tl-node" aria-hidden="true"></span>'
+                         f'<div class="nv-tl-card">{phase}{title}{body}</div></li>')
+        return f'<ol class="nv-block nv-timeline">{"".join(items)}</ol>'
+    if t == "comparison":
+        # 2-3 side-by-side panels (old-vs-new / option A/B/C); HTML parity with the comparison slide layout
+        cmp = layouts.normalize_comparison(b)  # accept slide `columns` as well as course `panels`
+        block_accent = b.get("accent")
+        panels = []
+        for i, p in enumerate(cmp["panels"]):
+            av = _accent_var(p.get("accent") or block_accent, i)
+            head = f'<div class="nv-cmp-head">{_unwrap_p(p.get("heading"))}</div>' if p.get("heading") else ""
+            sub = f'<div class="nv-cmp-sub">{_esc(p.get("sublabel"))}</div>' if p.get("sublabel") else ""
+            lis = "".join(f'<li>{_pair_or_text(x)}</li>' for x in (p.get("items") or []))
+            ul = f'<ul class="nv-cmp-list">{lis}</ul>' if lis else ""
+            callout = (f'<div class="nv-cmp-callout">{_unwrap_p(p.get("callout"))}</div>'
+                       if p.get("callout") else "")
+            panels.append(f'<div class="nv-cmp-panel" style="--nv-accent:{av}">{head}{sub}{ul}{callout}</div>')
+        cols = max(1, len(panels))
+        return f'<div class="nv-block nv-comparison" style="--nv-cmp-cols:{cols}">{"".join(panels)}</div>'
+    if t == "chart":
+        # engine-generated inline SVG (bar/line/pie/stacked/grouped) — no JS, brand-colored,
+        # with a screen-reader data-table fallback. See src/chart_svg.py.
+        return chart_svg.render_chart(b)
+    if t == "infographic":
+        # poster-style overview as a flowing HTML section. Consumes the SAME content object as
+        # the 'infographic' slide layout (b["infographic"] == slide content) — one schema, two renderers.
+        return _render_infographic_block(b.get("infographic") or {})
     return ""
+
+
+def _pair_or_text(x):
+    """A comparison/list item that is either inline-HTML text OR a [bold, rest]
+    pair (the slide-schema shape). Returns the inner HTML (caller wraps it)."""
+    if isinstance(x, (list, tuple)):
+        bold = _unwrap_p(str(x[0])) if len(x) > 0 else ""
+        rest = _unwrap_p(str(x[1])) if len(x) > 1 else ""
+        return f'<strong>{bold}</strong>{rest}'
+    return _unwrap_p(x)
+
+
+def _ig_item_li(item):
+    """A left-column bullet: a [bold, detail] pair (slide schema) OR a plain string."""
+    if isinstance(item, (list, tuple)):
+        bold = _unwrap_p(str(item[0])) if len(item) > 0 else ""
+        detail = _unwrap_p(str(item[1])) if len(item) > 1 else ""
+        return f'<li><strong>{bold}</strong>{detail}</li>'
+    return f'<li>{_unwrap_p(item)}</li>'
+
+
+def _render_infographic_block(c):
+    title = f'<h3 class="nv-ig-title">{_unwrap_p(c.get("title"))}</h3>' if c.get("title") else ""
+    sub = f'<p class="nv-ig-subtitle">{_unwrap_p(c.get("subtitle"))}</p>' if c.get("subtitle") else ""
+    header = f'<header class="nv-ig-header">{title}{sub}</header>' if (title or sub) else ""
+
+    left = c.get("left") or {}
+    lh = f'<h4 class="nv-ig-heading">{_esc(left.get("heading"))}</h4>' if left.get("heading") else ""
+    li_ = f'<p class="nv-ig-intro">{_unwrap_p(left.get("intro"))}</p>' if left.get("intro") else ""
+    litems = "".join(_ig_item_li(it) for it in (left.get("items") or []))
+    lul = f'<ul class="nv-ig-items">{litems}</ul>' if litems else ""
+    lcall = f'<div class="nv-ig-callout">{_unwrap_p(left.get("callout"))}</div>' if left.get("callout") else ""
+    left_html = f'<div class="nv-ig-left">{lh}{li_}{lul}{lcall}</div>' if (lh or li_ or lul or lcall) else ""
+
+    right = c.get("right") or {}
+    rh = f'<h4 class="nv-ig-heading">{_esc(right.get("heading"))}</h4>' if right.get("heading") else ""
+    rs = f'<div class="nv-ig-sublabel">{_esc(right.get("sublabel"))}</div>' if right.get("sublabel") else ""
+    cards = []
+    for i, cd in enumerate(right.get("cards") or []):
+        av = _accent_var(cd.get("accent"), i)
+        num = _esc(str(cd.get("num", i + 1)))
+        ct = f'<div class="nv-ig-card-title">{_unwrap_p(cd.get("title"))}</div>' if cd.get("title") else ""
+        cb = f'<div class="nv-ig-card-body">{_unwrap_p(cd.get("body"))}</div>' if cd.get("body") else ""
+        cards.append(f'<li class="nv-ig-card" style="--nv-accent:{av}">'
+                     f'<span class="nv-ig-num" aria-hidden="true">{num}</span>'
+                     f'<div class="nv-ig-card-text">{ct}{cb}</div></li>')
+    rcards = f'<ul class="nv-ig-cards">{"".join(cards)}</ul>' if cards else ""
+    right_html = f'<div class="nv-ig-right">{rh}{rs}{rcards}</div>' if (rh or rs or rcards) else ""
+
+    cols = f'<div class="nv-ig-cols">{left_html}{right_html}</div>' if (left_html or right_html) else ""
+
+    goals = c.get("goals") or {}
+    glabel_raw = goals.get("label")
+    glabel_txt = " ".join(glabel_raw) if isinstance(glabel_raw, (list, tuple)) else (glabel_raw or "")
+    glabel = f'<div class="nv-ig-goals-label">{_esc(glabel_txt)}</div>' if glabel_txt else ""
+    gitems = []
+    for i, g in enumerate(goals.get("items") or []):
+        av = _accent_var(g.get("accent"), i)
+        gt = f'<div class="nv-ig-goal-title">{_unwrap_p(g.get("title"))}</div>' if g.get("title") else ""
+        gb = f'<div class="nv-ig-goal-body">{_unwrap_p(g.get("body"))}</div>' if g.get("body") else ""
+        gitems.append(f'<li class="nv-ig-goal" style="--nv-accent:{av}">{gt}{gb}</li>')
+    glist = f'<ul class="nv-ig-goal-list">{"".join(gitems)}</ul>' if gitems else ""
+    goals_html = f'<div class="nv-ig-goals">{glabel}{glist}</div>' if (glabel or glist) else ""
+
+    footer = f'<p class="nv-ig-footer">{_unwrap_p(c.get("footer"))}</p>' if c.get("footer") else ""
+
+    return f'<section class="nv-block nv-infographic">{header}{cols}{goals_html}{footer}</section>'
 
 
 def _section_wave(color, role, ab="", have=True):
@@ -325,7 +445,7 @@ def _body(blocks, asset_base="", have_transitions=True):
             while j < n and blocks[j].get("gated"):
                 run.append(blocks[j]); j += 1
             if run:
-                parts.append('<div class="nv-gated">')
+                parts.append('<div class="nv-gated" tabindex="-1" role="region" aria-label="Continued content">')
                 parts.extend(render_block(x, ctx) for x in run)
                 parts.append('</div>')
             i = j
@@ -345,14 +465,16 @@ PAGE = """<!doctype html>
 <link rel="stylesheet" href="{ab}brand/tokens.css">
 <link rel="stylesheet" href="{ab}player/player.css">
 <style>:root{{ --brand-accent: {accent}; }}</style>
+<noscript><style>.nv-gated{{ display: block !important; }}</style></noscript>
 </head>
 <body{body_attrs}>
+<a class="nv-skip" href="#nv-main">Skip to content</a>
 <header class="nv-topbar">
   <img src="{ab}brand/{logo}" alt="{logo_alt}">
   <span class="nv-title">{title}</span>
-  <div class="nv-progress"><span></span></div>
+  <div class="nv-progress" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
 </header>
-<main class="nv-main">
+<main class="nv-main" id="nv-main" tabindex="-1">
 {hero}
 {body}
 <div class="nv-course-end">
@@ -390,7 +512,7 @@ def copy_shared(dest_dir, brand=None):
 
 
 def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_player=True,
-                  lesson_index=1, lesson_count=1, brand=None):
+                  lesson_index=1, lesson_count=1, brand=None, animate=True):
     """Write a complete course dir: index.html + (brand/ + player/) + assets/.
 
     asset_blobs: dict {out_rel_path: bytes} for course media (from a Rise zip or
@@ -425,6 +547,8 @@ def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_pla
         attrs += f' data-graded="1" data-pass="{int(ir.get("passingScore", 80))}"'
     if ir.get("retry"):
         attrs += f' data-retry="{int(ir["retry"])}"'
+    if not animate:                          # default on; player.js gates on data-anim="0"
+        attrs += ' data-anim="0"'
     exit_label = "Next lesson →" if (lesson_count > 1 and lesson_index < lesson_count) else "Finish course"
     page = PAGE.format(lang=ir.get("locale", "en"), title=_esc(ir.get("title")),
                        accent=ir.get("accent") or b.accent, hero=hero_html,

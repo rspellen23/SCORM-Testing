@@ -1,0 +1,32 @@
+/* TeleTracking theme tokens. Players reference var(--brand-*) only. */
+@font-face { font-family: "Open Sans"; font-weight: 400; font-style: normal; src: url("fonts/OpenSans-Regular.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 400; font-style: italic; src: url("fonts/OpenSans-Italic.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 600; font-style: normal; src: url("fonts/OpenSans-SemiBold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 700; font-style: normal; src: url("fonts/OpenSans-Bold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans"; font-weight: 800; font-style: normal; src: url("fonts/OpenSans-ExtraBold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans Condensed"; font-weight: 700; font-style: normal; src: url("fonts/OpenSansCondensed-Bold.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "Open Sans Condensed"; font-weight: 300; font-style: normal; src: url("fonts/OpenSansCondensed-Light.ttf") format("truetype"); font-display: swap; }
+:root {
+  --brand-accent:        #1EB16A;
+  --brand-accent2:       #4EE89E;
+  --brand-accent-ink:    #0d5e39;
+  --brand-heading:       #003E51;
+  --brand-band-bg:       #1EB16A;
+  --brand-band-ink:      #FFFFFF;
+  --brand-light:         #FFFFFF;
+  --brand-surface:       #EDF0F0;
+  --brand-line:          #C7CFD6;
+  --brand-page-bg:       #FFFFFF;
+  --brand-ink:           #1b2127;
+  --brand-ink-soft:      #6C7782;
+  --brand-note-bg:       #eaf7f0;
+  --brand-note-border:   #1EB16A;
+  --brand-correct:       #1EB16A;
+  --brand-incorrect:     #BD362F;
+  --brand-font-body:     "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --brand-font-head:     "Open Sans Condensed", "Open Sans", system-ui, sans-serif;
+  --brand-radius:        14px;
+  --brand-radius-lg:     22px;
+  --brand-content-width: 820px;
+  --brand-gap:           1.6rem;
+}

@@ -1,0 +1,12 @@
+{
+  "title": "Process or Pipeline Title",
+  "subtitle": "One line on what this sequence accomplishes.",
+  "intro": "Optional single sentence framing the steps below.",
+  "steps": [
+    {"num": "1", "title": "Step one", "body": "What happens in this step, in a short sentence.", "accent": "primary"},
+    {"num": "2", "title": "Step two", "body": "What happens in this step, in a short sentence.", "accent": "secondary"},
+    {"num": "3", "title": "Step three", "body": "What happens in this step, in a short sentence.", "accent": "tertiary"},
+    {"num": "4", "title": "Step four", "body": "What happens in this step, in a short sentence.", "accent": "dark"}
+  ],
+  "footer": "One line summarizing the outcome the process drives toward."
+}

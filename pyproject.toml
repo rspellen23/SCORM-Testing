@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "course-builder"
+version = "0.1.0"
+description = "Agnostic course system: .docx/.md/Rise sources -> branded HTML -> SCORM 1.2 / cmi5. Branding is external; the engine carries no company references."
+requires-python = ">=3.8"
+# The runtime course-build path is PURE standard library on purpose: a bare
+# `python3` can build SCORM packages air-gapped. Everything that needs a
+# third-party library is an optional surface, declared under [optional-dependencies].
+dependencies = []
+
+[project.optional-dependencies]
+# PowerPoint / .docx / .pdf / image export surfaces (slide, deck, to-pptx, SME review, cover art).
+export = [
+    "python-pptx>=0.6.21",
+    "python-docx>=0.8.11",
+    "pypdf>=3.9",
+    "Pillow>=9.0",
+]
+# Development + CI: schema validation of importer output and the test suite.
+# jsonschema is OPTIONAL at runtime — importers validate when it is installed
+# and degrade gracefully (warn, don't crash) when it is not, to keep the
+# air-gapped stdlib build path working.
+dev = [
+    "pytest>=7",
+    "jsonschema>=4",
+]
+
+[project.scripts]
+course-builder = "cli:main"
+
+# Flat layout: the engine modules live directly in ./src as top-level modules
+# (no package directory). This mirrors how the `build` wrapper and the dashboard
+# already invoke them (python3 src/cli.py), so packaging adds an installed entry
+# point without restructuring the working tree.
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = [
+    "authoring",
+    "blocks",
+    "brand",
+    "chart_svg",
+    "cli",
+    "cmi5",
+    "common",
+    "cover",
+    "docx_import",
+    "docx_review",
+    "ir_validate",
+    "layouts",
+    "md_import",
+    "pptx_export",
+    "pptx_transitions",
+    "prompts",
+    "render",
+    "rise_import",
+    "scorm",
+    "scorm_lint",
+    "slide_layouts",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

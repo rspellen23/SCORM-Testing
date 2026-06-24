@@ -9,7 +9,7 @@ renderer + packager consume it. One IR JSON file + an `assets/` folder = a compl
   "id": "managing-bed-requests",        // slug; used for filenames + SCORM identifier
   "title": "Managing Bed Requests",
   "locale": "en",                        // "en" | "en-GB"
-  "accent": "#1EB16A",                   // course accent (defaults to the brand accent)
+  "accent": "#3B82F6",                   // course accent (defaults to the brand accent)
   "hero": {                              // optional cover
     "image": "assets/hero.jpg",
     "title": "Managing Bed Requests",
@@ -29,7 +29,7 @@ Every block is `{ "type": "...", ...fields, "gated": false }`.
 |---|---|---|
 | `heading`     | `level` (1–3), `html` | section title; `level:1/2` render as a navy band |
 | `paragraph`   | `html` | body copy (sanitized inline HTML: strong/em/a/ul/li kept) |
-| `headingParagraph` | `level`, `headingHtml`, `html` | combined |
+| `headingParagraph` | `level`, `headingHtml`, `html` | combined heading + body. **Coming soon — import-only:** no authoring grammar; produced by the Rise/docx importers only |
 | `image`       | `src`, `alt`, `caption`, `variant` (`full`/`hero`) | full-width figure |
 | `imageText`   | `src`, `alt`, `html`, `side` (`left`/`right`) | image beside text |
 | `video`       | `mode` (`file`/`embed`), `src`, `poster`, `captions`, `captionsLang`, `caption`, `aspect`, `title`, `requireComplete` | `file` = self-hosted `<video>` bundled in the zip (+ `<track>` captions); `embed` = streamed responsive `<iframe>` |
@@ -41,14 +41,22 @@ Every block is `{ "type": "...", ...fields, "gated": false }`.
 | `table`       | `html` | passthrough `<table>` HTML (sanitized) |
 | `divider`     | — | spacer rule |
 | `transition`  | `color` (green/gold/dark/blue/teal), `band` (top/bottom) | brand "ribbon" wave divider; reusable, color-swappable. Renders a pre-cropped band from `brand/transitions/<color>-<band>.png` (`green`=brand-accent default). Decorative (`aria-hidden`). md grammar: `*Transition:* <color> <band>` |
-| `continue`    | `text` (default "CONTINUE") | gate; reveals the next gated run |
+| `continue`    | `text` (default "CONTINUE") | gate; reveals the next gated run. **Coming soon — import-only:** no authoring grammar; produced by the Rise/docx importers only |
 | `knowledgeCheck` | `prompt`, `multi` (bool), `options` [{`html`,`correct`}], `feedback`, `feedbackIncorrect` | interactive, **unscored** |
 | `quote`       | `html` (quote text), `attribution`, `src` (optional bg image) | pull-quote; with `src` the image is a tinted full-bleed background. md: `*Quote:* <text> · by: <name> · slot:`bg`` |
 | `accordion`   | `entries` [{`title`, `html`, `src?`}] | native `<details>` disclosure (a11y for free, no JS). md: `*Accordion:*` + `::: item` (title:/body:/slot:) groups, lone `:::` closes |
 | `process`     | `entries` [{`title`, `html`, `src?`, `kind?`}] | numbered ordered-step list (static, accessible). md: `*Process:*` + `::: step` groups |
 | `flashcard`   | `entries` [{`frontHtml`, `frontSrc?`, `backHtml`, `backSrc?`}] | CSS 3D-flip cards; click/Enter/Space toggles `aria-pressed`, both faces in DOM, reduced-motion safe. Non-gating. md: `*Flashcard:*` + `::: card` (front:/back:/frontslot:/backslot:) |
 | `categorize`  | `buckets` [{`id`, `title`}], `pool` [{`html`, `target`}], `prompt?`, `feedback`, `feedbackIncorrect` | sort each pool item into its correct bucket. Accessible **select-to-place** base (a Check button validates + locks); drag is a future enhancement. **Gates completion** once checked. md: `*Categorize:*` + `bucket:`/`item: <text> -> <bucket>` lines, lone `:::` closes |
-| `scenario`    | `scenes` [{`title`, `html`, `responses` [{`html`, `feedback`, `preferred?`}]}] | **linear fallback** for Rise branching scenarios — renders each scene's narrative + response options with their feedback (preferred path highlighted). True branching is a future track. Import-only (no authoring grammar yet) |
+| `scenario`    | `scenes` [{`title`, `html`, `responses` [{`html`, `feedback`, `preferred?`}]}] | **linear fallback** for Rise branching scenarios — renders each scene's narrative + response options with their feedback (preferred path highlighted). True branching is a future track. **Coming soon — import-only** (no authoring grammar yet; the lint rejects a `*Scenario:*` marker) |
+| `button`      | `label`, `action` (`link`/`modal`), `href` (link) or `modal` (panel), `buttonVariant` (`primary`/`secondary`), `arrow` (bool) | CTA: external link or modal trigger. md: `*Button:*` + `::: modal` fence for the modal variant |
+| `cardGrid`    | `cards` [{`title`, `teaser`, `icon`, `href?`, `modal?`}], `columns` (1–4), `requireOpen` (bool) | card grid; cards may be plain, link, or modal-opening. `requireOpen` gates completion until every modal card is opened. md: `*Cards:*` + `::: card` groups |
+| `timeline`    | `milestones` [{`title`, `html`, `accent?`}], `accent?` | ordered roadmap on a vertical brand axis (HTML parity with the `timeline` slide layout). md: `*Timeline:*` + `::: milestone` groups |
+| `comparison`  | `panels` [{`heading`, `sublabel?`, `items` [html…], `callout?`, `accent?`}], `accent?` | 2–3 side-by-side panels (old-vs-new / A-B-C). md: `*Comparison:*` + `::: panel` groups |
+| `chart`       | `chart` (`bar`/`line`/`pie`/`stackedBar`/`groupedBar`), `categories` [str…], `series` [{`name`, `data` [num/null…]}], `xLabel?`, `yLabel?`, **`source` (REQUIRED)** | engine-drawn inline SVG (no JS, brand-colored, sr-only data-table). `source:` is mandatory — the lint rejects a sourceless chart (no-invented-metrics). md: `*Chart:*` + `categories:`/`series: Name = a,b`/`source:` lines |
+| `infographic` | `infographic` {`title`, `subtitle?`, `left`{`heading`,`intro`,`items`}, `right?`/`cards?`, `goals?`, `footer?`} | poster-style overview as a flowing HTML section. Consumes the **same content object** as the `infographic` slide layout (`b["infographic"]` == slide content). md: `*Infographic:*` + `::: left/right/card/goals/goal` fences |
+| `sectionStart`| `color` (green/gold/dark/blue/teal) | opens a colored section band (wraps the blocks until `sectionEnd`). md: `*Section:* <color>` |
+| `sectionEnd`  | — | closes the current colored section. md: `*Section:* end` |
 
 > **Fence convention (shared with `cardGrid`):** inside `*Accordion:*`/`*Process:*`/`*Flashcard:*`, each entry opens with `::: item`/`::: step`/`::: card` and a **single lone `:::` closes the whole block** — there is **no per-entry closer**. (Adding one closes the block early — the known cardGrid gotcha.)
 

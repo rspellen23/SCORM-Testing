@@ -1,0 +1,12 @@
+{
+  "title": "Roadmap or Timeline Title",
+  "subtitle": "One line on the arc this timeline covers.",
+  "intro": "Optional single sentence framing the milestones below.",
+  "milestones": [
+    {"phase": "NOW", "title": "Milestone one", "body": "What this phase delivers, briefly.", "accent": "primary"},
+    {"phase": "NEXT", "title": "Milestone two", "body": "What this phase delivers, briefly.", "accent": "secondary"},
+    {"phase": "LATER", "title": "Milestone three", "body": "What this phase delivers, briefly.", "accent": "tertiary"},
+    {"phase": "FUTURE", "title": "Milestone four", "body": "What this phase delivers, briefly.", "accent": "dark"}
+  ],
+  "footer": "One line summarizing the direction of travel. (Supports 3–6 milestones.)"
+}

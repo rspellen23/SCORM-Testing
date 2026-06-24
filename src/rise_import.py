@@ -298,4 +298,6 @@ def import_rise(zip_path, brand=None):
         copy_map = {p: "assets/" + posixpath.basename(p) for p in used}
         ir["_stats"] = {"blocks": len(blocks), "assets": len(used),
                         "skipped": dict(stats["skipped"])}
+        from ir_validate import validate_ir
+        validate_ir(ir, label=ir.get("id", "course"))
         return ir, copy_map, zip_path

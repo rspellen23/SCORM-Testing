@@ -57,13 +57,14 @@ def _para(doc, fragment, size=11, color=GREY, bold=False, italic=False, style=No
 
 
 def _accent_rgb(brand):
-    hexv = (brand.accent if brand else "#1EB16A").lstrip("#")
+    hexv = (brand.accent if brand else "#3B82F6").lstrip("#")
     return RGBColor.from_string(hexv), hexv
 
 
 def _preamble(md_path, which):
-    """Pull the per-microlearning author meta lines (Subject/Length/Objectives) from
-    the raw .md so reviewers get provenance. Best-effort, never raises."""
+    """Pull the per-microlearning author meta lines (Subject/Length/Objectives) plus the
+    instructional-design rationale from the raw .md so reviewers get provenance and can see
+    WHY the unit/curriculum is structured the way it is. Best-effort, never raises."""
     try:
         text = open(md_path, encoding="utf-8").read()
     except OSError:
@@ -71,10 +72,19 @@ def _preamble(md_path, which):
     secs = re.split(r"^##\s+Microlearning\s+", text, flags=re.M)
     head = secs[0] if secs else ""              # file preamble (course-level meta)
     lines = []
-    for key in ("Subject", "Estimated Length", "Learning Objectives", "Confidence Score"):
+    # course-level bold meta + the curriculum-level "why these units / this order" rationale
+    for key in ("Subject", "Estimated Length", "Learning Objectives", "Confidence Score",
+                "Curriculum Rationale"):
         m = re.search(rf"^\*\*{re.escape(key)}:\*\*\s*(.+)$", head, flags=re.M)
         if m:
             lines.append((key, m.group(1).strip()))
+    # per-unit "why this unit is built this way" rationale, from its Build-Notes block (plain line)
+    sec = secs[which] if 0 < which < len(secs) else ""
+    rm = re.search(r"Design Rationale:\s*(.+?)(?:\n(?:[A-Za-z][\w /]*:|\*\*)|\Z)", sec, flags=re.S)
+    if rm:
+        val = re.sub(r"\s*\n\s*", "; ", rm.group(1).strip()).strip("; ").strip()
+        if val:
+            lines.append(("Design Rationale", val))
     return lines
 
 
@@ -109,6 +119,58 @@ def _kc_box(doc, b, accent_rgb, accent_hex):
         lr.font.color.rgb = GREY
         fr = fb.add_run(b["feedback"]); fr.italic = True; fr.font.size = Pt(10)
         fr.font.color.rgb = GREY; fr.font.name = BODY_FONT
+    doc.add_paragraph()
+
+
+def _fmt_num(v):
+    if v is None:
+        return ""
+    if isinstance(v, float) and not v.is_integer():
+        return f"{v:g}"
+    return str(int(v)) if isinstance(v, (int, float)) else str(v)
+
+
+def _render_chart_review(doc, b, accent_hex):
+    """Surface a chart in the SME review doc as a LABEL + a data table + its source,
+    so the reviewer can verify every figure (and catch a missing/wrong source) before
+    anything is published."""
+    kind = {"bar": "Bar", "groupedBar": "Grouped bar", "stackedBar": "Stacked bar",
+            "line": "Line", "pie": "Pie"}.get(b.get("chart"), "Chart")
+    lab = doc.add_paragraph()
+    r = lab.add_run(f"[{kind} chart] "); r.bold = True; r.font.color.rgb = NAVY
+    r.font.name = BODY_FONT; r.font.size = Pt(11)
+    if b.get("title"):
+        t = lab.add_run(plain(b["title"])); t.font.color.rgb = NAVY
+        t.font.name = BODY_FONT; t.font.size = Pt(11); t.bold = True
+    cats = b.get("categories") or []
+    series = [s for s in (b.get("series") or []) if isinstance(s, dict)]
+    if cats and series:
+        tbl = doc.add_table(rows=len(cats) + 1, cols=len(series) + 1)
+        tbl.style = "Table Grid"
+        hdr = [""] + [s.get("name") or f"Series {i + 1}" for i, s in enumerate(series)]
+        for ci, txt in enumerate(hdr):
+            cell = tbl.cell(0, ci); p = cell.paragraphs[0]
+            run = p.add_run(txt); run.bold = True; run.font.size = Pt(10)
+            run.font.name = BODY_FONT; run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+            _shade(cell, accent_hex)
+        for ri, cat in enumerate(cats, 1):
+            cells = [cat] + [_fmt_num((s.get("data") or [None] * len(cats))[ri - 1]
+                                      if ri - 1 < len(s.get("data") or []) else None) for s in series]
+            for ci, txt in enumerate(cells):
+                cell = tbl.cell(ri, ci); p = cell.paragraphs[0]
+                run = p.add_run(txt); run.font.size = Pt(10); run.font.name = BODY_FONT
+                run.bold = (ci == 0); run.font.color.rgb = GREY
+    # source line — flag it RED if missing, since the build would reject it
+    sp = doc.add_paragraph()
+    if (b.get("source") or "").strip():
+        s1 = sp.add_run("Source: "); s1.bold = True
+        s2 = sp.add_run(plain(b["source"])); s2.italic = True
+        for rr in (s1, s2):
+            rr.font.size = Pt(9.5); rr.font.name = BODY_FONT; rr.font.color.rgb = GREY
+    else:
+        warn = sp.add_run("⚠ NO SOURCE — verify these figures and add a source before publishing.")
+        warn.bold = True; warn.font.size = Pt(9.5); warn.font.name = BODY_FONT
+        warn.font.color.rgb = RGBColor(0xA3, 0x20, 0x19)
     doc.add_paragraph()
 
 
@@ -204,6 +266,8 @@ def render_review_docx(ir, out_path, brand=None, md_path=None, which=1):
                 _para(doc, b.get("html"))
         elif t == "table":
             _render_table(doc, b.get("html"), accent_hex)
+        elif t == "chart":
+            _render_chart_review(doc, b, accent_hex)
         elif t == "cardGrid":
             for c in b.get("cards", []):
                 p = doc.add_paragraph(style="List Bullet")

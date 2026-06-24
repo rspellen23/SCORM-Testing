@@ -38,9 +38,20 @@ GREY = RGBColor(0x44, 0x44, 0x44)
 LIGHT = RGBColor(0xF2, 0xF4, 0xF5)
 
 # block types this exporter cannot represent on a static slide
+# (timeline/comparison are rich HTML-player layouts — for a PowerPoint of those,
+#  use the dedicated `./build slide --layout timeline|comparison` generator; here
+#  they are logged as dropped rather than silently swallowed by the textflow.)
+#  chart blocks likewise: the dedicated `./build slide --layout chart` generator emits a
+#  NATIVE, editable PowerPoint chart — far better than a flattened bitmap — so here a chart
+#  is logged as dropped. (Future: emit a native chart slide inline during the flatten.)
+#  quote + infographic have no faithful static-slide form either (a tinted full-bleed
+#  pull-quote / a poster section) → dropped-and-logged, not silently swallowed.
+# This set is mirrored by blocks.BLOCKS (pptx="drop"/"structural"); the registry
+# drift test (tests/test_block_registry.py) fails if the two disagree.
 _DROP = {"continue", "video", "audio", "embed", "accordion", "process",
          "flashcard", "categorize", "scenario", "divider", "transition",
-         "sectionStart", "sectionEnd", "button"}
+         "sectionStart", "sectionEnd", "button", "timeline", "comparison", "chart",
+         "quote", "infographic"}
 
 
 # ---------------------------------------------------------------- HTML -> runs
@@ -190,8 +201,12 @@ def _new_para(tf, first_holder):
     return tf.add_paragraph()
 
 
-def _render_textflow(tf, blocks, accent):
-    """Render the non-media, non-table blocks into one text frame."""
+def _render_textflow(tf, blocks, accent, unmatched=None):
+    """Render the non-media, non-table blocks into one text frame.
+
+    Any block type this flow doesn't recognize is recorded in `unmatched`
+    (a set) rather than silently vanishing — a NEW block type added without a
+    flatten disposition surfaces as a warning instead of disappearing."""
     tf.word_wrap = True
     first = [True]
     for b in blocks:
@@ -253,6 +268,11 @@ def _render_textflow(tf, blocks, accent):
                     tz.font.name = "Open Sans"
         elif t == "knowledgeCheck":
             _render_kc(tf, b, accent, first)
+        elif unmatched is not None:
+            # not rendered here, not pre-pulled (image/table), not in _DROP -> a
+            # type with no flatten disposition. Record it so it's reported, never
+            # silently swallowed (the audit's silent-fallthrough finding).
+            unmatched.add(t)
 
 
 def _render_kc(tf, b, accent, first):
@@ -350,9 +370,13 @@ def _build_slide(prs, slide, accent, logo_path):
     return s
 
 
-def export_pptx(ir, blobs, out_path, brand=None, logo=True):
-    """Render the Course IR to a .pptx at out_path. Returns a stats dict."""
-    accent = RGBColor.from_string((brand.accent if brand else "#1EB16A").lstrip("#"))
+def export_pptx(ir, blobs, out_path, brand=None, logo=True,
+                transition=None, transition_dir=None, transition_speed="med"):
+    """Render the Course IR to a .pptx at out_path. Returns a stats dict.
+
+    If `transition` is set (e.g. "fade"/"push"), it is applied to every slide
+    (see src/pptx_transitions.py for supported effects)."""
+    accent = RGBColor.from_string((brand.accent if brand else "#3B82F6").lstrip("#"))
     logo_path = brand.asset(brand.get("logo", "Logo.png")) if (brand and logo) else None
 
     prs = Presentation()
@@ -382,6 +406,7 @@ def export_pptx(ir, blobs, out_path, brand=None, logo=True):
     stats = {"slides": len(slides) + 1, "dropped": {}}
     for d in dropped:
         stats["dropped"][d] = stats["dropped"].get(d, 0) + 1
+    unmatched = set()
 
     for sl in slides:
         s = _build_slide(prs, sl, accent, logo_path)
@@ -410,7 +435,7 @@ def export_pptx(ir, blobs, out_path, brand=None, logo=True):
                                      BODY_TOP + (BODY_H - ih) // 2, width=iw)
                 tx_left = MARGIN
             box = s.shapes.add_textbox(tx_left, BODY_TOP, col_w, BODY_H)
-            _render_textflow(box.text_frame, text_content, accent)
+            _render_textflow(box.text_frame, text_content, accent, unmatched)
             box.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
         else:
             y = BODY_TOP
@@ -420,7 +445,7 @@ def export_pptx(ir, blobs, out_path, brand=None, logo=True):
                 else:
                     th = Inches(2.0)
                 box = s.shapes.add_textbox(MARGIN, y, BODY_W, th)
-                _render_textflow(box.text_frame, text_content, accent)
+                _render_textflow(box.text_frame, text_content, accent, unmatched)
                 y = y + th + Inches(0.15)
             if img_path:
                 iw, ih = _img_fit(img_path, BODY_W, Inches(2.6))
@@ -429,6 +454,21 @@ def export_pptx(ir, blobs, out_path, brand=None, logo=True):
             for tb in tables:
                 y = _add_table(s, parse_table(tb.get("html")), MARGIN, y, BODY_W, accent)
                 y = y + Inches(0.2)
+
+    if unmatched:
+        # a type reached the textflow with no rendering branch and no _DROP entry
+        # -> it would have vanished silently. Report it as dropped + warn loudly.
+        import sys
+        for t in unmatched:
+            stats["dropped"][t] = stats["dropped"].get(t, 0) + 1
+        print(f"[pptx_export] WARNING: block type(s) {sorted(unmatched)} have no "
+              f"flatten disposition (not rendered, not in _DROP) — dropped. Add them "
+              f"to blocks.BLOCKS / _DROP.", file=sys.stderr)
+
+    if transition:
+        import pptx_transitions
+        pptx_transitions.apply_all(prs, transition, transition_speed, transition_dir)
+        stats["transition"] = transition
 
     prs.save(out_path)
     return stats

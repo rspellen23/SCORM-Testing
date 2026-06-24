@@ -10,6 +10,116 @@
 
 ---
 
+## 0. Instructional-design foundations — the pedagogy behind every choice
+
+> A script isn't just a parseable file; it's one piece of a **curriculum** built for an **adult
+> learner**. Structural validity (§2) is the floor — these foundations are the bar. They are **always
+> on, regardless of archetype**, and they make every structural choice **defensible**: for any unit
+> you should be able to say *"it's built this way because of X principle."* Record that reasoning in
+> the **Design Rationale** (§4) — that's how a reviewer gets a straight answer to *"why is it
+> structured like this?"*
+
+These four lenses each govern a different tier of the work:
+
+**0.1 Adult-learner posture — Knowles (cross-cutting + the archetype's frame).** Write for an adult
+who is busy, experienced, and self-directed:
+- **Relevance / need-to-know** — open by making the stake explicit: the problem this removes, what
+  they'll be able to do. Never "here's a feature"; always "here's the pain this solves."
+- **Build on prior experience** — assume competence; connect new material to what they already do,
+  and invite them to relate it to their own work.
+- **Problem-centered, not content-centered** — frame around a real task or decision the learner
+  faces, not an abstract tour of the topic.
+- **Self-direction & respect** — concise, no padding, no busywork; give the *why* so they can judge
+  for themselves. Adults resent box-ticking.
+- **Internal motivation** — appeal to doing the job better, mastery, autonomy — not compliance for
+  its own sake.
+  Each **archetype** states the specific adult-learner *pain point* it serves — read it and let it
+  set the framing.
+
+**0.2 Each unit addresses one need, completely — Merrill's First Principles (per microlearning).**
+Every `## Microlearning` unit should: be **problem/task-centered** (anchored to a real task/question,
+stated early) → **activate prior knowledge** (connect to what they already know before adding new) →
+**demonstrate** (show it — example, walkthrough, worked case, visual — don't just tell) → **apply**
+(the KC and any scenario are *practice*, not a quiz tax) → **integrate** (close by tying it back to
+the job: when they'll use it, how it transfers).
+
+**0.3 The within-unit teaching sequence — Gagné's Nine Events (per microlearning).** A well-built
+unit rides this spine (the archetype slide-plans are designed to satisfy it): **1** gain attention
+(hook) → **2** inform objectives (Slide 1) → **3** recall prior learning (connect to experience) →
+**4** present the content → **5** provide guidance (examples / analogy / diagram) → **6** elicit
+performance (the KC / scenario) → **7** provide feedback (both KC feedback paths) → **8** assess (the
+KC outcome) → **9** enhance retention & transfer (recap + "where you'll use this"). **Don't label
+these in the script** — they're the spine, not headings.
+
+**0.4 The set must cover the curriculum — backward design (across units).** When the source is
+decomposed into multiple units (curriculum mapping): derive the **full set of learning points** the
+source supports; ensure **every point lands in some unit** — no gap, no silent drop; **sequence by
+prerequisite** (earlier units enable later ones; never reference what hasn't been taught); **no
+redundancy** (each unit earns its place — merge or re-scope overlaps). The **unit count is driven by
+complete coverage of the source, never by the number of objectives listed** (one objective may span
+several units; one unit may serve several objectives).
+When a course has **more than one unit**, record the curriculum-level reasoning once in the **file
+preamble** (above the first `## Microlearning`, where it's ignored by the parser) as a bold line:
+`**Curriculum Rationale:** <why this set of units and this order — the coverage/sequence decision>`.
+That answers *"why these units, in this order?"* the same way the per-unit Design Rationale answers
+*"why is this unit built this way?"*
+
+---
+
+## 0b. Media & layout design principles — how content picks its treatment
+
+§0 governs *what* to teach and *why*. This section governs *how each piece is presented* —
+which block, how many columns, which media (or none). These are not style preferences; they are
+grounded in the science of multimedia learning (Mayer's **Cognitive Theory of Multimedia
+Learning**; Clark & Mayer, *e-Learning and the Science of Instruction*; **cognitive load
+theory**). Every presentation choice should trace to one of these, and the unit's
+**Design Rationale** (see §4) must name the presentation choices, not only the pedagogy.
+
+### 0b.1 Media — does this content need a visual, and which kind? (Mayer: coherence, signaling, contiguity)
+
+- **DEFAULT IS NONE.** Add a visual only when it *carries information* or *genuinely aids pacing*.
+  Gratuitous "filler" decoration measurably **hurts** learning (coherence principle — extraneous
+  material competes for working memory). Never add an image just to fill space or "look finished."
+- **Screenshot** (`*Visual:* screenshot`) → software UI, "where do I click," "what does this look
+  like." The information *is* the interface.
+- **Video / GIF** (Build-Notes Media plan, not `*Visual:*`) → a sequence or motion that must be
+  *seen performed* over time (a demo, an animation of a flow). A still cannot carry motion.
+- **Diagram** (`*Visual:* diagram`) → structure, flow, relationships, architecture, before→after
+  states. The value is the spatial arrangement.
+- **Decorative** (`*Visual:* decorative`) → a purely emotional/pacing hook with no information to
+  convey. Use sparingly, at a **section opener** only; decorative ⇒ no caption.
+- One visual per idea, placed **adjacent to the text it supports** (spatial-contiguity principle).
+- Do not narrate an on-screen image in prose word-for-word (redundancy principle) — let the caption
+  and the figure carry it; the prose adds what the image cannot.
+
+### 0b.2 Layout & density — which block, and single vs multi-column? (cognitive load, split-attention, item parallelism)
+
+Match the *shape of the content* to the block. The engine's structures and what each is for:
+
+- **Ordered steps / a how-to / a pipeline** → `*Process:*` (numbered, single-column).
+- **2–3 things compared, A vs B, old vs new, options** → `*Comparison:*` (side-by-side panels).
+- **Phases, a roadmap, dates, chronology** → `*Timeline:*`.
+- **One big idea = a problem + a framework + goals** → `*Infographic:*` poster.
+- **Parallel peer items** (features, roles, components, gates) → `*Cards:*` grid.
+- **Real quantitative data from the source** → `*Chart:*` (numbers must appear LITERALLY in the
+  source; cite a `source:` — never fabricate; see §2 / the build rejects a sourceless chart).
+- **The teaching substance itself** → ordinary **paragraphs**, single-column.
+
+Density rule: use a **multi-column** block (comparison / cards) **only** when the items are *truly
+parallel* and short enough to scan side-by-side. If they are sequential, dependent, or long, keep a
+**single column** — forcing serial content into columns splits attention and raises load.
+
+### 0b.3 Emphasis — note vs statement vs paragraph (signaling — emphasis only works when sparse)
+
+- **Paragraph** = the actual teaching exposition (the substance carrying the content).
+- **`*Note:*`** = a *secondary* aside set apart from the main flow — a caution, a tip, an exception,
+  a "good to know." If it is core teaching, it belongs in a paragraph, not a note.
+- **`*Statement:*`** = one memorable principle or takeaway you want to *land*. Use it **rarely**
+  (≈ one per unit). Over-emphasis is self-defeating: if everything is highlighted, nothing is
+  (signaling principle).
+
+---
+
 ## 1. Output target
 
 A single microlearning unit in the **§8 grammar**, ready to drop into a `.md` and build with
@@ -70,6 +180,60 @@ is several units in one `.md`, each built separately and bundled in an your LMS 
     `mbr_1_objectives.svg`). One `*Visual:*` per slide; for two images use two slides or a follow-up.
   - **Video / audio are NOT `*Visual:*`** — they stay in the Build-Notes Media plan (they build to
     `video`/`audio` IR blocks). `*Visual:*` is images/SVG only.
+- **Data → `*Chart:*` (parser-supported).** When the source has REAL quantitative data that a chart
+  conveys better than a table or prose, emit a chart. Grammar: a `*Chart:*` line naming the type,
+  then `key: value` lines until a blank line.
+  ```
+  *Chart:* bar            (bar | line | pie | stackedBar | groupedBar; column/donut/grouped also accepted)
+  title: Quarterly admits
+  categories: Q1, Q2, Q3, Q4
+  series: Admits = 120, 145, 130, 160
+  series: Discharges = 110, 140, 125, 155     (repeat `series:` for more; omit the `Name =` for one unnamed series)
+  yLabel: Patients
+  xLabel: Quarter
+  source: <REQUIRED — the source doc/table these numbers came from>
+  ```
+  - **Numbers MUST be literal source figures** — never estimate, extrapolate, or invent. Values use
+    NO thousands separators (comma is the delimiter): write `1200`, not `1,200`. Use `null` for a gap.
+  - **`source:` is mandatory.** A chart without it is **rejected by the build** (no-invented-metrics
+    rule). `pie` uses exactly one series; bar/line/stacked/grouped take one or more.
+- **Overview poster → `*Infographic:*` (parser-supported).** A poster-style summary block — a
+  challenge column, a framework column of numbered cards, a goals strip, and a footer. It renders as
+  a flowing on-brand HTML section in the course AND, with the **same content**, as the `infographic`
+  slide layout (`./build slide --layout infographic`). Use it for a section/topic overview, not for
+  body teaching. Grammar (flat `:::` fences; a lone `:::` closes the whole block):
+  ```
+  *Infographic:* Initiative or Topic Title
+  subtitle: One-line tagline.
+  footer: One line summarizing the outcome.
+  ::: left
+  heading: THE CHALLENGE
+  intro: Summarize the problem this addresses:
+  callout: What happens if this isn't solved.
+  - Key problem one — short supporting detail
+  - Key problem two — short supporting detail
+  :::
+  ::: right
+  heading: FRAMEWORK OR APPROACH
+  sublabel: 4 COMPONENTS
+  :::
+  ::: card
+  num: 1
+  title: Component one
+  body: What it does, in one short sentence.
+  accent: primary
+  :::
+  ::: goals
+  label: OUR GOALS
+  :::
+  ::: goal
+  title: Goal one
+  body: Short description of the goal.
+  accent: primary
+  :::
+  ```
+  `accent` is a brand role (`primary|secondary|tertiary|dark`; omit to auto-cycle). Repeat `::: card`
+  and `::: goal` per item. Every section is optional — drop the fences you don't need.
 - **Author-meta block — ORDERING IS LOAD-BEARING.** The build cuts everything from the first line
   that starts `**Articulate Build Notes` or `**Sources`. So:
   - The meta block **must open with** `**Articulate Build Notes:**`.
@@ -86,6 +250,11 @@ is several units in one `.md`, each built separately and bundled in an your LMS 
   demo GIF, video, diagram), **do not** write a markdown image. Instead record it under
   **Build Notes** as a **VISUAL line** (see §4) — Segment C inserts the real `image`/`video`/`audio`/
   `embed` block into the IR by slot-name during the build.
+- **Coming-soon block types — do NOT author them.** `scenario`, `continue` (gated reveal), and
+  `headingParagraph` render and validate, but have **no authoring grammar yet** — they are
+  produced only by the Rise/docx importers (import-only stubs). The lint rejects a `*Scenario:*` /
+  `*Continue:*` / `*HeadingParagraph:*` marker so it can't silently degrade. Use the available
+  grammar (e.g. `*Statement:*` + a KC, or a `*Process:*`) until these graduate.
 
 ## 4. The Build-Notes block (under the cut marker)
 
@@ -96,6 +265,10 @@ Estimated Length: <e.g. 11 min>
 Learning Objectives:
 - <objective — traceable to a Context-Pack objective or gap>
 Confidence Score: <High | Medium | Low — flag any slide built on thin sourcing>
+Design Rationale: <WHY this unit is structured the way it is, named to the §0 principles so the
+  choice is defensible. 1–3 short lines. e.g. "Problem-centered open (Knowles need-to-know);
+  demonstrate→apply per Merrill; KC placed at Gagné event 6 (elicit performance), debrief at 9
+  (transfer). Scoped to one learning point per backward-design coverage map.">
 Visuals / Media plan:
 - Slide 4: VIDEO (file) — demo of <X>; slot `<course-slug>_4_demo.mp4`; requireComplete: true
 - Slide 6: IMAGE — <description>; slot `<course-slug>_6_diagram.png`
@@ -122,7 +295,7 @@ Build Notes: <anything the builder/reviewer should know>
   **objective/gap**. Do **not** invent product behavior — this trains real software; fabrication is a
   correctness defect. If sourcing is thin, lower the Confidence Score and flag the slide.
 - **Accent/color:** don't set colors in the script. Brand styling is applied at build (renderer
-  default = the brand accent `#1EB16A`).
+  default = the brand accent (the active brand sets the hex)).
 
 ## 6. How to use a template
 

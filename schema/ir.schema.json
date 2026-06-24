@@ -1,11 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://coursecraft.local/course-ir/v1",
+  "$id": "https://example.org/course-ir/v1",
   "title": "Course IR",
   "type": "object",
   "required": ["title", "blocks"],
   "properties": {
     "schema": { "const": "course-ir/v1" },
+    "irVersion": { "type": "integer", "minimum": 1, "description": "IR shape version; gated by ir_validate.migrate() on from-ir. Absent = current." },
     "id": { "type": "string" },
     "title": { "type": "string" },
     "locale": { "enum": ["en", "en-GB"] },
@@ -38,7 +39,9 @@
                    "video", "audio", "embed",
                    "note", "statement", "list", "table", "divider", "continue", "knowledgeCheck",
                    "button", "cardGrid",
-                   "quote", "accordion", "process", "flashcard", "categorize", "scenario"]
+                   "quote", "accordion", "process", "flashcard", "categorize", "scenario",
+                   "timeline", "comparison", "chart", "infographic",
+                   "transition", "sectionStart", "sectionEnd"]
         },
         "gated": { "type": "boolean", "description": "Hidden until the preceding continue gate is clicked" },
         "level": { "type": "integer", "minimum": 1, "maximum": 3 },
@@ -110,13 +113,13 @@
             "properties": {
               "title": { "type": "string" },
               "html": { "type": "string" },
-              "src": { "type": "string" },
+              "src": { "type": ["string", "null"], "description": "optional entry image; null/absent means no image" },
               "alt": { "type": "string" },
               "kind": { "enum": ["intro", "step"], "description": "process only: step role" },
               "frontHtml": { "type": "string" },
-              "frontSrc": { "type": "string" },
+              "frontSrc": { "type": ["string", "null"] },
               "backHtml": { "type": "string" },
-              "backSrc": { "type": "string" }
+              "backSrc": { "type": ["string", "null"] }
             }
           }
         },
@@ -159,6 +162,109 @@
                 }
               }
             }
+          }
+        },
+        "accent": { "enum": ["primary", "secondary", "tertiary", "dark"], "description": "timeline/comparison: brand accent role for the block (per-milestone/panel accents are set on each item; omit to auto-cycle)" },
+        "milestones": {
+          "type": "array",
+          "description": "timeline: ordered roadmap milestones rendered along a vertical brand axis (HTML player parity with the 'timeline' slide layout)",
+          "items": {
+            "type": "object",
+            "required": ["title"],
+            "properties": {
+              "phase": { "type": "string", "description": "phase/date chip, e.g. 'NOW' or 'Q1'" },
+              "title": { "type": "string" },
+              "html": { "type": "string", "description": "milestone body HTML" },
+              "accent": { "enum": ["primary", "secondary", "tertiary", "dark"], "description": "brand accent role for this milestone; omit to auto-cycle" }
+            }
+          }
+        },
+        "panels": {
+          "type": "array",
+          "description": "comparison: 2-3 side-by-side panels for old-vs-new or option A/B/C (HTML player parity with the 'comparison' slide layout)",
+          "items": {
+            "type": "object",
+            "required": ["heading"],
+            "properties": {
+              "heading": { "type": "string" },
+              "sublabel": { "type": "string", "description": "small label under the panel heading" },
+              "accent": { "enum": ["primary", "secondary", "tertiary", "dark"], "description": "brand accent role for this panel; omit to auto-cycle" },
+              "items": { "type": "array", "items": { "type": "string" }, "description": "panel bullet lines (inline HTML allowed)" },
+              "callout": { "type": "string", "description": "highlighted callout box at the foot of the panel" }
+            }
+          }
+        },
+        "chart": { "enum": ["bar", "line", "pie", "stackedBar", "groupedBar"], "description": "chart block: visualization type. bar=column comparison; line=trend; pie=part-to-whole; stackedBar/groupedBar=multi-series" },
+        "categories": { "type": "array", "items": { "type": "string" }, "description": "chart: x-axis category labels (bar/line/stacked/grouped) or slice labels (pie). One entry per data point per series." },
+        "series": {
+          "type": "array",
+          "description": "chart: one or more data series. pie uses exactly one series. Each series' data length must equal categories length.",
+          "items": {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "name": { "type": "string", "description": "series legend label (required when >1 series)" },
+              "data": { "type": "array", "items": { "type": ["number", "null"] }, "description": "numeric values aligned to categories; null = missing/no-bar" }
+            }
+          }
+        },
+        "xLabel": { "type": "string", "description": "chart: x-axis title" },
+        "yLabel": { "type": "string", "description": "chart: y-axis (value) title" },
+        "source": { "type": "string", "description": "chart: REQUIRED provenance — which source document/table these figures came from. Charts with no source are invalid (no-invented-metrics guardrail)." },
+        "infographic": {
+          "type": "object",
+          "description": "infographic block: a poster-style overview rendered as a flowing HTML section. The content object is IDENTICAL to the 'infographic' slide-layout content schema, so one JSON serves both the slide generator and the course block.",
+          "properties": {
+            "title": { "type": "string" },
+            "subtitle": { "type": "string" },
+            "left": {
+              "type": "object",
+              "description": "the challenge/problem column",
+              "properties": {
+                "heading": { "type": "string" },
+                "intro": { "type": "string" },
+                "items": { "type": "array", "description": "bullets; each is either a string or a [bold, detail] pair", "items": {} },
+                "callout": { "type": "string" }
+              }
+            },
+            "right": {
+              "type": "object",
+              "description": "the framework/approach column",
+              "properties": {
+                "heading": { "type": "string" },
+                "sublabel": { "type": "string" },
+                "cards": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "num": { "type": "string" },
+                      "title": { "type": "string" },
+                      "body": { "type": "string" },
+                      "accent": { "enum": ["primary", "secondary", "tertiary", "dark"] }
+                    }
+                  }
+                }
+              }
+            },
+            "goals": {
+              "type": "object",
+              "properties": {
+                "label": { "description": "section label — a string or an array of label parts", "items": {} },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": { "type": "string" },
+                      "body": { "type": "string" },
+                      "accent": { "enum": ["primary", "secondary", "tertiary", "dark"] }
+                    }
+                  }
+                }
+              }
+            },
+            "footer": { "type": "string" }
           }
         }
       }

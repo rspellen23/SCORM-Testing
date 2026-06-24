@@ -1,0 +1,30 @@
+{
+  "title": "Comparison Title",
+  "subtitle": "One line on what is being compared.",
+  "intro": "Optional single sentence framing the columns below.",
+  "columns": [
+    {
+      "heading": "OPTION A",
+      "sublabel": "OPTIONAL SUBLABEL",
+      "accent": "dark",
+      "items": [
+        ["Point one", " — short supporting detail"],
+        ["Point two", " — short supporting detail"],
+        ["Point three", " — short supporting detail"]
+      ],
+      "callout": "One line summarizing this column."
+    },
+    {
+      "heading": "OPTION B",
+      "sublabel": "OPTIONAL SUBLABEL",
+      "accent": "primary",
+      "items": [
+        ["Point one", " — short supporting detail"],
+        ["Point two", " — short supporting detail"],
+        ["Point three", " — short supporting detail"]
+      ],
+      "callout": "One line summarizing this column."
+    }
+  ],
+  "footer": "One line summarizing the takeaway. (Add a third column for a 3-up compare.)"
+}

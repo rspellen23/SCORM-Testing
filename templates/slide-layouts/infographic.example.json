@@ -1,0 +1,35 @@
+{
+  "title": "Initiative or Project Title",
+  "subtitle": "Tagline one.  Tagline two.  Tagline three.",
+  "left": {
+    "heading": "THE CHALLENGE",
+    "intro": "Summarize the problem this addresses:",
+    "items": [
+      ["Key problem one", " — short supporting detail"],
+      ["Key problem two", " — short supporting detail"],
+      ["Key problem three", " — short supporting detail"],
+      ["Key problem four", " — short supporting detail"],
+      ["Key problem five", " — short supporting detail"]
+    ],
+    "callout": "One or two sentences on the stakes — what happens if this isn't solved."
+  },
+  "right": {
+    "heading": "FRAMEWORK OR APPROACH",
+    "sublabel": "4 COMPONENTS",
+    "cards": [
+      {"num": "1", "title": "Component one", "body": "What it does, in one short sentence.", "accent": "primary"},
+      {"num": "2", "title": "Component two", "body": "What it does, in one short sentence.", "accent": "secondary"},
+      {"num": "3", "title": "Component three", "body": "What it does, in one short sentence.", "accent": "tertiary"},
+      {"num": "4", "title": "Component four", "body": "What it does, in one short sentence.", "accent": "dark"}
+    ]
+  },
+  "goals": {
+    "label": ["OUR", "GOALS"],
+    "items": [
+      {"title": "Goal one", "body": "Short description of the goal.", "accent": "primary"},
+      {"title": "Goal two", "body": "Short description of the goal.", "accent": "secondary"},
+      {"title": "Goal three", "body": "Short description of the goal.", "accent": "tertiary"}
+    ]
+  },
+  "footer": "One line summarizing the outcome you're driving toward."
+}

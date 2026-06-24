@@ -192,4 +192,6 @@ def import_docx(docx_path, image_dir=None):
     ir = {"schema": "course-ir/v1", "id": slugify(title), "title": title,
           "locale": "en", "accent": None, "hero": hero, "blocks": blocks}
     ir["_stats"] = {"blocks": len(blocks), "assets": len(used)}
+    from ir_validate import validate_ir
+    validate_ir(ir, label=ir.get("id", "course"))
     return ir, used

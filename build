@@ -1,25 +1,31 @@
 #!/bin/sh
-# CourseCraft — self-contained edition.
-# The full engine lives in ./src; this runs it with the CourseCraft brand (./brand).
+# course-builder — one company-agnostic course system.
+# The full engine lives in ./src. The system itself carries NO company branding;
+# all branding is loaded from an external brand profile under ./brands.
+#   - default (no --brand)       -> brands/_default  (neutral)
+#   - --brand teletracking       -> brands/teletracking
+#   - --brand /abs/path/to/brand -> any external brand profile
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ENGINE="$HERE/src/cli.py"
-BRAND="$HERE/brand"
 case "$1" in
-  from-docx|from-md|from-md-course|from-rise|from-ir|import-rise|cover|to-pptx)
-    exec python3 "$ENGINE" "$@" --brand "$BRAND" ;;
   ""|-h|--help)
-    echo "CourseCraft build — self-contained (engine in ./src), runs with this brand."
-    echo "  ./build from-md-course <script.md> --images <dir> --out <out.zip> [--format cmi5]"
-    echo "  ./build from-md <script.md> --which N --images <dir> --out <out.zip>"
-    echo "  ./build from-docx <doc.docx> --images <dir> --out <out.zip>"
-    echo "  ./build from-rise <raw.zip> --out <out.zip>"
-    echo "  ./build to-pptx <script.md> --images <dir> --out <deck.pptx>   # PowerPoint export"
-    echo "  ./build cover --title '...' --out <dir>"
-    echo "  (lint / repackage: run python3 ./src/cli.py directly)"
+    echo "course-builder — agnostic course system (engine in ./src; branding via --brand)."
+    echo "  ./build from-md-course <script.md> --images <dir> --out <out.zip> [--format cmi5] [--brand <name>]"
+    echo "  ./build from-md <script.md> --which N --images <dir> --out <out.zip> [--brand <name>]"
+    echo "  ./build from-docx <doc.docx> --images <dir> --out <out.zip> [--brand <name>]"
+    echo "  ./build from-rise <raw.zip> --out <out.zip> [--brand <name>]"
+    echo "  ./build from-ir <course.ir.json> --out <out.zip> [--brand <name>]"
+    echo "  ./build to-pptx <script.md> --images <dir> --out <deck.pptx> [--brand <name>]   # course -> PowerPoint"
+    echo "  ./build slide --content <data.json> --out <slide.pptx> [--brand <name>]         # infographic slide template"
+    echo "  ./build cover --title '...' --out <dir> [--brand <name>]"
     echo ""
+    echo "  Branding: omit --brand for the neutral default; --brand teletracking for the TeleTracking profile."
+    echo "  (lint / repackage: run python3 ./src/cli.py directly)"
     echo "  Dashboard (GUI):  ./dashboard/launch.command   (or: python3 ./dashboard/server.py)"
     echo "  Requires: python3, python-pptx (PowerPoint), python-docx (SME .docx review)."
     exit 0 ;;
   *)
+    # Pass everything through to the engine. The engine defaults --brand to the
+    # neutral _default profile; pass --brand <name> to apply external branding.
     exec python3 "$ENGINE" "$@" ;;
 esac

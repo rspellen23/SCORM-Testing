@@ -7,14 +7,19 @@
 """
 import os, sys, json, argparse, zipfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# When installed (`pip install -e .`) the engine modules import directly.
+# When run as a bare script (air-gapped `python3 src/cli.py`), make sure this
+# module's own directory is importable. Idempotent — a no-op once installed.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
 import render, scorm, cmi5, brand  # noqa: E402
 
 
-def _emit(ir, asset_blobs, out_zip, keep_dir=False, validate=False, fmt="scorm", brand_name="_default"):
+def _emit(ir, asset_blobs, out_zip, keep_dir=False, validate=False, fmt="scorm", brand_name="_default", animate=True):
     b = brand.load_brand(brand_name)
     course_dir = os.path.splitext(out_zip)[0] + ".course"
-    render.render_course(ir, course_dir, asset_blobs, brand=b)
+    render.render_course(ir, course_dir, asset_blobs, brand=b, animate=animate)
     if fmt == "cmi5":
         cmi5.package(course_dir, out_zip, ir["id"], ir["title"], lang=ir.get("locale", "en"),
                      graded=ir.get("graded", False), passing=ir.get("passingScore", 80),
@@ -52,26 +57,35 @@ def cmd_from_rise(a):
     with zipfile.ZipFile(src_zip) as zf:
         for in_path, rel in copy_map.items():
             blobs[rel] = zf.read(in_path)
-    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"), getattr(a, "brand", "_default"))
+    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"),
+          getattr(a, "brand", "_default"), animate=not getattr(a, "no_animate", False))
 
 
 def cmd_from_docx(a):
     from docx_import import import_docx
     ir, used = import_docx(a.docx, a.images)
     blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
-    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"), getattr(a, "brand", "_default"))
+    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"),
+          getattr(a, "brand", "_default"), animate=not getattr(a, "no_animate", False))
 
 
 def cmd_from_md(a):
     from md_import import import_md
     ir, used = import_md(a.md, which=a.which, hero=a.hero, image_dir=a.images)
     blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
-    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"), getattr(a, "brand", "_default"))
+    _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"),
+          getattr(a, "brand", "_default"), animate=not getattr(a, "no_animate", False))
 
 
 def cmd_from_md_course(a):
     """Build EVERY '## Microlearning N' in a .md into ONE multi-SCO SCORM course
-    (N lessons sharing brand/+player/; the LMS shows a TOC and rolls up completion)."""
+    (N lessons sharing brand/+player/; the LMS shows a TOC over the lessons).
+
+    NOTE: SCORM 1.2 has no manifest-level completion rollup, so whether finishing
+    all lessons marks the COURSE complete is the LMS's default policy, not
+    something this package guarantees. For real cross-lesson moveOn/rollup, build
+    cmi5 (--format cmi5). The production model is one single-SCO package per unit,
+    sequenced by the LMS in a Path — this multi-SCO path is not that."""
     import re, shutil
     from md_import import import_md
     from common import slugify
@@ -94,7 +108,8 @@ def cmd_from_md_course(a):
         blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
         render.render_course(ir, os.path.join(course_dir, f"sco_{k}"), blobs,
                              asset_base="../", bundle_brand_player=False,
-                             lesson_index=k, lesson_count=n, brand=b)
+                             lesson_index=k, lesson_count=n, brand=b,
+                             animate=not getattr(a, "no_animate", False))
         scos.append({"id": ir["id"], "title": ir["title"], "href": f"sco_{k}/index.html"})
         graded, passing, lang = ir.get("graded", False), ir.get("passingScore", 80), ir.get("locale", "en")
     fmt = getattr(a, "format", "scorm")
@@ -162,6 +177,9 @@ def cmd_import_rise(a):
 def cmd_from_ir(a):
     """Rebuild a SCORM from an (edited) IR JSON + a folder of its assets."""
     ir = json.load(open(a.ir, encoding="utf-8"))
+    import ir_validate
+    ir = ir_validate.migrate(ir, label=ir.get("id", "course"))   # version gate + forward-compat seam
+    ir_validate.validate_ir(ir, label=ir.get("id", "course"))
     blobs = {}
     if a.images and os.path.isdir(a.images):
         for n in os.listdir(a.images):
@@ -195,10 +213,50 @@ def cmd_to_pptx(a):
     ir, used = import_md(a.md, which=a.which, hero=a.hero, image_dir=a.images)
     blobs = {rel: src for rel, src in used.items()}      # rel -> on-disk path
     b = brand.load_brand(getattr(a, "brand", "_default"))
-    stats = pptx_export.export_pptx(ir, blobs, a.out, brand=b)
+    stats = pptx_export.export_pptx(
+        ir, blobs, a.out, brand=b,
+        transition=getattr(a, "transition", None),
+        transition_dir=getattr(a, "transition_dir", None),
+        transition_speed=getattr(a, "transition_speed", "med"))
     print(f"✓ {ir['title']}")
-    print(f"  slides={stats['slides']} dropped={stats['dropped']}")
+    print(f"  slides={stats['slides']} dropped={stats['dropped']}"
+          + (f" transition={stats['transition']}" if stats.get('transition') else ""))
     print(f"  PPTX → {a.out} ({os.path.getsize(a.out)//1024} KB)")
+
+
+def cmd_slide(a):
+    """Render one standalone, on-brand slide from a JSON content file.
+
+    A reusable slide-template target (separate from course IR), selected via
+    --layout (see slide_layouts.LAYOUTS). Colors come from the active brand
+    profile -- see src/slide_layouts.py for each layout's content schema."""
+    import slide_layouts
+    b = brand.load_brand(getattr(a, "brand", "_default"))
+    stats = slide_layouts.export_slide_file(
+        a.content, a.out, brand=b, layout=a.layout,
+        transition=getattr(a, "transition", None),
+        transition_dir=getattr(a, "transition_dir", None),
+        transition_speed=getattr(a, "transition_speed", "med"))
+    print(f"✓ slide ({stats['layout']}) → {a.out} ({os.path.getsize(a.out)//1024} KB)")
+    extra = " ".join(f"{k}={v}" for k, v in stats.items() if k != "layout")
+    if extra:
+        print(f"  {extra}")
+
+
+def cmd_deck(a):
+    """Assemble a multi-slide, on-brand .pptx deck from a JSON deck file.
+
+    The deck file is {"slides": [{"layout": <name>, "content": {...}}, ...]};
+    each slide uses any slide_layouts layout. One transition applies deck-wide."""
+    import slide_layouts
+    b = brand.load_brand(getattr(a, "brand", "_default"))
+    stats = slide_layouts.export_deck_file(
+        a.content, a.out, brand=b,
+        transition=getattr(a, "transition", None),
+        transition_dir=getattr(a, "transition_dir", None),
+        transition_speed=getattr(a, "transition_speed", "med"))
+    print(f"✓ deck ({stats['slides']} slides) → {a.out} ({os.path.getsize(a.out)//1024} KB)")
+    print(f"  layouts: {', '.join(stats['layouts'])}")
 
 
 def cmd_cover(a):
@@ -242,25 +300,29 @@ def main():
 
     r = sub.add_parser("from-rise"); r.add_argument("zip")
     r.add_argument("--out", required=True); r.add_argument("--keep-dir", action="store_true")
-    r.add_argument("--validate", action="store_true"); r.add_argument("--brand", default="_default"); r.set_defaults(fn=cmd_from_rise)
+    r.add_argument("--validate", action="store_true"); r.add_argument("--brand", default="_default")
+    r.add_argument("--no-animate", action="store_true", help="disable entrance animations"); r.set_defaults(fn=cmd_from_rise)
 
     d = sub.add_parser("from-docx"); d.add_argument("docx")
     d.add_argument("--images", required=True); d.add_argument("--out", required=True)
     d.add_argument("--keep-dir", action="store_true")
-    d.add_argument("--validate", action="store_true"); d.add_argument("--brand", default="_default"); d.set_defaults(fn=cmd_from_docx)
+    d.add_argument("--validate", action="store_true"); d.add_argument("--brand", default="_default")
+    d.add_argument("--no-animate", action="store_true", help="disable entrance animations"); d.set_defaults(fn=cmd_from_docx)
 
     md = sub.add_parser("from-md"); md.add_argument("md")
     md.add_argument("--which", type=int, default=1); md.add_argument("--images", default=None)
     md.add_argument("--hero", default=None); md.add_argument("--out", required=True)
     md.add_argument("--keep-dir", action="store_true")
     md.add_argument("--format", choices=["scorm", "cmi5"], default="scorm")
-    md.add_argument("--validate", action="store_true"); md.add_argument("--brand", default="_default"); md.set_defaults(fn=cmd_from_md)
+    md.add_argument("--validate", action="store_true"); md.add_argument("--brand", default="_default")
+    md.add_argument("--no-animate", action="store_true", help="disable entrance animations"); md.set_defaults(fn=cmd_from_md)
 
     mc = sub.add_parser("from-md-course"); mc.add_argument("md")
     mc.add_argument("--images", default=None); mc.add_argument("--title", default=None)
     mc.add_argument("--out", required=True); mc.add_argument("--keep-dir", action="store_true")
     mc.add_argument("--format", choices=["scorm", "cmi5"], default="scorm")
-    mc.add_argument("--validate", action="store_true"); mc.add_argument("--brand", default="_default"); mc.set_defaults(fn=cmd_from_md_course)
+    mc.add_argument("--validate", action="store_true"); mc.add_argument("--brand", default="_default")
+    mc.add_argument("--no-animate", action="store_true", help="disable entrance animations"); mc.set_defaults(fn=cmd_from_md_course)
 
     gp = sub.add_parser("gen-prompts"); gp.add_argument("md")
     gp.add_argument("--which", type=int, default=1); gp.add_argument("--hero", default=None)
@@ -288,7 +350,29 @@ def main():
     pp = sub.add_parser("to-pptx"); pp.add_argument("md")
     pp.add_argument("--which", type=int, default=1); pp.add_argument("--images", default=None)
     pp.add_argument("--hero", default=None); pp.add_argument("--out", required=True)
-    pp.add_argument("--brand", default="_default"); pp.set_defaults(fn=cmd_to_pptx)
+    pp.add_argument("--brand", default="_default")
+    pp.add_argument("--transition", default=None,
+        help="slide transition applied to every slide: none|fade|cut|push|wipe|split|cover")
+    pp.add_argument("--transition-dir", default=None, help="direction for push/wipe/cover: l|r|u|d")
+    pp.add_argument("--transition-speed", default="med", help="slow|med|fast")
+    pp.set_defaults(fn=cmd_to_pptx)
+
+    sl = sub.add_parser("slide"); sl.add_argument("--content", required=True)
+    sl.add_argument("--layout", default="infographic"); sl.add_argument("--out", required=True)
+    sl.add_argument("--brand", default="_default")
+    sl.add_argument("--transition", default=None,
+        help="slide transition: none|fade|cut|push|wipe|split|cover")
+    sl.add_argument("--transition-dir", default=None, help="direction for push/wipe/cover: l|r|u|d")
+    sl.add_argument("--transition-speed", default="med", help="slow|med|fast")
+    sl.set_defaults(fn=cmd_slide)
+
+    dk = sub.add_parser("deck"); dk.add_argument("--content", required=True)
+    dk.add_argument("--out", required=True); dk.add_argument("--brand", default="_default")
+    dk.add_argument("--transition", default=None,
+        help="transition applied to every slide: none|fade|cut|push|wipe|split|cover")
+    dk.add_argument("--transition-dir", default=None, help="direction for push/wipe/cover: l|r|u|d")
+    dk.add_argument("--transition-speed", default="med", help="slow|med|fast")
+    dk.set_defaults(fn=cmd_deck)
 
     cv = sub.add_parser("cover")
     cv.add_argument("--title", default=None); cv.add_argument("--name", default=None)

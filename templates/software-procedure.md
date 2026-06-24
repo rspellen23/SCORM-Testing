@@ -1,6 +1,7 @@
 <!--
   ARCHETYPE: Software Procedure / Walkthrough
   WHEN TO USE: Teach the learner to DO a task in the product (a click-path/workflow they execute). Proven by Managing Bed Requests.
+  ADULT-LEARNER FRAME (Knowles): The learner has a real job to do in the product and isn't sure of the steps — or does it the slow/wrong way. This archetype is task-centered by nature: respect that they're capable, show the goal and the path, name the pitfalls, then let them do it. The motivation is doing their actual job faster and correctly.
   SLIDE-ROLE PLAN (auto-generated from the slides below):
     1. Learning Objectives
     2. The goal / when you'd do this

@@ -1,6 +1,7 @@
 <!--
   ARCHETYPE: Decision / Scenario
   WHEN TO USE: The learner must APPLY a rule/judgment to a situation (not just know it). The KC sits mid-unit; the debrief follows it.
+  ADULT-LEARNER FRAME (Knowles): The learner faces judgment calls where the rule is known but applying it under real conditions is hard. Adults learn rules best by working real cases — center a realistic scenario they actually own, let them decide, then debrief the reasoning. Relevance comes from the decisions that are genuinely theirs to make.
   SLIDE-ROLE PLAN (auto-generated from the slides below):
     1. Learning Objectives
     2. The rule / principle

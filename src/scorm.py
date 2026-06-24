@@ -1,7 +1,8 @@
 """Wrap a rendered course directory into a SCORM 1.2 package (.zip).
 
-Runtime supports both SCORM 1.2 and 2004 (player.js detects API/API_1484_11);
-the manifest declares 1.2, which is the broadly-accepted, widely-validated target.
+The player runtime is 2004-ready (player.js detects API/API_1484_11), but
+PACKAGING targets 1.2 only — this module emits a 1.2 manifest, the
+broadly-accepted, widely-validated target. There is no 2004 packaging path.
 """
 import os, zipfile
 from xml.sax.saxutils import escape

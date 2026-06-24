@@ -1,6 +1,7 @@
 <!--
   ARCHETYPE: Concept Explainer
   WHEN TO USE: Teach an idea/model/term the learner needs to understand (not a task to perform). Proven by the Responsible AI modules.
+  ADULT-LEARNER FRAME (Knowles): The learner keeps bumping into a term/idea they don't fully grasp, so they hesitate or misuse it. They don't need a lecture — they need to know why this concept changes what they do. Lead with the stake, connect to what they already know, and make the mechanism usable, not academic.
   SLIDE-ROLE PLAN (auto-generated from the slides below):
     1. Learning Objectives
     2. Hook / why this matters

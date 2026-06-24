@@ -1,0 +1,14 @@
+# Course Builder — Python dependencies.
+# The course engine itself is pure standard library; these add the optional
+# surfaces noted below. AI generation also needs a subscription CLI on PATH
+# (`claude` for Claude Code, or `codex` for ChatGPT) — installed separately.
+#
+# Requires Python >= 3.8 (ThreadingHTTPServer 3.7, shutil dirs_exist_ok 3.8).
+# Lower-bound pins = the oldest releases this code is known to work against;
+# newer is fine. For a fully reproducible install, freeze these to exact ==.
+
+python-pptx>=0.6.21   # slide / deck / to-pptx PowerPoint output
+python-docx>=0.8.11   # .docx source import + SME-review document export
+pypdf>=3.9            # reading .pdf source documents
+Pillow>=9.0           # cover / art compositing
+jsonschema>=4         # IR validation (optional at runtime; required for CI)

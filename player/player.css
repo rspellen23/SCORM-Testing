@@ -9,6 +9,11 @@ body {
   line-height: 1.6;
   font-size: 18px;
   -webkit-font-smoothing: antialiased;
+  /* Contain the transient horizontal offset of slide-in entrance animations so
+     they never flash a horizontal scrollbar on narrow viewports / LMS iframes.
+     'clip' (not 'hidden') avoids creating a scroll container, so the sticky
+     topbar keeps working. */
+  overflow-x: clip;
 }
 img { max-width: 100%; height: auto; display: block; }
 
@@ -20,6 +25,11 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .nv-topbar img { height: 26px; }
 .nv-topbar .nv-title { font-family: var(--brand-font-head); font-weight: 700; font-size: 1.15rem; letter-spacing: .3px; }
+.nv-skip { position: absolute; left: 8px; top: -48px; z-index: 1100; background: var(--brand-accent);
+  color: #fff; padding: .5rem .9rem; border-radius: 6px; font-weight: 600; text-decoration: none;
+  transition: top .15s ease; }
+.nv-skip:focus { top: 8px; outline: 2px solid #fff; outline-offset: 2px; }
+.nv-main:focus { outline: none; }
 .nv-progress { flex: 1; height: 6px; background: rgba(255,255,255,.18); border-radius: 99px; overflow: hidden; }
 .nv-progress > span { display: block; height: 100%; width: 0; background: var(--brand-accent); transition: width .35s ease; }
 
@@ -330,6 +340,119 @@ body.nv-modal-open { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .nv-flip-inner { transition: none; }
+}
+
+/* ---- Timeline / roadmap (vertical brand axis with milestone cards) ---- */
+/* HTML player parity with the 'timeline' slide layout. Per-item accent rides on --nv-accent. */
+.nv-timeline { position: relative; list-style: none; margin: var(--brand-gap) 0; padding: 0 0 0 2.2rem; }
+.nv-timeline::before { content: ""; position: absolute; left: .52rem; top: .5rem; bottom: .5rem; width: 3px;
+  background: var(--brand-line); border-radius: 99px; }
+.nv-tl-item { position: relative; margin: 0 0 1.1rem; }
+.nv-tl-item:last-child { margin-bottom: 0; }
+.nv-tl-node { position: absolute; left: -1.97rem; top: .45rem; width: 1.05rem; height: 1.05rem; border-radius: 99px;
+  background: var(--nv-accent, var(--brand-accent)); box-shadow: 0 0 0 4px var(--brand-page-bg), 0 0 0 5px var(--brand-line); }
+.nv-tl-card { background: var(--brand-light); border: 1px solid var(--brand-line);
+  border-left: 4px solid var(--nv-accent, var(--brand-accent)); border-radius: var(--brand-radius);
+  padding: 1rem 1.2rem 1.1rem; box-shadow: 0 4px 14px rgba(11,44,55,.06); }
+.nv-tl-phase { display: inline-block; font-family: var(--brand-font-head); font-weight: 700; font-size: .78rem;
+  letter-spacing: .6px; text-transform: uppercase; color: var(--nv-accent, var(--brand-accent-ink)); margin-bottom: .25rem; }
+.nv-tl-title { font-family: var(--brand-font-head); color: var(--brand-heading); margin: 0 0 .3rem; font-size: 1.2rem; }
+.nv-tl-card .nv-p { margin: .2rem 0 0; }
+
+/* ---- Comparison (2-3 side-by-side panels: old-vs-new / option A/B/C) ---- */
+.nv-comparison { display: grid; gap: 1.2rem; grid-template-columns: repeat(var(--nv-cmp-cols, 2), 1fr); margin: var(--brand-gap) 0; }
+@media (max-width: 680px){ .nv-comparison { grid-template-columns: 1fr; } }
+.nv-cmp-panel { display: flex; flex-direction: column; background: var(--brand-light); border: 1px solid var(--brand-line);
+  border-radius: var(--brand-radius-lg); overflow: hidden; box-shadow: 0 4px 14px rgba(11,44,55,.06); }
+.nv-cmp-head { background: var(--nv-accent, var(--brand-accent)); color: var(--brand-light);
+  font-family: var(--brand-font-head); font-weight: 700; font-size: 1.2rem; padding: .9rem 1.2rem; text-align: center; }
+.nv-cmp-head :where(strong,em,a) { color: var(--brand-light); }
+.nv-cmp-sub { color: var(--brand-ink-soft); font-size: .9rem; padding: .7rem 1.3rem 0; text-align: center; }
+.nv-cmp-list { list-style: none; margin: .6rem 0; padding: .2rem 1.3rem; flex: 1; }
+.nv-cmp-list li { position: relative; padding-left: 1.2rem; margin: .55rem 0; }
+.nv-cmp-list li::before { content: ""; position: absolute; left: 0; top: .55em; width: .5rem; height: .5rem;
+  border-radius: 99px; background: var(--nv-accent, var(--brand-accent)); }
+.nv-cmp-callout { margin: auto 1.1rem 1.1rem; padding: .8rem 1rem; border-radius: 10px; background: var(--brand-surface);
+  border-left: 4px solid var(--nv-accent, var(--brand-accent)); font-weight: 600; color: var(--brand-heading); }
+
+/* infographic — poster-style overview block (HTML parity with the 'infographic' slide layout) */
+.nv-infographic { margin: var(--brand-gap) 0; }
+.nv-ig-header { text-align: center; margin-bottom: 1.4rem; }
+.nv-ig-title { font-family: var(--brand-font-head); color: var(--brand-heading); font-size: 1.7rem; margin: 0 0 .35rem;
+  display: inline-block; padding-bottom: .4rem; border-bottom: 3px solid var(--brand-accent); }
+.nv-ig-subtitle { color: var(--brand-ink-soft); font-size: 1rem; margin: .2rem 0 0; }
+.nv-ig-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; align-items: start; }
+@media (max-width: 680px){ .nv-ig-cols { grid-template-columns: 1fr; } }
+.nv-ig-heading { font-family: var(--brand-font-head); color: var(--brand-heading); font-size: 1.05rem;
+  letter-spacing: .04em; text-transform: uppercase; margin: 0 0 .5rem; }
+.nv-ig-left { background: var(--brand-light); border: 1px solid var(--brand-line); border-radius: var(--brand-radius-lg);
+  padding: 1.2rem 1.3rem; box-shadow: 0 4px 14px rgba(11,44,55,.06); }
+.nv-ig-intro { color: var(--brand-ink-soft); margin: 0 0 .6rem; }
+.nv-ig-items { list-style: none; margin: 0; padding: 0; }
+.nv-ig-items li { position: relative; padding-left: 1.2rem; margin: .5rem 0; }
+.nv-ig-items li::before { content: ""; position: absolute; left: 0; top: .55em; width: .5rem; height: .5rem;
+  border-radius: 99px; background: var(--brand-accent); }
+.nv-ig-items strong { color: var(--brand-heading); }
+.nv-ig-callout { margin: .9rem 0 0; padding: .8rem 1rem; border-radius: 10px; background: var(--brand-surface);
+  border-left: 4px solid var(--brand-accent); font-weight: 600; color: var(--brand-heading); }
+.nv-ig-sublabel { color: var(--brand-ink-soft); font-size: .85rem; letter-spacing: .05em; text-transform: uppercase;
+  margin: -.2rem 0 .7rem; }
+.nv-ig-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.nv-ig-card { display: flex; gap: .8rem; align-items: flex-start; background: var(--brand-light);
+  border: 1px solid var(--brand-line); border-left: 4px solid var(--nv-accent, var(--brand-accent));
+  border-radius: 12px; padding: .8rem 1rem; box-shadow: 0 3px 10px rgba(11,44,55,.05); }
+.nv-ig-num { flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 99px; background: var(--nv-accent, var(--brand-accent));
+  color: var(--brand-light); font-family: var(--brand-font-head); font-weight: 700; font-size: 1.05rem;
+  display: flex; align-items: center; justify-content: center; }
+.nv-ig-card-title { font-family: var(--brand-font-head); font-weight: 700; color: var(--brand-heading); }
+.nv-ig-card-body { color: var(--brand-ink-soft); font-size: .92rem; margin-top: .12rem; }
+.nv-ig-goals { margin-top: 1.4rem; }
+.nv-ig-goals-label { font-family: var(--brand-font-head); font-weight: 700; color: var(--brand-heading);
+  text-transform: uppercase; letter-spacing: .05em; font-size: .95rem; margin-bottom: .6rem; }
+.nv-ig-goal-list { list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .8rem; }
+.nv-ig-goal { background: var(--brand-light); border: 1px solid var(--brand-line);
+  border-top: 4px solid var(--nv-accent, var(--brand-accent)); border-radius: 12px; padding: .9rem 1rem;
+  box-shadow: 0 3px 10px rgba(11,44,55,.05); }
+.nv-ig-goal-title { font-family: var(--brand-font-head); font-weight: 700; color: var(--brand-heading); margin-bottom: .2rem; }
+.nv-ig-goal-body { color: var(--brand-ink-soft); font-size: .92rem; }
+.nv-ig-footer { margin: 1.3rem 0 0; text-align: center; font-weight: 600; color: var(--brand-heading);
+  padding-top: .9rem; border-top: 1px solid var(--brand-line); }
+
+/* ---- Chart (engine-generated inline SVG; data carried by an sr-only table) ---- */
+.nv-chart { margin: var(--brand-gap) 0; }
+.nv-chart-title { font-family: var(--brand-font-head); color: var(--brand-heading); font-weight: 700;
+  font-size: 1.2rem; text-align: center; margin: 0 0 .4rem; }
+.nv-chart-frame { background: var(--brand-light); border: 1px solid var(--brand-line);
+  border-radius: var(--brand-radius-lg); padding: .6rem .4rem; box-shadow: 0 4px 14px rgba(11,44,55,.06); }
+.nv-chart-svg { display: block; width: 100%; height: auto; }
+.nv-chart-svg text { font-family: var(--brand-font-body, inherit); }
+.nv-chart-legend { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem 1.1rem;
+  margin: .1rem 0 .6rem; padding: 0; }
+.nv-chart-key { display: inline-flex; align-items: center; gap: .45rem; font-size: .92rem; color: var(--brand-ink); }
+.nv-chart-swatch { width: .85rem; height: .85rem; border-radius: 3px; display: inline-block; }
+.nv-chart-source { color: var(--brand-ink-soft); font-size: .85rem; margin: .55rem 0 0; text-align: center; }
+.nv-chart-src-label { font-weight: 600; }
+.nv-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* ---- Entrance animations (named effects as elements enter the viewport) ---- */
+/* The player adds .nv-anim + a direction class to blocks (and staggers grouped
+   children) ONLY when animations are on (body[data-anim] != "0"), Intersection-
+   Observer is available, and motion is allowed — then toggles .nv-in on intersect.
+   So a no-JS, no-observer, reduced-motion, or animations-off visitor always sees
+   fully-visible content. --nv-anim-delay staggers cascaded items. */
+.nv-anim { opacity: 0;
+  transition: opacity .9s ease, transform .9s cubic-bezier(.23,1,.32,1);
+  transition-delay: var(--nv-anim-delay, 0s); }
+.nv-anim-up    { transform: translateY(24px); }   /* Float In */
+.nv-anim-left  { transform: translateX(-34px); }  /* Slide In From Left */
+.nv-anim-right { transform: translateX(34px); }   /* Slide In From Right */
+.nv-anim-zoom  { transform: scale(.94); }          /* Pop In */
+.nv-anim-fade  { transform: none; }                /* Fade (grouped shells) */
+.nv-anim.nv-in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .nv-anim { opacity: 1; transform: none; transition: none; }
 }
 
 /* utility: strip leftover Rise inline white text that would vanish on white bg is handled at import,

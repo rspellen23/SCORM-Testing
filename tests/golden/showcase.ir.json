@@ -1,0 +1,587 @@
+{
+  "accent": null,
+  "blocks": [
+    {
+      "gated": false,
+      "html": "<p>What You&#x27;ll Take Away</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "alt": "A single calm figure looking toward a small set of simple goal markers, conveying focus and readiness to learn",
+      "gated": false,
+      "html": "<p>This short overview shows how I now build training in-house — faster, on-brand, and tracked. It also doubles as a tour: nearly every block on these slides is a different capability of the Course Builder. By the end you&#x27;ll be able to:</p><ul><li>Describe what the TeleTracking Course Builder is and the problem it solves</li><li>Explain how it turns ordinary content into polished, tracked courses</li><li>Recognize where people stay firmly in control</li><li>Identify what it takes to run it, and where it could grow</li></ul>",
+      "side": "left",
+      "src": "assets/objectives.png",
+      "type": "imageText"
+    },
+    {
+      "gated": false,
+      "html": "<p>The Old Way vs The New Way</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "html": "<p>For years, building a single course meant licensed authoring tools, vendor lock-in, and long turnaround times. Here is the contrast in one view:</p>",
+      "type": "paragraph"
+    },
+    {
+      "gated": false,
+      "panels": [
+        {
+          "callout": "Slow, costly, and out of our hands.",
+          "heading": "The Old Way",
+          "items": [
+            "Per-seat licenses and vendor lock-in",
+            "Every edit reopens a proprietary tool",
+            "Each brand or language refresh means rework"
+          ],
+          "sublabel": "Licensed tools"
+        },
+        {
+          "callout": "Fast, and fully in our control.",
+          "heading": "The Course Builder",
+          "items": [
+            "No per-seat authoring licenses",
+            "Edit plain text, rebuild in seconds",
+            "Re-brand or re-localize with no rebuild"
+          ],
+          "sublabel": "In-house"
+        }
+      ],
+      "type": "comparison"
+    },
+    {
+      "gated": false,
+      "html": "<p>What the Course Builder Is</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "infographic": {
+        "footer": "One in-house system. No licenses, no vendor wait.",
+        "goals": {
+          "items": [
+            {
+              "accent": "primary",
+              "body": "Days, not weeks.",
+              "title": "Faster"
+            },
+            {
+              "accent": "secondary",
+              "body": "On-brand, every time.",
+              "title": "Consistent"
+            }
+          ],
+          "label": [
+            "THE",
+            "PAYOFF"
+          ]
+        },
+        "left": {
+          "callout": "Slow, costly, and locked to a vendor.",
+          "heading": "THE CHALLENGE",
+          "intro": "Building courses the old way meant:",
+          "items": [
+            [
+              "Licensed tools",
+              " — per-seat costs and lock-in"
+            ],
+            [
+              "Slow turnaround",
+              " — every edit reopens a proprietary tool"
+            ],
+            [
+              "Rework",
+              " — each brand or language redo starts over"
+            ]
+          ]
+        },
+        "right": {
+          "cards": [
+            {
+              "accent": "primary",
+              "body": "Our own system — no licenses, no vendor.",
+              "num": "1",
+              "title": "In-house"
+            },
+            {
+              "accent": "secondary",
+              "body": "TeleTracking identity applied automatically.",
+              "num": "2",
+              "title": "Branded"
+            },
+            {
+              "accent": "tertiary",
+              "body": "Registers completion in our learning platform.",
+              "num": "3",
+              "title": "Tracked"
+            }
+          ],
+          "heading": "WHAT IT IS",
+          "sublabel": "3 PILLARS"
+        },
+        "subtitle": "Plain content in — a branded, tracked course out.",
+        "title": "What the Course Builder Is"
+      },
+      "type": "infographic"
+    },
+    {
+      "gated": false,
+      "html": "<p>It is not a replacement for our people&#x27;s expertise — it is a power tool that lets a small team produce far more, far faster.</p>",
+      "type": "note"
+    },
+    {
+      "gated": false,
+      "html": "<p>How It Works</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "alt": "A simple left-to-right flow of three soft rounded shapes feeding into one polished output card, conveying an automated content-to-course pipeline",
+      "gated": false,
+      "src": "assets/how-it-works.png",
+      "type": "image",
+      "variant": "full"
+    },
+    {
+      "gated": false,
+      "html": "<p>The system follows one clean path, every time:</p>",
+      "type": "paragraph"
+    },
+    {
+      "entries": [
+        {
+          "html": "<p>Author in Word or Markdown, or import an existing course.</p>",
+          "kind": "step",
+          "title": "Bring content"
+        },
+        {
+          "html": "<p>The engine structures it into one standard internal format.</p>",
+          "kind": "step",
+          "title": "Convert"
+        },
+        {
+          "html": "<p>TeleTracking colors, fonts, logo, and interactive blocks, applied automatically.</p>",
+          "kind": "step",
+          "title": "Brand & render"
+        },
+        {
+          "html": "<p>Out comes a standards-based course file, ready to upload and track.</p>",
+          "kind": "step",
+          "title": "Package"
+        }
+      ],
+      "gated": false,
+      "type": "process"
+    },
+    {
+      "gated": false,
+      "html": "<p>One Build, Every Format</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "html": "<p>Because the content is stored once in a neutral format, the <em>same</em> course can be published to whatever standard our platform needs — with no rework.</p>",
+      "type": "paragraph"
+    },
+    {
+      "gated": false,
+      "html": "<table><thead><tr><th>Output</th><th>Use</th></tr></thead><tbody><tr><td>SCORM 1.2</td><td>Broadest LMS compatibility</td></tr><tr><td>SCORM 2004</td><td>Richer tracking and sequencing</td></tr><tr><td>cmi5 / xAPI</td><td>Modern learning analytics</td></tr></tbody></table>",
+      "type": "table"
+    },
+    {
+      "gated": false,
+      "html": "<p>Author once. Publish to any standard. Re-brand or re-localize without rebuilding from scratch.</p>",
+      "type": "statement"
+    },
+    {
+      "gated": false,
+      "html": "<p>The Payoff, Illustrated</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "html": "<p>The engine can also render data directly into a course as a native, on-brand chart — generated from numbers, not pasted as a picture:</p>",
+      "type": "paragraph"
+    },
+    {
+      "categories": [
+        "Licensed vendor path",
+        "Course Builder"
+      ],
+      "chart": "bar",
+      "gated": false,
+      "series": [
+        {
+          "data": [
+            6,
+            1
+          ],
+          "name": "Weeks"
+        }
+      ],
+      "source": "Illustrative example for this demo — not measured data.",
+      "title": "Weeks to ship one course (illustrative)",
+      "type": "chart",
+      "yLabel": "Weeks"
+    },
+    {
+      "gated": false,
+      "html": "<p>These figures are illustrative, included to demonstrate the chart block. Real metrics would carry a cited source.</p>",
+      "type": "note"
+    },
+    {
+      "gated": false,
+      "html": "<p>Where People Stay in Control</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "alt": "A calm figure standing at a row of checkpoint markers along a path, hand raised in an approving gesture, conveying human review and sign-off at key gates",
+      "gated": false,
+      "html": "<p>The system automates the <em>assembly</em>, not the <em>judgment</em>. People stay in the loop at every gate that matters — expand each one:</p>",
+      "side": "right",
+      "src": "assets/hitl.png",
+      "type": "imageText"
+    },
+    {
+      "entries": [
+        {
+          "html": "<p>Subject-matter experts write and approve the substance.</p>",
+          "title": "Content & accuracy"
+        },
+        {
+          "html": "<p>Every image is generated by a person, reviewed, and chosen on purpose.</p>",
+          "title": "Course art"
+        },
+        {
+          "html": "<p>A human confirms it looks right before it ships.</p>",
+          "title": "Brand sign-off"
+        },
+        {
+          "html": "<p>Nothing publishes without a person saying yes.</p>",
+          "title": "Final approval"
+        }
+      ],
+      "gated": false,
+      "type": "accordion"
+    },
+    {
+      "gated": false,
+      "html": "<p>Quick Sort: Who Owns What?</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "html": "<p>Drag-free sorting check — match each task to who owns it:</p>",
+      "type": "paragraph"
+    },
+    {
+      "buckets": [
+        {
+          "id": "b1",
+          "title": "The system handles"
+        },
+        {
+          "id": "b2",
+          "title": "People own"
+        }
+      ],
+      "gated": false,
+      "pool": [
+        {
+          "html": "Applying brand colors and fonts",
+          "target": "b1"
+        },
+        {
+          "html": "Structuring content into the course format",
+          "target": "b1"
+        },
+        {
+          "html": "Packaging the standards-based course file",
+          "target": "b1"
+        },
+        {
+          "html": "Writing and approving the content",
+          "target": "b2"
+        },
+        {
+          "html": "Choosing and reviewing the art",
+          "target": "b2"
+        },
+        {
+          "html": "Final sign-off before it ships",
+          "target": "b2"
+        }
+      ],
+      "prompt": "Sort each task by who owns it.",
+      "type": "categorize"
+    },
+    {
+      "gated": false,
+      "html": "<p>What It Takes to Run</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "alt": "The Course Builder workspace in VS Code",
+      "gated": false,
+      "src": "assets/screenshot-vscode.png",
+      "type": "image",
+      "variant": "full"
+    },
+    {
+      "gated": false,
+      "html": "<p>The engine itself is lightweight and runs on an ordinary laptop — no special hardware. Here is the whole kit:</p>",
+      "type": "paragraph"
+    },
+    {
+      "cards": [
+        {
+          "teaser": "Runs on a standard laptop — no servers, no GPUs.",
+          "title": "The engine"
+        },
+        {
+          "teaser": "Word, Markdown, or the browser-based template editor.",
+          "title": "Authoring"
+        },
+        {
+          "teaser": "An LLM to draft content and assist the build.",
+          "title": "The AI layer"
+        },
+        {
+          "teaser": "TeleTracking colors, fonts, and logo — already built in.",
+          "title": "Brand profile"
+        }
+      ],
+      "columns": 2,
+      "gated": false,
+      "type": "cardGrid"
+    },
+    {
+      "gated": false,
+      "html": "<p>Two Ways to Power It</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "html": "<p>The AI layer is a plug-in choice — the engine works the same either way. Flip each card:</p>",
+      "type": "paragraph"
+    },
+    {
+      "entries": [
+        {
+          "backHtml": "<p>The likely default — the business already has an enterprise plan, so there&#x27;s nothing new to buy or host.</p>",
+          "frontHtml": "<p>Enterprise ChatGPT</p>"
+        },
+        {
+          "backHtml": "<p>An on-premise model like Qwen or Mistral, for when content can&#x27;t leave our walls. The engine doesn&#x27;t care which it talks to.</p>",
+          "frontHtml": "<p>Air-Gapped Open Model</p>"
+        }
+      ],
+      "gated": false,
+      "type": "flashcard"
+    },
+    {
+      "gated": false,
+      "html": "<p>Backend-agnostic by design — not locked to any one AI vendor.</p>",
+      "type": "note"
+    },
+    {
+      "gated": false,
+      "html": "<p>The Principle Behind It</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "attribution": "<p>Course Builder design principle</p>",
+      "gated": false,
+      "html": "<p>The machine speeds up the work. People still own what goes out the door.</p>",
+      "type": "quote"
+    },
+    {
+      "gated": false,
+      "html": "<p>Dig Deeper</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "html": "<p>Most learners do not need the internals — but when they do, a single button opens the detail in place, without cluttering the slide:</p>",
+      "type": "paragraph"
+    },
+    {
+      "action": "modal",
+      "arrow": false,
+      "buttonVariant": "secondary",
+      "gated": false,
+      "label": "See the technical detail",
+      "modal": {
+        "heading": "Under the hood",
+        "html": "<p>The engine is a compact Python standard-library system — no servers, no GPUs. It reads Word or Markdown, converts to a neutral course format, applies a swappable brand profile, and emits SCORM 1.2, SCORM 2004, or cmi5. It runs air-gapped; the AI layer only assists authoring.</p>"
+      },
+      "type": "button"
+    },
+    {
+      "gated": false,
+      "html": "<p>What It Could Grow Into</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "alt": "A winding road with milestone markers, representing the capability roadmap ahead",
+      "gated": false,
+      "src": "assets/roadmap.png",
+      "type": "image",
+      "variant": "full"
+    },
+    {
+      "gated": false,
+      "html": "<p>Today it builds courses. The same engine and content can power much more, in stages:</p>",
+      "type": "paragraph"
+    },
+    {
+      "gated": false,
+      "milestones": [
+        {
+          "accent": "primary",
+          "html": "<p>Branded, tracked microlearning from plain content.</p>",
+          "phase": "Today",
+          "title": "Courses"
+        },
+        {
+          "accent": "secondary",
+          "html": "<p>Release notes, job aids, email digests, and slide decks from one source.</p>",
+          "phase": "Next",
+          "title": "More than courses"
+        },
+        {
+          "accent": "tertiary",
+          "html": "<p>Click-through simulations and AI roleplay in real product workflows.</p>",
+          "phase": "Then",
+          "title": "Practice"
+        },
+        {
+          "accent": "dark",
+          "html": "<p>Scale the same training out to the hospitals we serve.</p>",
+          "phase": "Later",
+          "title": "Customer academies"
+        },
+        {
+          "accent": "primary",
+          "html": "<p>Use completion and quiz data to auto-flag courses for refresh.</p>",
+          "phase": "Ongoing",
+          "title": "A feedback loop"
+        }
+      ],
+      "type": "timeline"
+    },
+    {
+      "gated": false,
+      "html": "<p>A fuller capability roadmap accompanies this overview.</p>",
+      "type": "note"
+    },
+    {
+      "gated": false,
+      "html": "<p>Proof: This Course Built Itself</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "color": "green",
+      "gated": false,
+      "type": "sectionStart"
+    },
+    {
+      "gated": false,
+      "html": "<p>You just experienced the product. This entire overview — the branding, the layout, the comparison, the infographic, the process steps, the chart, the accordion, the sorting check, the flashcards, the knowledge check — was authored as plain text and assembled by the Course Builder. What you see is what it produces.</p>",
+      "type": "paragraph"
+    },
+    {
+      "gated": false,
+      "type": "sectionEnd"
+    },
+    {
+      "alt": "This very course, built and rendered by the Course Builder",
+      "gated": false,
+      "src": "assets/screenshot-player.png",
+      "type": "image",
+      "variant": "full"
+    },
+    {
+      "band": "bottom",
+      "color": "gold",
+      "gated": false,
+      "type": "transition"
+    },
+    {
+      "gated": false,
+      "html": "<p>Check Your Understanding</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "feedback": "Exactly. It is our own system, it automates the assembly, and people own the content, the art, and the final sign-off.",
+      "feedbackIncorrect": "Not quite. It is in-house (not a purchased license), and people stay in control of content, art, and approval — the system speeds up the assembly, it does not replace judgment.",
+      "gated": false,
+      "id": "kc1",
+      "multi": false,
+      "options": [
+        {
+          "correct": false,
+          "html": "A new licensed authoring tool we purchased from a vendor"
+        },
+        {
+          "correct": true,
+          "html": "An in-house system that turns content into branded, tracked courses, with people in control at every gate"
+        },
+        {
+          "correct": false,
+          "html": "A fully automated AI that writes and publishes training with no human involvement"
+        },
+        {
+          "correct": false,
+          "html": "A replacement for our instructional design team"
+        }
+      ],
+      "prompt": "What is the best one-line description of the TeleTracking Course Builder?",
+      "type": "knowledgeCheck"
+    },
+    {
+      "gated": false,
+      "html": "<p>Where It Stands, and Your Part</p>",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "gated": false,
+      "html": "<p>The Course Builder is real, working, and already producing branded courses that track in our platform. I built it, and I want to keep developing it — growing what it can do for TeleTracking.</p>",
+      "type": "paragraph"
+    },
+    {
+      "gated": false,
+      "html": "<p>Approve this for more development by me.</p>",
+      "type": "statement"
+    },
+    {
+      "gated": false,
+      "html": "<p>A nod that this is worth pursuing is all it takes. I&#x27;ll keep building.</p>",
+      "type": "note"
+    }
+  ],
+  "graded": false,
+  "hero": null,
+  "id": "meet-the-teletracking-course-builder",
+  "locale": "en",
+  "passingScore": 80,
+  "retry": 0,
+  "schema": "course-ir/v1",
+  "title": "Meet the TeleTracking Course Builder"
+}

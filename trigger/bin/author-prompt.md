@@ -17,6 +17,7 @@ course. Another stage builds these scripts into branded SCORM.
    `*Section:*`, `*Visual:*`, `> GAP:` notes, knowledge checks).
 3. `templates/concept-explainer.md`, `templates/decision-scenario.md`,
    `templates/software-procedure.md`, `templates/policy-acceptable-use.md`,
+   `templates/onboarding-company.md`, `templates/onboarding-role.md`,
    `templates/sales-rep-onboarding.md`, `templates/objection-handling.md` —
    the archetypes; pick the best-fitting archetype per microlearning.
 

@@ -64,6 +64,25 @@ ACCORDION_RE = re.compile(r'^\*Accordion:\*\s*(.*)$', re.I)
 PROCESS_RE = re.compile(r'^\*Process:\*\s*(.*)$', re.I)
 FLASHCARD_RE = re.compile(r'^\*Flashcard:\*\s*(.*)$', re.I)
 CATEGORIZE_RE = re.compile(r'^\*(?:Categorize|Sort):\*\s*(.*)$', re.I)
+TIMELINE_RE = re.compile(r'^\*Timeline:\*\s*(.*)$', re.I)
+COMPARISON_RE = re.compile(r'^\*Comparison:\*\s*(.*)$', re.I)
+CHART_RE = re.compile(r'^\*Chart:\*\s*(.*)$', re.I)
+INFOGRAPHIC_RE = re.compile(r'^\*Infographic:\*\s*(.*)$', re.I)
+
+# A fenced/keyed block must never run past the next slide / unit / meta marker:
+# if an author forgets the closing lone `:::`, the block stops here instead of
+# eating the rest of the unit (the unclosed-fence swallow, audit item 2.5).
+# This is the boundary the infographic parser already enforced; it is shared by
+# all the fenced parsers so they behave identically.
+FENCE_BOUNDARY_RE = re.compile(r'^(\*\*Slide\b|\*\*Articulate|\*\*Sources?\b|##\s)', re.I)
+_CHART_ALIASES = {                       # author-friendly spellings -> canonical enum
+    "bar": "bar", "column": "bar", "col": "bar",
+    "line": "line", "trend": "line",
+    "pie": "pie", "donut": "pie", "doughnut": "pie",
+    "stacked": "stackedBar", "stackedbar": "stackedBar", "stacked-bar": "stackedBar",
+    "grouped": "groupedBar", "groupedbar": "groupedBar", "grouped-bar": "groupedBar",
+    "clustered": "groupedBar",
+}
 
 
 def _kv_opt(segs, key):
@@ -282,10 +301,12 @@ def _parse_cards(lines, i):
         grid['requireOpen'] = True
     mcol = re.search(r'columns?:\s*(\d+)', header, re.I)
     if mcol:
-        grid['columns'] = int(mcol.group(1))
+        grid['columns'] = min(4, max(1, int(mcol.group(1))))   # schema caps columns at 4
     cur = None
     while i < len(lines):
         s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
         fm = FENCE_RE.match(s)
         if fm:
             tag = (fm.group(1) or '').lower()
@@ -330,6 +351,8 @@ def _read_fences(lines, i):
     groups, cur = [], None
     while i < len(lines):
         s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):    # unclosed fence: stop at the next marker, don't consume it
+            break
         fm = FENCE_RE.match(s)
         if fm:
             if fm.group(1) is None:      # lone ::: closes the block
@@ -389,6 +412,8 @@ def _parse_categorize(lines, i):
     name2id = {}
     while i < len(lines):
         s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
         if FENCE_RE.match(s):
             i += 1
             break
@@ -408,6 +433,240 @@ def _parse_categorize(lines, i):
         i += 1
     for p in block["pool"]:
         p["target"] = name2id.get(p.pop("_target_name", ""), "")
+    return block, i
+
+
+def _parse_timeline(lines, i):
+    """`*Timeline:*` then `::: milestone` (phase:/title:/body:/accent:) groups, lone `:::` closes.
+
+    Renders as a vertical roadmap (HTML parity with the timeline slide layout). accent is a brand
+    role (primary|secondary|tertiary|dark); omit to auto-cycle.
+    """
+    i += 1
+    groups, i = _read_fences(lines, i)
+    milestones = []
+    for g in groups:
+        m = {}
+        if g.get("phase"):
+            m["phase"] = g["phase"]
+        if g.get("title"):
+            m["title"] = _inline(g["title"])
+        if g.get("body"):
+            m["html"] = "<p>" + _inline(g["body"]) + "</p>"
+        if g.get("accent"):
+            m["accent"] = g["accent"].lower()
+        milestones.append(m)
+    return {"type": "timeline", "milestones": milestones}, i
+
+
+def _parse_comparison(lines, i):
+    """`*Comparison:*` then `::: panel` groups; inside each, `heading:`/`sublabel:`/`accent:`/`callout:`
+    lines plus `- bullet` item lines. A lone `:::` closes the block. 2-3 panels (old-vs-new / A/B/C).
+    """
+    i += 1
+    panels, cur = [], None
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
+        fm = FENCE_RE.match(s)
+        if fm:
+            if fm.group(1) is None:          # lone ::: closes the block
+                i += 1
+                break
+            cur = {"items": []}              # a named fence (::: panel) starts a new panel
+            panels.append(cur)
+            i += 1
+            continue
+        if cur is not None and s:
+            mb = re.match(r'^[-*]\s+(.*)', s)
+            if mb:
+                cur["items"].append(_inline(mb.group(1).strip()))
+            elif ':' in s:
+                k, v = s.split(':', 1)
+                k, v = k.strip().lower(), v.strip()
+                if k in ("heading", "callout"):
+                    cur[k] = _inline(v)
+                elif k in ("sublabel", "accent"):
+                    cur[k] = v
+        i += 1
+    out = []
+    for p in panels:
+        panel = {}
+        for k in ("heading", "sublabel", "callout"):
+            if p.get(k):
+                panel[k] = p[k]
+        if p.get("accent"):
+            panel["accent"] = p["accent"].lower()
+        if p.get("items"):
+            panel["items"] = p["items"]
+        out.append(panel)
+    return {"type": "comparison", "panels": out}, i
+
+
+def _ig_split_item(raw):
+    """A left-column bullet `bold — detail` -> ["bold", " — detail"] (slide-schema pair).
+    No em dash -> a plain string. Matches the 'infographic' slide content shape."""
+    raw = raw.strip()
+    m = re.match(r'^(.*?)\s*[—–-]\s+(.*)$', raw)
+    if m:
+        return [_inline(m.group(1).strip()), " — " + _inline(m.group(2).strip())]
+    return _inline(raw)
+
+
+def _parse_infographic(lines, i):
+    """`*Infographic:* <title>` then top-level `subtitle:`/`footer:` lines and flat fences:
+      `::: left`   heading:/intro:/callout: + `- bold — detail` bullets
+      `::: right`  heading:/sublabel:
+      `::: card`   num:/title:/body:/accent:        (one per framework card, repeatable)
+      `::: goals`  label:                            (the goals-strip label)
+      `::: goal`   title:/body:/accent:              (one per goal, repeatable)
+    A lone `:::` closes the whole block. Produces b["infographic"] == the slide content schema,
+    so one JSON serves both the slide generator and this course block.
+    """
+    title = (INFOGRAPHIC_RE.match(lines[i].strip()).group(1) or "").strip()
+    i += 1
+    ig = {}
+    if title:
+        ig["title"] = _inline(title)
+    left, right, cards, goals_items, goals_label = {"items": []}, {}, [], [], None
+    mode, cur, seen_fence = None, None, False        # mode: None|left|right|card|goals|goal
+    # the block ends at the next slide/meta/unit marker — supports BOTH a single terminal `:::`
+    # and a `:::` after every fence (whichever the author writes). Shared with the other
+    # fenced parsers as FENCE_BOUNDARY_RE so the unclosed-fence behavior is identical.
+    end_re = FENCE_BOUNDARY_RE
+    while i < len(lines):
+        s = lines[i].strip()
+        if not s:
+            i += 1
+            continue
+        fm = FENCE_RE.match(s)
+        if fm:
+            if fm.group(1) is None:                  # lone ::: closes the CURRENT fence
+                mode, cur = None, None
+                i += 1
+                continue
+            seen_fence = True
+            tag = fm.group(1).lower()
+            if tag == "left":
+                mode, cur = "left", None
+            elif tag == "right":
+                mode, cur = "right", None
+            elif tag == "card":
+                cur = {}; cards.append(cur); mode = "card"
+            elif tag in ("goals", "goalstrip"):
+                mode, cur = "goals", None
+            elif tag == "goal":
+                cur = {}; goals_items.append(cur); mode = "goal"
+            else:
+                mode, cur = None, None
+            i += 1
+            continue
+        if end_re.match(s):                          # next block/slide/meta — stop, don't consume
+            break
+        if mode is None:
+            if not seen_fence:                       # top-level keys before any fence
+                if ':' in s:
+                    k, v = s.split(':', 1)
+                    k = k.strip().lower()
+                    if k in ("subtitle", "footer"):
+                        ig[k] = _inline(v.strip())
+                i += 1
+                continue
+            break                                    # content after the fences closed → block ends
+        mb = re.match(r'^[-*]\s+(.*)', s)
+        if mb and mode == "left":
+            left["items"].append(_ig_split_item(mb.group(1)))
+        elif ':' in s:
+            k, v = s.split(':', 1)
+            k, v = k.strip().lower(), v.strip()
+            if mode == "left" and k in ("heading", "intro", "callout"):
+                left[k] = v if k == "heading" else _inline(v)
+            elif mode == "right" and k in ("heading", "sublabel"):
+                right[k] = v
+            elif mode == "card" and cur is not None and k in ("num", "accent", "title", "body"):
+                cur[k] = _inline(v) if k in ("title", "body") else v
+            elif mode == "goals" and k == "label":
+                goals_label = v
+            elif mode == "goal" and cur is not None and k in ("accent", "title", "body"):
+                cur[k] = _inline(v) if k in ("title", "body") else v
+        i += 1
+    if left.get("heading") or left.get("intro") or left.get("callout") or left["items"]:
+        if not left["items"]:
+            left.pop("items")
+        ig["left"] = left
+    if right:
+        if cards:
+            right["cards"] = cards
+        ig["right"] = right
+    elif cards:
+        ig["right"] = {"cards": cards}
+    if goals_label or goals_items:
+        g = {}
+        if goals_label:
+            g["label"] = goals_label.split("|") if "|" in goals_label else goals_label.split()
+        if goals_items:
+            g["items"] = goals_items
+        ig["goals"] = g
+    return {"type": "infographic", "infographic": ig}, i
+
+
+def _chart_num(x):
+    """Parse one data cell to a number (or None for a missing/blank value).
+    Tolerates a stray %, a leading $, and surrounding spaces; NO thousands separators
+    (comma is the value delimiter), so write 1200 not 1,200."""
+    x = (x or "").strip().lstrip("$").rstrip("%").strip()
+    if x == "" or x.lower() in ("null", "na", "n/a", "-", "—"):
+        return None
+    try:
+        return int(x) if re.fullmatch(r"-?\d+", x) else float(x)
+    except ValueError:
+        return None
+
+
+def _parse_chart(lines, i):
+    """`*Chart:* <bar|line|pie|stackedBar|groupedBar>` then `key: value` lines until a
+    blank line. Keys: `categories:` (comma-separated labels), `series:` (repeatable —
+    `Name = v1, v2, ...` or just `v1, v2, ...` for one unnamed series), `title:`,
+    `xLabel:`, `yLabel:`, `source:`.
+
+    `source:` is the no-invented-metrics guardrail — the renderer shows it and the
+    AI-generation lint rejects a chart that lacks one. Values use NO thousands
+    separators (comma is the delimiter); use `null` for a missing data point.
+    """
+    m = CHART_RE.match(lines[i].strip())
+    raw = (m.group(1) or "bar").strip()
+    ctype = _CHART_ALIASES.get(raw.lower(), raw or "bar")
+    i += 1
+    block = {"type": "chart", "chart": ctype, "categories": [], "series": []}
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed keyed block: stop at the next marker (e.g. **Articulate:)
+            break
+        if not s:
+            i += 1
+            break
+        if ':' not in s:
+            break
+        k, _, v = s.partition(':')
+        k, v = k.strip().lower(), v.strip()
+        if k == "categories":
+            block["categories"] = [c.strip() for c in v.split(',') if c.strip()]
+        elif k == "series":
+            name, sep, nums = v.partition('=')
+            if not sep:                       # no "Name =" -> a single unnamed series
+                name, nums = "", v
+            block["series"].append({"name": name.strip(),
+                                    "data": [_chart_num(x) for x in nums.split(',')]})
+        elif k in ("xlabel", "x"):
+            block["xLabel"] = _inline(v)
+        elif k in ("ylabel", "y"):
+            block["yLabel"] = _inline(v)
+        elif k == "title":
+            block["title"] = _inline(v)
+        elif k == "source":
+            block["source"] = _inline(v)
+        i += 1
     return block, i
 
 
@@ -472,6 +731,18 @@ def _body_blocks(text):
         if CATEGORIZE_RE.match(s):
             flush_para(); flush_lst()
             block, i = _parse_categorize(lines, i); blocks.append(block); continue
+        if TIMELINE_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_timeline(lines, i); blocks.append(block); continue
+        if COMPARISON_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_comparison(lines, i); blocks.append(block); continue
+        if CHART_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_chart(lines, i); blocks.append(block); continue
+        if INFOGRAPHIC_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_infographic(lines, i); blocks.append(block); continue
         mnote = NOTE_RE.match(s)
         if mnote:
             flush_para(); flush_lst()
@@ -532,18 +803,21 @@ def _block_inner_html(b):
 def _merge_image_text(blocks):
     """Fold the body run after a `side:` visual into that imageText block's text column.
 
-    Absorbs following paragraph/list/table blocks until the next structural boundary
-    (heading, image/imageText, transition, section marker, KC, continue).
+    Only the prose blocks the text column can actually render (paragraph/list/table —
+    everything `_block_inner_html` serializes) are absorbed; ANY other block type ends
+    the run and stands on its own. This is an allowlist on purpose: a denylist silently
+    swallowed structured blocks (accordion/process/comparison/timeline/infographic/
+    chart/categorize/flashcard/…) that followed a `side:` visual, because the serializer
+    returns "" for them. Allowlisting keeps every current and future block type safe by
+    default.
     """
-    BOUNDARY = {"image", "imageText", "transition", "sectionStart", "sectionEnd",
-                "heading", "headingParagraph", "knowledgeCheck", "continue",
-                "button", "cardGrid"}
+    ABSORB = {"paragraph", "list", "table"}
     out, i = [], 0
     while i < len(blocks):
         b = blocks[i]
         if b.get("type") == "imageText" and b.pop("_mergeText", False):
             parts, j = [], i + 1
-            while j < len(blocks) and blocks[j].get("type") not in BOUNDARY:
+            while j < len(blocks) and blocks[j].get("type") in ABSORB:
                 parts.append(_block_inner_html(blocks[j])); j += 1
             b["html"] = "".join(p for p in parts if p)
             out.append(b); i = j
@@ -554,11 +828,17 @@ def _merge_image_text(blocks):
 
 def _knowledge_check(body):
     q = re.search(r'\*Question:\*\s*(.+)', body)
-    opts = re.findall(r'^\s*-\s*[A-D]\)\s*(.+)$', body, re.M)
-    ans = re.search(r'\*Correct Answer:\*\s*([A-D])', body)
+    # accept `- A)`, `- a.`, `- B)` ... (letter + `.` or `)`); capture the letter so
+    # the correct answer is matched by LETTER, not by blind position. Out-of-range or
+    # missing answers leave NO option correct -> authoring.lint() flags it (no silent mis-score).
+    pairs = re.findall(r'^\s*-\s*([A-Za-z])[.)]\s*(.+)$', body, re.M)
+    letters = [p[0].upper() for p in pairs]
+    opts = [p[1] for p in pairs]
+    ans = re.search(r'\*Correct Answer:\*\s*([A-Za-z])', body)
+    ans_letter = ans.group(1).upper() if ans else None
+    correct_idx = letters.index(ans_letter) if ans_letter in letters else -1
     fb = re.search(r'\*Feedback\s*[—–-]\s*Correct:\*\s*(.+)', body)
     fbno = re.search(r'\*Feedback\s*[—–-]\s*Incorrect:\*\s*(.+)', body)
-    correct_idx = "ABCD".index(ans.group(1)) if ans else -1
     return {
         "type": "knowledgeCheck", "multi": False,
         "prompt": _inline(q.group(1)) if q else "",
@@ -621,7 +901,8 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
 
     import os
     used = {}
-    cand = {n.lower(): n for n in os.listdir(image_dir)} if image_dir else {}
+    cand = ({n.lower(): n for n in os.listdir(image_dir)}
+            if image_dir and os.path.isdir(image_dir) else {})
 
     # resolve *Visual:* slot directives against the labelled-asset folder
     for b in blocks:
@@ -631,7 +912,12 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
             if actual:
                 used["assets/" + actual] = os.path.join(image_dir, actual)
                 b["src"] = "assets/" + actual
-            # else: src stays assets/<slot> — asset supplied later (slot-named, per §10)
+            elif image_dir:
+                # An images folder WAS provided but no file matches this slot, so the
+                # asset doesn't exist — don't ship a broken <img>. Blank the src; the
+                # render layer drops the image and keeps the text.
+                b["src"] = ""
+            # else (no image_dir): src stays assets/<slot> — asset supplied later (§10)
 
     # resolve card/button modal media filenames against the same folder
     def _modals():
@@ -681,6 +967,8 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
           "locale": "en", "accent": None, "hero": hero_block, "blocks": blocks,
           "graded": graded, "passingScore": passing, "retry": retry}
     ir["_stats"] = {"blocks": len(blocks), "assets": len(used)}
+    from ir_validate import validate_ir
+    validate_ir(ir, label=ir.get("id", "course"))
     return ir, used
 
 

@@ -1,6 +1,7 @@
 <!--
   ARCHETYPE: Policy / Acceptable-Use
   WHEN TO USE: Compliance/governance — what's allowed, what's not, and what to do when unsure. Proven by Responsible AI "Acceptable Use".
+  ADULT-LEARNER FRAME (Knowles): The learner must comply with a policy, but compliance training usually feels like box-ticking they resent. Give the WHY behind the rule (self-direction and respect), make "what to do when you're unsure" concrete, and appeal to protecting themselves, patients, and the organization — not "because the policy says so."
   SLIDE-ROLE PLAN (auto-generated from the slides below):
     1. Learning Objectives
     2. The core rule

@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+*.egg
+
+# Build outputs
+build/
+*.course/
+SCORM-Testing.zip
+
+# Generated zips (keep sample-courses and demo source; ignore built output zips)
+demo/*.zip
+projects/
+
+# CourseCraft config (machine-specific)
+.coursecraft/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/settings.json
+*.swp

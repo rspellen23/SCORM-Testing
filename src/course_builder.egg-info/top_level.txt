@@ -11,6 +11,7 @@ docx_review
 ir_validate
 layouts
 md_import
+pptx_animate
 pptx_export
 pptx_transitions
 prompts
@@ -19,3 +20,4 @@ rise_import
 scorm
 scorm_lint
 slide_layouts
+slide_svg

@@ -33,8 +33,6 @@ ARCHETYPE_TEMPLATES = [
     "onboarding-company.md",
     "onboarding-role.md",
     "decision-scenario.md",
-    "sales-rep-onboarding.md",
-    "objection-handling.md",
 ]
 
 

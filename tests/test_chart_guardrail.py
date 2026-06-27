@@ -32,3 +32,23 @@ def test_sourced_chart_accepted():
     ok, n, errors = authoring.lint(_UNIT + _SOURCE)
     assert ok is True, errors
     assert errors == []
+
+
+# --- B3: a chart with a non-numeric cell ("N/A"/null) must not crash --------
+# LLMs emit "N/A"/null for missing data; the SR/print data table did int("N/A").
+
+def test_chart_with_non_numeric_cell_does_not_crash():
+    import chart_svg
+    block = {"chart": "bar", "categories": ["Q1", "Q2", "Q3"],
+             "series": [{"name": "Admits", "data": [120, "N/A", 130]}],
+             "source": "ops report"}
+    svg = chart_svg.render_chart(block)        # must not raise
+    assert svg and "N/A" in svg                # the bad cell shows verbatim in the data table
+    assert "120" in svg and "130" in svg       # the numeric cells still render
+
+
+def test_chart_with_null_cell_renders_blank_not_crash():
+    import chart_svg
+    block = {"chart": "line", "categories": ["A", "B"],
+             "series": [{"name": "X", "data": [5, None]}], "source": "s"}
+    assert chart_svg.render_chart(block)        # None → "" in _fmt, no crash

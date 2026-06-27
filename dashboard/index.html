@@ -4,119 +4,334 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="__CSRF_TOKEN__">
-<title>CourseCraft</title>
+<title>Course Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Open+Sans:wght@400;600;700;800&family=Open+Sans+Condensed:wght@700&display=swap" rel="stylesheet">
 <style>
-  :root { --accent:#1EB16A; --navy:#003E51; --grey:#444; --line:#dfe3e5; --bg:#f6f8f9; --mut:#778; }
+  /* ============================================================
+     Course Builder — design system (Claude Design port, 2026-06-26)
+     Neutral, warm "paper/clay" tool chrome. The TeleTracking brand
+     (green/navy) is reserved for the CONTENT the tool previews &
+     exports (the SVG slide posters + built packages), never the chrome.
+     Every color is a CSS variable so the palette can be retuned in one place.
+     ============================================================ */
+  :root {
+    --font-ui:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+    /* surfaces */
+    --bg:#F1EDE6; --surface:#FBF9F5; --sunken:#F4F0E8; --bar:rgba(248,246,241,.86);
+    /* ink */
+    --ink:#1F1C19; --ink-strong:#262320; --ink-2:#4A443D;
+    --body:#6F675E; --muted:#857C71; --faint:#9A9389; --faint-2:#A89F92;
+    /* hairlines */
+    --line:#E6E0D5; --line-2:#E3DDD2; --line-3:#DED7CA; --line-4:#DAD3C6; --hair:#EAE4D9;
+    /* clay accent */
+    --accent:#C0664A; --accent-2:#A4523A; --accent-soft:#F6E9E2; --accent-soft-2:#FBEFE9; --accent-ring:#F1DDD3;
+    --dark-btn:#262320; --dark-btn-2:#3A352F;
+    /* status */
+    --ok:#3F7D5F; --ok-ink:#23503B; --ok-bg:#E9F2EC; --ok-line:#CBE3D5;
+    --warn:#B07D2A; --warn-ink:#8A5A38; --warn-bg:#F6EDD9; --warn-line:#EBDCB6; --warn-bg-2:#FBF1E9; --warn-line-2:#ECD6C4;
+    --err:#A23A2C; --err-bg:#FBECE8; --err-line:#ECD3CC;
+    --console-bg:#15201C; --console-ink:#CFE9DC; --console-cursor:#7FD8A8;
+    /* output-brand accent (the ONE green allowed in chrome: status dot + slideshow Next) */
+    --brand-green:#1EB16A;
+    --r-card:14px; --r-ctl:9px; --r-sm:8px; --r-pill:20px;
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--grey); background:var(--bg); }
-  header { background:var(--navy); color:#fff; padding:18px 26px; display:flex; align-items:center; gap:14px; }
-  header h1 { font-size:20px; margin:0; font-weight:700; } header .accent { color:var(--accent); }
-  header .sub { margin-left:auto; font-size:13px; opacity:.85; }
-  .wrap { max-width:940px; margin:22px auto 60px; padding:0 20px; }
-  .topbar { display:flex; align-items:center; gap:12px; justify-content:flex-end; margin-bottom:14px; }
-  .modeswitch { margin-right:auto; display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff; }
-  .mode-btn { border:none; background:#fff; color:var(--navy); padding:8px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; }
-  .mode-btn.active { background:var(--navy); color:#fff; }
-  .mode-btn + .mode-btn { border-left:1px solid var(--line); }
-  .slide-card { border:1px solid var(--line); border-radius:9px; padding:10px 12px; margin:10px 0; background:#fcfdfd; }
-  .slide-card-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:7px; }
-  .slide-card-head .slide-n { font-weight:700; color:var(--navy); font-size:13px; }
-  .slide-card-head select { padding:5px 8px; font-size:12.5px; }
-  .slide-card-head .slidemeta { flex:1; min-width:120px; font-size:11.5px; }
-  .slide-card textarea { width:100%; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; white-space:pre; line-height:1.4; }
-  button.ghost.xs { padding:3px 9px; font-size:13px; line-height:1; }
-  .topbar label { font-size:13px; font-weight:600; color:var(--navy); }
-  select { padding:8px 10px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit; }
-  .stage { background:#fff; border:1px solid var(--line); border-radius:10px; padding:0; margin-bottom:16px; overflow:hidden; }
-  .stage-head { display:flex; align-items:center; gap:14px; padding:15px 22px; }
-  .num { flex:none; width:30px; height:30px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
-  .stage-head h2 { margin:0; font-size:16px; color:var(--navy); }
-  .stage-head .desc { font-size:12.5px; color:var(--mut); margin-top:2px; }
-  .pill { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; margin-left:auto; }
-  .pill.ready { background:#eef7f1; color:#1d6b48; } .pill.wait { background:#eef1f3; color:#667; }
-  .stage-body { padding:0 22px 20px 66px; }
-  label.fld { display:block; font-size:12.5px; font-weight:600; color:var(--navy); margin:12px 0 5px; }
-  .req { color:#a32019; }
-  .pathrow { display:flex; gap:8px; } .pathrow input, .pathrow select { flex:1; }
-  input, textarea { padding:9px 11px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit; }
-  input[readonly] { background:#fafdfb; }
-  .full { width:100%; }
-  button.btn { background:var(--accent); color:#fff; border:none; border-radius:7px; padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer; }
-  button.btn:disabled { background:#b7c2c0; cursor:not-allowed; }
-  button.ghost { background:#fff; color:var(--navy); border:1px solid var(--line); border-radius:7px; padding:8px 13px; font-size:13px; cursor:pointer; }
-  .detected { background:#eef7f1; border:1px solid #cfe9da; color:#1d6b48; padding:9px 12px; border-radius:7px; font-size:13px; margin:12px 0; }
-  .filelist { font-size:12.5px; color:var(--mut); margin:8px 0; max-height:120px; overflow:auto; }
-  .row { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; margin:12px 0; }
-  .row .grow { flex:1; min-width:240px; } .row strong { font-size:13px; color:var(--navy); } .row label { font-size:13.5px; cursor:pointer; }
-  .result { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; font-size:13px; margin:7px 0; flex-wrap:wrap; }
-  .result.ok { background:#eef7f1; color:#1d6b48; } .result.err { background:#fdecea; color:#a32019; }
-  .result .name { font-weight:600; } .result .file { color:#666; } .result .sp { margin-left:auto; }
-  details.log { font-size:12px; margin:4px 0 10px; } details.log pre { background:#0d2530; color:#cfe; padding:10px; border-radius:6px; overflow:auto; max-height:220px; }
-  .hint { font-size:12.5px; color:var(--mut); margin:6px 0; }
-  code { background:#eef2f3; padding:1px 5px; border-radius:4px; font-size:12px; }
-  /* picker modal */
-  .modal-bg { position:fixed; inset:0; background:rgba(0,30,40,.45); display:none; align-items:center; justify-content:center; }
-  .modal-bg.show { display:flex; }
-  .modal { background:#fff; width:560px; max-width:92vw; max-height:80vh; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
-  .modal h3 { margin:0; padding:16px 20px; background:var(--navy); color:#fff; font-size:15px; }
-  .crumb { padding:10px 18px; font-size:12px; color:#567; background:#eef2f3; word-break:break-all; }
-  .listing { flex:1; overflow:auto; padding:6px 0; }
-  .item { padding:9px 20px; cursor:pointer; font-size:14px; display:flex; gap:9px; align-items:center; }
-  .item:hover { background:#eef7f1; } .item .ic { width:18px; text-align:center; } .item.file { color:var(--navy); }
-  .item.muted { color:#9aa6ab; cursor:default; } .item.muted:hover { background:transparent; }
-  .modal-foot { padding:12px 18px; border-top:1px solid var(--line); display:flex; gap:10px; align-items:center; }
-  .modal-foot .sel { font-size:12px; color:#678; flex:1; word-break:break-all; }
+  body { margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--bg);
+         -webkit-font-smoothing:antialiased; }
+  code { background:var(--sunken); padding:1px 6px; border-radius:5px; font-size:12px; font-family:var(--font-mono); color:var(--body); }
 
-  /* ---- visual refresh (overrides; keeps all existing structure + IDs) ---- */
-  body { background:linear-gradient(180deg,#e9eef1 0,var(--bg) 260px) no-repeat; }
-  header { position:sticky; top:0; z-index:20; box-shadow:0 2px 14px rgba(0,30,40,.14);
-           background:linear-gradient(110deg,var(--navy),#0a4d63); }
-  header h1 { letter-spacing:.2px; }
-  .wrap { max-width:960px; }
-  .modeswitch { box-shadow:0 1px 2px rgba(0,30,40,.06); }
-  .mode-btn { transition:background .15s,color .15s; }
-  .mode-btn:not(.active):hover { background:#f0f7f3; }
-  .stage { box-shadow:0 1px 3px rgba(0,30,40,.06); transition:box-shadow .2s, transform .2s; }
-  .stage:hover { box-shadow:0 8px 24px rgba(0,30,40,.10); transform:translateY(-1px); }
-  .stage-head { padding-top:17px; padding-bottom:16px; }
-  .num { box-shadow:0 0 0 4px #e7f5ee; transition:transform .2s, box-shadow .2s; }
-  .stage:hover .num { transform:scale(1.07); box-shadow:0 0 0 4px #dcf0e6; }
-  button.btn { box-shadow:0 1px 2px rgba(30,177,106,.3); transition:filter .15s, box-shadow .15s, transform .05s; }
-  button.btn:hover:not(:disabled) { filter:brightness(1.06); box-shadow:0 4px 12px rgba(30,177,106,.38); }
+  /* ============ TOP BAR ============ */
+  header.topbar { position:sticky; top:0; z-index:30; background:var(--bar);
+    backdrop-filter:saturate(1.2) blur(10px); -webkit-backdrop-filter:saturate(1.2) blur(10px);
+    border-bottom:1px solid var(--line-2); display:flex; align-items:center; gap:18px; padding:11px 22px; }
+  .brandmark { display:flex; align-items:center; gap:11px; }
+  .brandmark .logo { width:30px; height:30px; border-radius:8px;
+    background:linear-gradient(150deg,#C0664A,#9E4F37); color:#fff; display:flex; align-items:center;
+    justify-content:center; font-weight:800; font-size:13px; letter-spacing:.5px; box-shadow:0 1px 3px rgba(158,79,55,.4); }
+  .brandtext { line-height:1.05; }
+  .brandtext .bt1 { font-size:15px; font-weight:700; letter-spacing:-.2px; color:var(--ink); }
+  .brandtext .bt2 { font-size:10.5px; color:var(--faint); font-weight:500; letter-spacing:.3px; }
+  .modeswitch { display:inline-flex; background:#ECE6DB; border:1px solid #E0D9CD; border-radius:10px; padding:3px; gap:2px; margin-left:8px; }
+  .mode-btn { border:none; border-radius:8px; background:transparent; color:var(--body); padding:7px 16px;
+    font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; transition:background .15s,color .15s,box-shadow .15s; }
+  .mode-btn.active { background:var(--dark-btn); color:#fff; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.18); }
+  .mode-btn:not(.active):hover { color:var(--ink); }
+  .topbar-right { margin-left:auto; display:flex; align-items:center; gap:16px; }
+  .brandsel { display:flex; align-items:center; gap:8px; }
+  .brandsel-label { font-size:11.5px; font-weight:600; color:var(--body); cursor:help; }
+  .brandsel-wrap { position:relative; display:flex; align-items:center; }
+  .brandsel-wrap .brand-dot { position:absolute; left:10px; width:9px; height:9px; border-radius:50%;
+    background:var(--brand-green); box-shadow:0 0 0 2px var(--surface); pointer-events:none; }
+  .brandsel-wrap select { padding:7px 26px 7px 26px; font-weight:600; color:var(--ink); }
+  .projchip { display:flex; align-items:center; gap:7px; padding:6px 12px; background:var(--surface);
+    border:1px solid var(--line-2); border-radius:var(--r-sm); }
+  .projchip .pc-k { font-size:11px; color:var(--faint); font-weight:600; }
+  .projchip #hdr_project { font-size:12.5px; font-weight:700; color:var(--ink); }
+
+  /* ============ BODY: rail + main ============ */
+  .body { display:flex; align-items:flex-start; gap:0; max-width:1240px; margin:0 auto; }
+  .rail { flex:0 0 270px; align-self:stretch; padding:30px 24px 40px; position:sticky; top:55px; }
+  .rail-kicker { font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--faint-2); margin-bottom:4px; }
+  .rail-prog { font-size:13px; font-weight:600; color:var(--body); margin-bottom:22px; }
+  .rail-list { display:flex; flex-direction:column; }
+  .rail-step { display:flex; gap:13px; cursor:pointer; }
+  .rail-mark { display:flex; flex-direction:column; align-items:center; align-self:stretch; }
+  .rail-dot { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; flex:none; transition:background .15s,box-shadow .15s; }
+  .rail-line { width:2px; flex:1; min-height:14px; margin:5px 0 1px; background:var(--line-2); border-radius:2px; }
+  .rail-txt { padding-bottom:18px; min-width:0; }
+  .rail-title { font-size:13.5px; font-weight:500; color:var(--faint-2); transition:color .15s; }
+  .rail-status { font-size:11px; color:var(--faint-2); font-weight:500; margin-top:1px; }
+  .rail-step.done .rail-dot { background:var(--dark-btn); color:#fff; }
+  .rail-step.done .rail-line { background:#C7BFAF; }
+  .rail-step.done .rail-title { font-weight:600; color:var(--body); }
+  .rail-step.current .rail-dot { background:var(--accent); color:#fff; font-weight:800; box-shadow:0 0 0 4px var(--accent-ring); }
+  .rail-step.current .rail-title { font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-.2px; }
+  .rail-step.up .rail-dot { background:var(--surface); border:1.5px solid #D8D2C7; color:var(--faint-2); font-weight:700; }
+  .rail-step:hover .rail-title { color:var(--ink); }
+
+  .main { flex:1; min-width:0; padding:30px 40px 80px; max-width:920px; }
+
+  /* ============ STAGE (one visible at a time) ============ */
+  .stage { display:none; }
+  .stage-head { display:flex; align-items:flex-start; gap:0; padding:0; margin:0 0 22px; }
+  .stage-head > div { flex:1; min-width:0; }
+  .num { display:none; }                 /* the rail carries the step number now */
+  .stage-head h2 { margin:0; font-size:27px; font-weight:800; letter-spacing:-.6px; color:var(--ink); }
+  .stage-head .desc { font-size:14.5px; line-height:1.5; color:var(--body); margin-top:9px; max-width:640px; }
+  .stage-body { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-card);
+    padding:22px; box-shadow:0 1px 2px rgba(60,50,40,.04); }
+
+  /* ============ FORM CONTROLS ============ */
+  label.fld { display:block; font-size:12px; font-weight:700; color:var(--ink-2); margin:16px 0 7px; }
+  label.fld:first-child, .stage-body > label.fld:first-of-type { }
+  .req { color:var(--accent); font-weight:600; }
+  .pathrow { display:flex; gap:8px; } .pathrow input, .pathrow select { flex:1; }
+  input, textarea, select { padding:10px 12px; border:1px solid var(--line-3); border-radius:var(--r-ctl);
+    font-size:13px; font-family:inherit; background:#fff; color:var(--ink);
+    transition:border-color .15s, box-shadow .15s; }
+  textarea { resize:vertical; line-height:1.5; }
+  select { appearance:none; -webkit-appearance:none; padding-right:30px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'><path d='M1 1l4 4 4-4' stroke='%239A9389' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 11px center; cursor:pointer; }
+  input[readonly] { background:var(--sunken); font-family:var(--font-mono); font-size:12.5px; color:var(--body); }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(192,102,74,.16); }
+  /* native radios / checkboxes keep their native look (the scope toggles are buttons, not these) */
+  input[type=radio], input[type=checkbox] { -webkit-appearance:auto; appearance:auto; width:auto; padding:0;
+    border:0; background:none; box-shadow:none; accent-color:var(--accent); cursor:pointer; vertical-align:-2px; }
+  .full { width:100%; }
+
+  /* buttons */
+  button.btn { background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; border:none;
+    border-radius:11px; padding:11px 20px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;
+    box-shadow:0 2px 10px rgba(158,79,55,.28); transition:filter .15s, box-shadow .15s, transform .05s; }
+  button.btn:hover:not(:disabled) { filter:brightness(1.05); box-shadow:0 4px 14px rgba(158,79,55,.36); }
   button.btn:active:not(:disabled) { transform:translateY(1px); }
-  button.ghost { transition:background .15s, border-color .15s; }
-  button.ghost:hover { background:#f0f7f3; border-color:#bcdccc; }
-  select, input, textarea { transition:border-color .15s, box-shadow .15s; }
-  select:focus, input:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(30,177,106,.15); }
-  /* spinner for busy buttons */
+  button.btn:disabled { background:#CDBBB1; box-shadow:none; cursor:not-allowed; }
+  button.btn.xs { padding:6px 13px; font-size:12px; border-radius:var(--r-sm); box-shadow:none; }
+  button.btn-dark { background:var(--dark-btn); color:#fff; border:none; border-radius:10px; padding:10px 22px;
+    font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; transition:filter .15s, transform .05s; }
+  button.btn-dark:hover:not(:disabled) { filter:brightness(1.18); }
+  button.btn-dark:disabled { opacity:.4; cursor:default; }
+  button.ghost { background:#fff; color:var(--ink-2); border:1px solid var(--line-4); border-radius:var(--r-ctl);
+    padding:9px 14px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; transition:background .15s, border-color .15s; }
+  button.ghost:hover { background:var(--sunken); border-color:var(--line-3); }
+  button.ghost.xs { padding:6px 12px; font-size:12px; }
+
+  .detected { background:var(--ok-bg); border:1px solid var(--ok-line); color:var(--ok-ink); padding:12px 15px;
+    border-radius:11px; font-size:13px; margin:14px 0; font-weight:500; }
+  .detected button.ghost { border-color:#BBD9C6; color:#2C6047; }
+  .filelist { font-size:12.5px; color:var(--faint); margin:9px 0; max-height:140px; overflow:auto; line-height:1.6; }
+  .row { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; margin:14px 0; }
+  .row .grow { flex:1; min-width:240px; }
+  .row strong { font-size:12px; font-weight:700; color:var(--ink-2); }
+  .row label { font-size:13px; cursor:pointer; color:var(--ink-2); }
+  .hint { font-size:12.5px; color:var(--faint); margin:6px 0; line-height:1.55; }
+
+  /* result / status boxes (success / error) */
+  .result { display:flex; align-items:center; gap:11px; padding:12px 15px; border-radius:11px;
+    font-size:13px; margin:9px 0; flex-wrap:wrap; }
+  .result.ok { background:var(--ok-bg); border:1px solid var(--ok-line); color:var(--ok-ink); }
+  .result.err { background:var(--err-bg); border:1px solid var(--err-line); color:var(--err); }
+  .result .name { font-weight:700; } .result .file { color:var(--muted); font-family:var(--font-mono); font-size:11.5px; }
+  .result .sp { margin-left:auto; }
+  .result button.ghost { padding:7px 13px; font-size:12.5px; }
+  .result.ok button.ghost { border-color:#BBD9C6; color:#2C6047; }
+  details.log { font-size:12px; margin:4px 0 10px; }
+  details.log summary { cursor:pointer; color:var(--muted); }
+  details.log pre { background:var(--console-bg); color:var(--console-ink); padding:12px; border-radius:8px;
+    overflow:auto; max-height:220px; font-family:var(--font-mono); }
+
+  /* C1 build report — silent-drop / mis-scoring surface beside each result */
+  details.buildreport { font-size:12.5px; margin:-2px 0 10px; border-radius:8px; padding:8px 12px; }
+  details.buildreport.has-err { background:var(--err-bg); border:1px solid var(--err-line); }
+  details.buildreport.has-warn { background:#FBF3E2; border:1px solid #E8D5A8; }
+  details.buildreport summary { cursor:pointer; font-weight:600; color:var(--err); }
+  details.buildreport.has-warn summary { color:#8A6D1A; }
+  details.buildreport ul { margin:6px 0 2px; padding-left:4px; list-style:none; }
+  details.buildreport li { margin:3px 0; line-height:1.4; }
+  details.buildreport li.br-err { color:var(--err); }
+  details.buildreport li.br-warn { color:#7A5E12; }
+
+  /* capability / collapsible note */
+  details.capnote { margin:16px 0 2px; border:1px solid var(--line); background:var(--surface);
+    border-radius:11px; padding:0; overflow:hidden; }
+  details.capnote summary { cursor:pointer; list-style:none; padding:13px 16px; font-weight:700;
+    color:var(--ink-2); font-size:12.5px; }
+  details.capnote summary::-webkit-details-marker { display:none; }
+  details.capnote summary::before { content:'＋'; color:var(--accent); margin-right:8px; font-weight:700; }
+  details.capnote[open] summary::before { content:'－'; }
+  details.capnote > div { padding:0 16px 15px; font-size:12.5px; color:var(--body); line-height:1.6; }
+  details.capnote > div b, details.capnote > div strong { color:var(--ink-2); }
+
+  /* spinner — currentColor so it shows on clay buttons (white) AND on light result rows */
   .spin { display:inline-block; width:12px; height:12px; margin-right:7px; vertical-align:-1px;
-          border:2px solid rgba(255,255,255,.45); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    border:2px solid currentColor; border-right-color:transparent; border-radius:50%; opacity:.85;
+    animation:spin .7s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
-  /* capability note */
-  details.capnote { margin:13px 0 2px; border:1px solid #cfe9da; background:#f3faf6; border-radius:8px; padding:9px 13px; }
-  details.capnote summary { cursor:pointer; font-weight:600; color:#1d6b48; font-size:12.5px; }
-  details.capnote > div { margin-top:8px; font-size:12.5px; color:var(--grey); line-height:1.55; }
-  details.log summary { cursor:pointer; }
-  /* live streaming output */
-  pre.gen-live { background:#0d2530; color:#cfe; padding:12px; border-radius:8px; max-height:340px;
-                 overflow:auto; font-size:12px; line-height:1.45; white-space:pre-wrap; word-break:break-word; margin:0; }
-  details.capnote pre.gen-live { margin-top:8px; }
+  @keyframes cb-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* live streaming console */
+  pre.gen-live { background:var(--console-bg); color:var(--console-ink); padding:16px 18px; border-radius:8px;
+    max-height:340px; overflow:auto; font-size:12px; line-height:1.5; white-space:pre-wrap; word-break:break-word;
+    margin:0; font-family:var(--font-mono); }
+  details.capnote pre.gen-live { margin-top:8px; border-radius:0; }
+
+  /* AI connection pill */
+  .pill { font-size:11.5px; font-weight:700; padding:5px 12px; border-radius:var(--r-pill); }
+  .pill.ready { background:var(--ok-bg); color:#2C6047; }
+  .pill.wait { background:#EFE9DE; color:var(--muted); }
+
+  /* ============ SLIDE ROW (the §7.1 regenerate console) ============ */
+  .slide-row { display:flex; gap:14px; padding:13px; background:var(--surface); border:1px solid var(--line);
+    border-radius:13px; box-shadow:0 1px 2px rgba(60,50,40,.04); margin:0 0 11px; }
+  .slide-thumb { flex:0 0 168px; width:168px; height:95px; padding:0; border:1px solid #DDD6C8;
+    border-radius:var(--r-sm); background:var(--sunken); overflow:hidden; cursor:pointer; align-self:flex-start;
+    display:block; position:relative; box-shadow:0 1px 3px rgba(0,0,0,.08); transition:box-shadow .15s, border-color .15s; }
+  .slide-thumb:hover { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-ring); }
+  .slide-thumb svg { display:block; width:100%; height:100%; }
+  .slide-thumb .thumb-ph { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--faint-2); font-size:11px; }
+  .slide-row-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; }
+  .srow1, .srow2, .srow3 { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .slide-row .slide-n { width:23px; height:23px; border-radius:7px; background:#0B2C37; color:#fff;
+    font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+  .slide-row .slide-title { font-size:13.5px; font-weight:700; color:var(--ink);
+    max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .slide-row .sp { flex:1; }
+  .slide-row .sel-wrap select { padding:6px 26px 6px 10px; font-size:12px; font-weight:600; border-radius:var(--r-sm); }
+  .slide-row .sl-theme.themed { background:#0B2C37; color:#fff; font-weight:700; border-color:#0B2C37;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'><path d='M1 1l4 4 4-4' stroke='%23ffffff' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>"); }
+  .regen-lbl { font-size:11px; font-weight:700; color:var(--faint-2); text-transform:uppercase; letter-spacing:.4px; }
+  .scopeseg { display:inline-flex; background:#EFE9DE; border-radius:var(--r-sm); padding:3px; gap:2px; }
+  .scope-btn { padding:5px 11px; border:none; border-radius:6px; background:transparent; color:var(--muted);
+    font-family:inherit; font-size:11.5px; font-weight:600; cursor:pointer; transition:background .12s,color .12s; }
+  .scope-btn.active { background:var(--accent); color:#fff; font-weight:700; }
+  .iconbtn { width:28px; height:28px; border:1px solid var(--line-3); border-radius:var(--r-sm); background:#fff;
+    cursor:pointer; color:var(--muted); font-size:12px; line-height:1; transition:background .12s,border-color .12s; }
+  .iconbtn:hover:not(:disabled) { background:var(--sunken); }
+  .iconbtn:disabled { opacity:.4; cursor:default; }
+  .iconbtn.danger { border-color:var(--err-line); color:var(--err); }
+  .iconbtn.danger:hover { background:var(--err-bg); }
+  .slide-row .guide-arrow { color:var(--line-4); font-size:13px; }
+  .slide-row .sl-guide { flex:1; min-width:160px; font-size:12px; padding:6px 11px; border:1px solid var(--line-2); border-radius:var(--r-sm); }
+  .slide-row .row-flash { font-size:11.5px; font-weight:700; white-space:nowrap; }
+
+  /* deck toolbar (add slide / open json) */
+  .deck-tools { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+
+  /* empty state */
+  .empty { border:1.5px dashed var(--line-4); border-radius:var(--r-card); padding:40px; text-align:center; background:var(--surface); }
+  .empty .ico { font-size:30px; opacity:.4; }
+  .empty .t { font-size:14px; font-weight:700; color:var(--ink-2); margin-top:8px; }
+  .empty .s { font-size:12.5px; color:var(--faint); margin-top:5px; }
+
+  /* ============ FOOTER NAV ============ */
+  .footnav { display:flex; align-items:center; gap:12px; margin-top:32px; padding-top:20px; border-top:1px solid var(--line-2); }
+  .footnav .nav-sp { flex:1; }
+  .footnav .nav-prog { font-size:12px; color:var(--faint-2); }
+  .footnav .ghost:disabled { background:var(--sunken); color:#C0BBAE; cursor:default; }
+
+  /* ============ PICKER MODAL ============ */
+  .modal-bg { position:fixed; inset:0; background:rgba(20,16,12,.42); display:none; align-items:center; justify-content:center; z-index:70; }
+  .modal-bg.show { display:flex; }
+  .modal { background:var(--surface); width:560px; max-width:92vw; max-height:80vh; border-radius:16px;
+    overflow:hidden; display:flex; flex-direction:column; box-shadow:0 30px 80px rgba(0,0,0,.35); }
+  .modal h3 { margin:0; padding:16px 20px; border-bottom:1px solid var(--hair); color:var(--ink); font-size:14px; font-weight:700; }
+  .crumb { padding:10px 20px; font-size:11.5px; color:var(--muted); background:var(--sunken); word-break:break-all; font-family:var(--font-mono); }
+  .listing { flex:1; overflow:auto; padding:6px 0; }
+  .item { padding:10px 20px; cursor:pointer; font-size:13.5px; display:flex; gap:10px; align-items:center; color:var(--ink); }
+  .item:hover { background:var(--accent-soft); } .item .ic { width:18px; text-align:center; }
+  .item.file { color:var(--ink-2); }
+  .item.muted { color:var(--faint-2); cursor:default; } .item.muted:hover { background:transparent; }
+  .modal-foot { padding:14px 20px; border-top:1px solid var(--hair); display:flex; gap:10px; align-items:center; }
+  .modal-foot .sel { font-size:11.5px; color:var(--muted); flex:1; word-break:break-all; font-family:var(--font-mono); }
+
+  /* ============ SLIDESHOW OVERLAY ============ */
+  #sl_show { position:fixed; inset:0; background:rgba(12,10,8,.975); display:none; flex-direction:column; z-index:60; }
+  #sl_show.show { display:flex; }
+  .show-top { display:flex; align-items:center; gap:16px; padding:14px 22px; color:#E8E2D6; }
+  .show-top::before { content:'Slideshow preview'; font-size:13px; font-weight:700; letter-spacing:.3px; }
+  .show-sp { flex:1; }
+  .show-count { font-family:var(--font-mono); font-size:13px; opacity:.7; }
+  .show-tx { font-size:12px; opacity:.6; display:inline-flex; align-items:center; gap:8px; }
+  .show-tx select { background:rgba(255,255,255,.06); color:#E8E2D6; border:1px solid rgba(255,255,255,.2);
+    padding:6px 26px 6px 11px; font-size:12.5px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'><path d='M1 1l4 4 4-4' stroke='%239A9389' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>"); background-repeat:no-repeat; background-position:right 11px center; }
+  .show-x { width:34px; height:34px; background:rgba(255,255,255,.08); border:none; color:#E8E2D6;
+    font-size:17px; cursor:pointer; line-height:1; border-radius:var(--r-ctl); }
+  .show-x:hover { background:rgba(255,255,255,.16); }
+  .show-stage { flex:1; display:flex; align-items:center; justify-content:center; padding:0 26px 12px; min-height:0; overflow:hidden; }
+  .show-slide { width:min(90vw, calc((100vh - 170px) * 16 / 9)); aspect-ratio:16/9; background:#fff;
+    border-radius:10px; box-shadow:0 24px 80px rgba(0,0,0,.6); overflow:hidden; }
+  .show-slide svg { display:block; width:100%; height:100%; }
+  @keyframes nv-rise { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+  #show_slide svg .nv-a { animation:nv-rise .5s ease both; transform-box:fill-box; }
+  @media (prefers-reduced-motion:reduce){ #show_slide svg .nv-a { animation:none; } }
+  .show-nav { display:flex; justify-content:center; gap:14px; padding:0 0 26px; }
+  .show-btn { border-radius:10px; padding:11px 24px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; }
+  #show_prev.show-btn { background:rgba(255,255,255,.06); color:#E8E2D6; border:1px solid rgba(255,255,255,.18); font-weight:600; }
+  #show_prev.show-btn:hover:not(:disabled) { background:rgba(255,255,255,.12); }
+  #show_next.show-btn { background:var(--brand-green); color:#fff; border:none; }
+  #show_next.show-btn:hover:not(:disabled) { filter:brightness(1.07); }
+  .show-btn:disabled { opacity:.4; cursor:default; }
+  @keyframes sx-fade { from{opacity:0} to{opacity:1} }
+  @keyframes sx-next { from{transform:translateX(28%);opacity:0} to{transform:translateX(0);opacity:1} }
+  @keyframes sx-prev { from{transform:translateX(-28%);opacity:0} to{transform:translateX(0);opacity:1} }
+  @keyframes sx-wipe { from{clip-path:inset(0 100% 0 0)} to{clip-path:inset(0 0 0 0)} }
+  .sx-fade .show-slide { animation:sx-fade .32s ease both; }
+  .sx-next .show-slide { animation:sx-next .34s cubic-bezier(.22,.61,.36,1) both; }
+  .sx-prev .show-slide { animation:sx-prev .34s cubic-bezier(.22,.61,.36,1) both; }
+  .sx-wipe .show-slide { animation:sx-wipe .4s ease both; }
+  @media (prefers-reduced-motion: reduce) {
+    .sx-fade .show-slide,.sx-next .show-slide,.sx-prev .show-slide,.sx-wipe .show-slide { animation:none; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1><span class="accent">Course</span>Craft</h1>
-  <span class="sub" id="hdr_project">No project open</span>
+<header class="topbar">
+  <div class="brandmark">
+    <div class="logo">CB</div>
+    <div class="brandtext"><div class="bt1">Course Builder</div><div class="bt2">local · single-user</div></div>
+  </div>
+  <div class="modeswitch">
+    <button class="mode-btn active" id="mode_course" onclick="setMode('course')">Course creation</button>
+    <button class="mode-btn" id="mode_slide" onclick="setMode('slide')">Slide presentation</button>
+  </div>
+  <div class="topbar-right">
+    <div class="brandsel" title="The output brand drives every preview, thumbnail and exported file. The tool chrome stays neutral; only the content it produces is branded.">
+      <span class="brandsel-label">Output brand</span>
+      <span class="brandsel-wrap"><span class="brand-dot"></span><select id="brand"></select></span>
+    </div>
+    <div class="projchip" id="projchip"><span class="pc-k">Project</span><span id="hdr_project">No project open</span></div>
+  </div>
 </header>
 
-<div class="wrap">
-  <div class="topbar">
-    <div class="modeswitch">
-      <button class="mode-btn active" id="mode_course" onclick="setMode('course')">Course creation</button>
-      <button class="mode-btn" id="mode_slide" onclick="setMode('slide')">Slide presentation</button>
-    </div>
-    <label>Brand</label><select id="brand"></select>
-  </div>
+<div class="body">
+  <aside class="rail" id="rail"></aside>
+  <main class="main">
 
   <div id="course_mode">
 
@@ -149,7 +364,7 @@
     <div class="stage-body">
       <div id="ai_status" class="hint"></div>
       <label class="fld">Account to use</label>
-      <div class="pathrow" style="max-width:420px"><select id="gen_provider"></select>
+      <div class="pathrow" style="max-width:420px"><select id="gen_provider" onchange="syncModelCtl('gen_provider','gen_model_row')"></select>
         <button class="ghost" onclick="refreshAI()">Re-check</button></div>
     </div>
   </div>
@@ -159,9 +374,9 @@
     <div class="stage-head"><div class="num">3</div>
       <div><h2>Source materials</h2><div class="desc">The documents and images the course is built from. Filled in from your project; change if needed.</div></div></div>
     <div class="stage-body">
-      <label class="fld" style="margin-top:0">Source documents — folder or a single file (.md / .txt / .docx / .pdf)</label>
+      <label class="fld" style="margin-top:0">Source documents — folder or a single file (.md · .txt · .csv · .doc / .docx · .rtf · .odt · .html · .pdf · images via OCR)</label>
       <div class="pathrow"><input id="src" placeholder="Choose a folder…" readonly>
-        <button class="ghost" onclick="pick('both','src',null,['md','txt','docx','pdf'])">Browse…</button>
+        <button class="ghost" onclick="pick('both','src',null,['md','txt','markdown','csv','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'])">Browse…</button>
         <button class="ghost" onclick="refreshSrc()">Refresh</button></div>
       <div id="src_files" class="filelist"></div>
       <label class="fld">Images folder</label>
@@ -184,25 +399,35 @@
       <textarea id="gen_aud" class="full" rows="1" placeholder="Who is this for? e.g. front-line nurse managers"></textarea>
       <div class="row">
         <div><label class="fld" style="margin-top:0">Teaching pattern</label><select id="gen_arch"></select></div>
+        <div><label class="fld" style="margin-top:0">Purpose</label>
+          <select id="gen_preset">
+            <option value="standard">Standard (default)</option>
+            <option value="compliance">Regulatory / policy compliance</option>
+            <option value="onboarding">New-hire onboarding</option>
+            <option value="product-skill">Product / software skill</option>
+            <option value="refresher">Quick refresher</option>
+          </select></div>
         <div><label class="fld" style="margin-top:0"># of microlearnings</label>
           <input id="gen_units" placeholder="auto" style="width:90px"></div>
       </div>
+      <p class="hint" style="margin:4px 0 0"><b>Purpose</b> tunes voice, depth, and assessment posture (orthogonal to the teaching pattern) — it never changes the brand or block set.</p>
       <p class="hint" style="margin:4px 0 0">Leave # blank (<b>auto</b>) to segment <b>all</b> the source into 10–15-min units — as many as full coverage needs. Set a number only to force an exact count.</p>
       <details class="capnote"><summary>What the generator can build</summary>
         <div>The draft is segmented into 10–15-min units, each grounded in adult-learning design. The AI chooses from the full block range as the content calls for it — <b>knowledge checks</b>, <b>drag-to-sort / categorize</b>, <b>flashcards</b>, <b>accordions</b>, <b>process &amp; timeline</b>, <b>comparison panels</b>, <b>infographics</b>, <b>charts</b> (from real sourced numbers only), images, and callouts — with optional entrance <b>animations</b>. You review and edit everything via the SME document before building.</div></details>
-      <div class="row" style="margin:10px 0 0"><strong>Model:</strong>
+      <div class="row" id="gen_model_row" style="margin:10px 0 0"><strong>Model:</strong>
         <select id="gen_model_sel">
-          <option value="haiku" selected>Fastest — Haiku</option>
-          <option value="sonnet">Balanced — Sonnet</option>
+          <option value="haiku">Fastest — Haiku</option>
+          <option value="sonnet" selected>Balanced — Sonnet</option>
           <option value="opus">Best — Opus</option>
           <option value="">CLI default</option></select>
-        <span class="hint">draft fast, then review &amp; edit — bump up only if a draft needs it</span></div>
+        <span class="hint" data-default="drafts on Sonnet (fast); the final pass from your SME review uses Opus">drafts on Sonnet (fast); the final pass from your SME review uses Opus</span></div>
       <div class="row" style="margin:8px 0 0"><strong>Mode:</strong>
-        <label><input type="radio" name="gen_mode" value="stream" checked> ⚡ Streaming — one fast pass, watch it write</label>
-        <label><input type="radio" name="gen_mode" value="staged"> 🧩 Staged — per-unit, step-by-step (resilient)</label></div>
+        <label><input type="radio" name="gen_mode" value="staged" checked> 🧩 Parallel — all modules at once (fastest for multi-unit)</label>
+        <label><input type="radio" name="gen_mode" value="stream"> ⚡ Streaming — one pass, watch it write live</label></div>
       <p style="margin:14px 0 0"><button class="btn" id="gen_go" onclick="generate()">Generate scripts</button>
         <span class="hint" style="margin-left:10px">Runs on your subscription — may take a minute.</span></p>
       <div id="gen_results"></div>
+      <div id="script_modules"></div>
     </div>
   </div>
 
@@ -269,18 +494,24 @@
   <div id="slide_mode" style="display:none">
 
     <!-- P1 — SOURCE & GENERATE -->
-    <div class="stage">
+    <div class="stage" id="ps1">
       <div class="stage-head"><div class="num">1</div>
         <div><h2>Source &amp; generate</h2><div class="desc">Point at your raw content (articles, docs); the AI converts it into slides using the shared layout templates. Same pipeline as a course — the output is a deck.</div></div></div>
       <div class="stage-body">
-        <label class="fld" style="margin-top:0">Source materials — folder or a single file (.md / .txt / .docx / .pdf)</label>
+        <label class="fld" style="margin-top:0">Source materials — folder or a single file (.md · .txt · .csv · .doc / .docx · .rtf · .odt · .html · .pdf · images via OCR)</label>
         <div class="pathrow"><input id="sl_src" placeholder="Choose a folder…" readonly>
-          <button class="ghost" onclick="pick('both','sl_src',null,['md','txt','docx','pdf'])">Browse…</button>
+          <button class="ghost" onclick="pick('both','sl_src',null,['md','txt','markdown','csv','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'])">Browse…</button>
           <button class="ghost" onclick="refreshSlSrc()">Refresh</button></div>
         <div id="sl_src_files" class="filelist"></div>
 
+        <label class="fld">Images folder (optional)</label>
+        <div class="pathrow"><input id="sl_images" placeholder="Choose a folder of images to use on slides…" readonly>
+          <button class="ghost" onclick="pick('dir','sl_images')">Browse…</button>
+          <button class="ghost" onclick="setv('sl_images','');renderDeck()">Clear</button></div>
+        <p class="hint" style="margin:4px 0 0">Pictures the deck can place on <b>image</b> / <b>image&nbsp;+&nbsp;text</b> slides. The AI only uses files that actually exist here; the preview and the built <code>.pptx</code> read from this folder. Leave blank for a text-only deck.</p>
+
         <label class="fld">AI account</label>
-        <div class="pathrow" style="max-width:460px"><select id="sl_provider"></select>
+        <div class="pathrow" style="max-width:460px"><select id="sl_provider" onchange="syncModelCtl('sl_provider','sl_model_row')"></select>
           <button class="ghost" onclick="refreshAI()">Re-check</button></div>
         <div id="sl_ai_status" class="hint"></div>
 
@@ -295,17 +526,38 @@
         <label class="fld">Audience</label>
         <textarea id="sl_aud" class="full" rows="1" placeholder="Optional — who it's for, e.g. leadership"></textarea>
 
+        <div class="row" style="margin:10px 0 0"><strong>Purpose:</strong>
+          <select id="sl_preset">
+            <option value="general" selected>General (default)</option>
+            <option value="formal">Formal presentation</option>
+            <option value="debrief">Debrief / retrospective</option>
+            <option value="workshop">Live training workshop</option>
+            <option value="client">Client-facing</option>
+            <option value="pitch">Pitch deck</option></select>
+          <span class="hint">shapes structure, tone &amp; length — all on the same brand standard</span></div>
+
+        <div class="row" id="sl_model_row" style="margin:10px 0 0"><strong>Model:</strong>
+          <select id="sl_model_sel">
+            <option value="haiku">Fastest — Haiku</option>
+            <option value="sonnet" selected>Balanced — Sonnet</option>
+            <option value="opus">Best — Opus</option>
+            <option value="">CLI default</option></select>
+          <span class="hint" data-default="runs isolated on your subscription (no MCP/hooks)">runs isolated on your subscription (no MCP/hooks)</span></div>
+
         <p style="margin:14px 0 0"><button class="btn" id="sl_gen" onclick="genDeck()">Generate presentation</button>
-          <span class="hint" style="margin-left:10px">Runs on your subscription — may take a minute.</span></p>
+          <span class="hint" style="margin-left:10px">Watch it write live — runs on your subscription.</span></p>
         <div id="sl_gen_results"></div>
       </div>
     </div>
 
     <!-- P2 — REVIEW & EDIT -->
-    <div class="stage">
+    <div class="stage" id="ps2">
       <div class="stage-head"><div class="num">2</div>
-        <div><h2>Review &amp; edit slides</h2><div class="desc">The generated slides land here. Tweak the text, change a layout, reorder, add or remove — same templates as the course blocks.</div></div></div>
+        <div><h2>Review &amp; edit slides</h2><div class="desc">The generated slides land here. Change a layout, flip its <strong>theme</strong> (Auto / Dark / Light), reorder, add or remove, or regenerate the checked aspects — same templates as the course blocks.</div></div></div>
       <div class="stage-body">
+        <p style="margin:0 0 12px">
+          <button class="btn" id="sl_preview_btn" onclick="openShow()">▶ Preview slideshow</button>
+          <span class="hint" style="margin-left:10px">step through the slides one by one — the same on-brand layout you'll get in PowerPoint</span></p>
         <div id="deck_list"></div>
         <input id="sl_jsonpath" type="hidden">
         <p style="margin:10px 0 0">
@@ -318,7 +570,7 @@
     </div>
 
     <!-- P3 — BUILD -->
-    <div class="stage">
+    <div class="stage" id="ps3">
       <div class="stage-head"><div class="num">3</div>
         <div><h2>Build presentation</h2><div class="desc">Render the slides to an editable, on-brand PowerPoint deck.</div></div></div>
       <div class="stage-body">
@@ -331,7 +583,15 @@
               <option value="cut">cut</option><option value="push">push</option>
               <option value="wipe">wipe</option><option value="split">split</option>
               <option value="cover">cover</option></select></div>
+          <div><label class="fld" style="margin-top:0">Element animation</label>
+            <select id="sl_animate" title="Per-element entrance — baked into the built deck and shown in the preview">
+              <option value="rise" selected>Float in (rise)</option>
+              <option value="fade">Fade in</option>
+              <option value="flyleft">Fly in — from left</option>
+              <option value="flyright">Fly in — from right</option>
+              <option value="none">none</option></select></div>
         </div>
+        <p class="hint" style="margin:6px 0 0">Each slide's pieces float in on entry (~0.65s apart) — the same feel as the courses. Applies to the built PowerPoint <i>and</i> the in-browser preview. Fine-tune individual slides in PowerPoint afterward if you like.</p>
         <label class="fld">Save to folder</label>
         <div class="pathrow" style="max-width:560px"><input id="sl_out" placeholder="Choose a folder…" readonly>
           <button class="ghost" onclick="pick('dir','sl_out')">Browse…</button></div>
@@ -342,6 +602,9 @@
       </div>
     </div>
   </div>
+
+    <div class="footnav" id="footnav"></div>
+  </main>
 </div>
 
 <!-- picker modal -->
@@ -353,6 +616,29 @@
     <div class="modal-foot"><span class="sel" id="pk_sel"></span>
       <button class="ghost" onclick="closePicker()">Cancel</button>
       <button class="btn" id="pk_use" onclick="usePicker()">Use this folder</button></div>
+  </div>
+</div>
+
+<!-- Slideshow preview overlay -->
+<div id="sl_show" role="dialog" aria-modal="true" aria-label="Slide preview">
+  <div class="show-top">
+    <span class="show-count" id="show_count">1 / 1</span>
+    <span class="show-sp"></span>
+    <label class="show-tx">Transition
+      <select id="show_tx">
+        <option value="fade" selected>Fade</option>
+        <option value="slide">Slide</option>
+        <option value="wipe">Wipe</option>
+        <option value="none">None</option>
+      </select></label>
+    <button class="show-x" onclick="closeShow()" title="Close (Esc)" aria-label="Close">✕</button>
+  </div>
+  <div class="show-stage" id="show_stage">
+    <div class="show-slide" id="show_slide"></div>
+  </div>
+  <div class="show-nav">
+    <button class="show-btn" id="show_prev" onclick="showNav(-1)" aria-label="Previous slide">‹ Back</button>
+    <button class="show-btn" id="show_next" onclick="showNav(1)" aria-label="Next slide">Next ›</button>
   </div>
 </div>
 
@@ -373,6 +659,10 @@ window.fetch = function(url, opts){
 let pk={mode:'dir', exts:['md'], path:'', target:null, cb:null};
 let CURRENT_PROJECT=null, FOLDERS={}, CURRENT_SCRIPT=null, STAGED=[];
 let SLIDE_EXAMPLES={}, LAYOUTS=[], DECK=[];
+// ---- stepper: one stage visible at a time, driven by the rail + footer nav ----
+let MODE='course', COURSE_STEP=1, SLIDE_STEP=1;
+const COURSE_STEPS=['Project','AI account','Source materials','Generate scripts','Apply SME review','Output format','Generate preview','Publish'];
+const SLIDE_STEPS=['Source & generate','Review & edit slides','Build presentation'];
 const SLIDE_GUIDES={
   infographic:"Header + left challenge column (intro · bullet items · callout) + right numbered cards + a goals row + footer. Every section is optional — delete what you don't need.",
   process:"A row of 3–6 numbered steps, left → right. Each step: title + body. Accents auto-cycle (or set \"accent\": primary/secondary/tertiary/dark).",
@@ -416,15 +706,54 @@ async function init(){
     LAYOUTS.map(l=>`<option value="${l}">${l}</option>`).join('');
   setv('sl_out', r.slides_out||'');
   if(!DECK.length) deckAdd(LAYOUTS.includes('divider')?'divider':LAYOUTS[0]);
+  setMode('course');   // boots the stepper (rail, active stage, footer, project chip)
 }
 
-/* ---- tabs ---- */
+/* ---- mode switch + wizard stepper ---- */
 function setMode(mode){
+  MODE = mode;
   const slide = mode==='slide';
   document.getElementById('course_mode').style.display = slide?'none':'';
   document.getElementById('slide_mode').style.display = slide?'':'none';
   document.getElementById('mode_course').classList.toggle('active', !slide);
   document.getElementById('mode_slide').classList.toggle('active', slide);
+  document.getElementById('projchip').style.display = slide?'none':'';  // project context is course-only
+  showStep();
+}
+// Show only the active stage; repaint the rail + footer. All stage DOM stays in
+// the page (so every existing handler/id keeps working) — we just toggle display.
+function showStep(){
+  const isC = MODE==='course';
+  const ids = isC ? ['s1','s2','s3','s4','s5','s6','s7','s8'] : ['ps1','ps2','ps3'];
+  const cur = isC ? COURSE_STEP : SLIDE_STEP, max = ids.length;
+  ids.forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.style.display=(i+1===cur)?'block':'none'; });
+  renderRail(isC, cur, max);
+  const fn=document.getElementById('footnav');
+  if(fn) fn.innerHTML =
+    `<button class="ghost nav-back" ${cur===1?'disabled':''} onclick="stepBy(-1)">← Back</button>`
+    + `<span class="nav-sp"></span><span class="nav-prog">Step ${cur} of ${max}</span>`
+    + `<button class="btn-dark nav-next" ${cur===max?'disabled':''} onclick="stepBy(1)">${cur===max?'Done':'Continue →'}</button>`;
+}
+function renderRail(isC, cur, max){
+  const rail=document.getElementById('rail'); if(!rail) return;
+  const titles = isC ? COURSE_STEPS : SLIDE_STEPS;
+  const steps = titles.map((t,idx)=>{
+    const n=idx+1, last=idx===titles.length-1;
+    const status = n<cur ? 'done' : (n===cur ? 'current' : 'up');
+    const label = status==='done' ? 'Done' : status==='current' ? 'In progress' : 'Up next';
+    return `<div class="rail-step ${status}" onclick="goStep(${n})">
+        <div class="rail-mark"><div class="rail-dot">${status==='done'?'✓':n}</div>${last?'':'<div class="rail-line"></div>'}</div>
+        <div class="rail-txt"><div class="rail-title">${esc(t)}</div><div class="rail-status">${label}</div></div>
+      </div>`;
+  }).join('');
+  rail.innerHTML = `<div class="rail-kicker">${isC?'Course creation':'Slide presentation'}</div>`
+    + `<div class="rail-prog">Step ${cur} of ${max}</div><div class="rail-list">${steps}</div>`;
+}
+function goStep(n){ if(MODE==='course') COURSE_STEP=n; else SLIDE_STEP=n; showStep(); window.scrollTo({top:0,behavior:'smooth'}); }
+function stepBy(d){
+  const max = MODE==='course'?8:3;
+  let c = (MODE==='course'?COURSE_STEP:SLIDE_STEP)+d;
+  goStep(Math.min(max, Math.max(1, c)));
 }
 
 /* ---- slide-presentation deck builder ---- */
@@ -445,34 +774,217 @@ function deckSetLayout(i,layout){
      !confirm(`Replace slide ${i+1}'s content with the ${layout} example? (Cancel keeps your text and just changes the layout.)`)){
     DECK[i].layout=layout; renderDeck(); return;
   }
-  DECK[i]={layout, content: exampleStr(layout)}; renderDeck();
+  DECK[i]={layout, content: exampleStr(layout), theme:DECK[i].theme, colorOff:DECK[i].colorOff, scopes:DECK[i].scopes, guide:DECK[i].guide}; renderDeck();
 }
-function deckEdit(i,v){ DECK[i].content=v; deckValidate(i); }
+// Cross-cutting per-slide theme override (dark|light). "" = Auto = drop the key so
+// the layout uses its blueprint-default theme. Repaints the thumb + flags the next
+// preview/build, which now carry the flag through.
+function deckSetTheme(i,theme){
+  if(theme==='dark'||theme==='light') DECK[i].theme=theme; else delete DECK[i].theme;
+  renderDeck();
+}
 function deckValidate(i){
+  // content is no longer hand-edited; only flag if a regenerate/layout-swap left
+  // it unreadable. Stay quiet when it's fine so the rows read clean.
   const el=document.getElementById('sl_valid_'+i); if(!el) return true;
-  try{ JSON.parse(DECK[i].content); el.textContent='✓ valid JSON'; el.style.color='#1d6b48'; return true; }
-  catch(e){ el.textContent='✗ not valid JSON: '+e.message; el.style.color='#a32019'; return false; }
+  try{ JSON.parse(DECK[i].content); el.textContent=''; return true; }
+  catch(e){ el.textContent='⚠ this slide\'s content is unreadable — regenerate it'; el.style.color='#a32019'; return false; }
+}
+function slideTitle(d){
+  try{ const c=JSON.parse(d.content)||{}; return c.title || c.kicker || c.subtitle || '(untitled slide)'; }
+  catch(e){ return '(unreadable)'; }
 }
 function renderDeck(){
   const box=document.getElementById('deck_list');
-  box.innerHTML = DECK.map((d,i)=>`
-    <div class="slide-card">
-      <div class="slide-card-head">
-        <span class="slide-n">Slide ${i+1}</span>
-        <select onchange="deckSetLayout(${i}, this.value)">
-          ${LAYOUTS.map(l=>`<option value="${l}" ${l===d.layout?'selected':''}>${l}</option>`).join('')}</select>
-        <span class="slidemeta hint">${esc(SLIDE_GUIDES[d.layout]||'')}</span>
-        <span class="sp"></span>
-        <button class="ghost xs" title="Move up" onclick="deckMove(${i},-1)" ${i===0?'disabled':''}>↑</button>
-        <button class="ghost xs" title="Move down" onclick="deckMove(${i},1)" ${i===DECK.length-1?'disabled':''}>↓</button>
-        <button class="ghost xs" title="Remove" onclick="deckRemove(${i})">✕</button>
+  box.innerHTML = DECK.map((d,i)=>{
+    const sc = d.scopes || (d.scopes={content:false,layout:false,color:false});
+    return `
+    <div class="slide-row" id="sl_row_${i}">
+      <button class="slide-thumb" id="sl_thumb_${i}" onclick="openShowAt(${i})"
+              title="Open the slideshow at this slide"><span class="thumb-ph">…</span></button>
+      <div class="slide-row-body">
+        <div class="srow1">
+          <span class="slide-n">${i+1}</span>
+          <span class="slide-title" title="${esc(slideTitle(d))}">${esc(slideTitle(d))}</span>
+          <span class="sp"></span>
+          <span class="sel-wrap"><select class="sl-layout" title="Layout for this slide" onchange="deckSetLayout(${i}, this.value)">
+            ${LAYOUTS.map(l=>`<option value="${l}" ${l===d.layout?'selected':''}>${l}</option>`).join('')}</select></span>
+          <span class="sel-wrap"><select class="sl-theme${d.theme?' themed':''}" title="Color theme — Auto uses the layout's natural theme; Dark/Light flips it" onchange="deckSetTheme(${i}, this.value)">
+            <option value="" ${!d.theme?'selected':''}>Auto theme</option>
+            <option value="dark" ${d.theme==='dark'?'selected':''}>Dark</option>
+            <option value="light" ${d.theme==='light'?'selected':''}>Light</option></select></span>
+        </div>
+        <div class="srow2">
+          <span class="regen-lbl">Regenerate</span>
+          <span class="scopeseg">
+            <button type="button" class="scope-btn${sc.content?' active':''}" title="Reword the text — keeps layout & colors" onclick="toggleScope(${i},'content',this)">Content</button>
+            <button type="button" class="scope-btn${sc.layout?' active':''}" title="Let AI pick the best-fitting layout" onclick="toggleScope(${i},'layout',this)">Layout</button>
+            <button type="button" class="scope-btn${sc.color?' active':''}" title="Reshuffle accent colors — instant, no AI" onclick="toggleScope(${i},'color',this)">Color</button>
+          </span>
+          <button class="btn xs" id="sl_regen_${i}" title="Run the checked scopes" onclick="regenSlide(${i})">↻ Run</button>
+          <span class="row-flash" id="sl_valid_${i}"></span>
+          <span class="sp"></span>
+          <button class="iconbtn" title="Move up" onclick="deckMove(${i},-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="iconbtn" title="Move down" onclick="deckMove(${i},1)" ${i===DECK.length-1?'disabled':''}>↓</button>
+          <button class="iconbtn danger" title="Remove" onclick="deckRemove(${i})">✕</button>
+        </div>
+        <div class="srow3">
+          <span class="guide-arrow">↳</span>
+          <input type="text" class="sl-guide" id="sc_guide_${i}" value="${esc(d.guide||'')}"
+                 oninput="DECK[${i}].guide=this.value"
+                 placeholder="what should change? (optional — guides Content / Layout regen)">
+        </div>
       </div>
-      <textarea rows="13" spellcheck="false" oninput="deckEdit(${i}, this.value)">${esc(d.content)}</textarea>
-      <div class="hint" id="sl_valid_${i}"></div>
-    </div>`).join('');
+    </div>`;}).join('');
   DECK.forEach((d,i)=>deckValidate(i));
+  paintThumbs();
 }
-const SRC_EXTS=['md','txt','docx','pdf','markdown'];
+// Scope is a per-slide toggle stored on the DECK item, so it survives re-renders
+// (layout/theme change) without clobbering the typed guidance. No re-render here —
+// just flip the button — so focus in the guidance field is never lost.
+function toggleScope(i, key, btn){
+  const sc = DECK[i].scopes || (DECK[i].scopes={content:false,layout:false,color:false});
+  sc[key] = !sc[key];
+  btn.classList.toggle('active', sc[key]);
+}
+// Inline row thumbnails: a faithful per-slide SVG poster, fetched once per
+// unique (brand, layout, content) and cached, so reorder/move repaints
+// instantly and only a changed slide re-renders. The data-key guard means a
+// slow response never lands in a row whose content has since changed.
+let THUMB_CACHE={};
+function slideKey(d){ return brand()+' '+(val('sl_images')||'')+' '+d.layout+' '+(d.theme||'')+' '+d.content; }
+function paintThumbs(){
+  DECK.forEach((d,i)=>{
+    const slot=document.getElementById('sl_thumb_'+i); if(!slot) return;
+    const key=slideKey(d); slot.dataset.key=key;
+    if(THUMB_CACHE[key]){ slot.innerHTML=THUMB_CACHE[key]; return; }
+    fetchThumb(i, d, key);
+  });
+}
+async function fetchThumb(i, d, key){
+  let res;
+  try{ res=await (await fetch('/api/slide-svg',{method:'POST',
+        body:JSON.stringify({layout:d.layout, content:d.content, theme:d.theme, brand:brand(), images:val('sl_images')})})).json(); }
+  catch(e){ return; }
+  if(!res || res.ok===false || !res.svg) return;
+  THUMB_CACHE[key]=res.svg;
+  const slot=document.getElementById('sl_thumb_'+i);
+  if(slot && slot.dataset.key===key) slot.innerHTML=res.svg;   // still the same slide
+}
+function flashRow(i,msg,ok){
+  const el=document.getElementById('sl_valid_'+i); if(!el) return;
+  el.textContent=msg; el.style.color = ok===false ? '#a32019' : '#1d6b48';
+}
+// Color scope = instant, local accent reshuffle (no AI). Rotates each element's
+// accent through the brand cycle; divider rotates its background role. Layouts not
+// listed here have no per-element accent (text-only / palette-driven), so Color is a no-op.
+const RECOLOR_LAYOUTS=['infographic','process','comparison','timeline','cards','cycles','divider'];
+const ACCENTS=['primary','secondary','tertiary','dark'];
+function recolorSlide(i){
+  let c; try{ c=JSON.parse(DECK[i].content)||{}; }catch(e){ return; }
+  const off=((DECK[i].colorOff||0)+1); DECK[i].colorOff=off;
+  const set=arr=>{ if(Array.isArray(arr)) arr.forEach((el,k)=>{ if(el&&typeof el==='object') el.accent=ACCENTS[(k+off)%4]; }); };
+  const lay=DECK[i].layout;
+  if(lay==='infographic'){ if(c.right&&c.right.cards) set(c.right.cards); if(c.goals&&c.goals.items) set(c.goals.items); }
+  else if(lay==='process'){ set(c.steps); }
+  else if(lay==='comparison'){ set(c.columns||c.panels); }
+  else if(lay==='timeline'){ set(c.milestones); }
+  else if(lay==='cards'){ set(c.cards); }
+  else if(lay==='cycles'){ set(c.steps); }
+  else if(lay==='divider'){ c.bg=['dark','primary','secondary','tertiary'][off%4]; }
+  // chart: series colors are automatic from the palette — nothing to reshuffle here
+  DECK[i].content=JSON.stringify(c,null,2);
+}
+// Regenerate the CHECKED aspects of one slide. Color-only = instant local reshuffle;
+// Content/Layout = one scoped AI pass; both = AI then reshuffle on top.
+async function regenSlide(i){
+  const sc=DECK[i].scopes||{};
+  const wantContent=!!sc.content, wantLayout=!!sc.layout, wantColor=!!sc.color;
+  if(!wantContent && !wantLayout && !wantColor){
+    flashRow(i,'Tick Content, Layout, and/or Color first.',false); return; }
+  if(wantColor && !wantContent && !wantLayout && !RECOLOR_LAYOUTS.includes(DECK[i].layout)){
+    flashRow(i,'This layout’s colors come from the palette automatically — nothing to reshuffle. (Try the Theme picker to flip dark/light.)',false); return; }
+  // Color-only -> no AI, instant
+  if(wantColor && !wantContent && !wantLayout){
+    recolorSlide(i); renderDeck(); flashRow(i,'✓ Recolored — open Preview slideshow to see it.'); return; }
+  // Content and/or Layout -> a scoped AI pass
+  if(!val('sl_src')){ alert('Regenerate re-drafts from your source folder — pick it in step 1 first.'); return; }
+  const prov=val('sl_provider'); if(!prov){ alert('Connect an AI account first (step 1).'); return; }
+  let cur={}; try{ cur=JSON.parse(DECK[i].content); }catch(e){}
+  const summaries=DECK.map((d,k)=>`${k+1}. [${d.layout}]${k===i?'  <-- regenerate this one':''}`);
+  const payload={ provider:prov, source:val('sl_src'), model:val('sl_model_sel'),
+    layout:DECK[i].layout, content:cur, slide_summaries:summaries, idx:i+1, total:DECK.length,
+    title:val('sl_title'), focus:val('sl_focus'), audience:val('sl_aud'),
+    guidance:val('sc_guide_'+i)||'', scope_content:wantContent, scope_layout:wantLayout,
+    images:val('sl_images') };
+  const btn=document.getElementById('sl_regen_'+i); const old=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
+  let res; try{ res=await (await fetch('/api/regenerate-slide',{method:'POST',body:JSON.stringify(payload)})).json(); }
+  catch(e){ res={error:String(e)}; }
+  if(btn){ btn.disabled=false; btn.innerHTML=old; }
+  if(!res || res.error || res.ok===false){ alert('Regenerate failed: '+((res&&res.error)||'unknown')); return; }
+  DECK[i]={ layout:(res.layout||DECK[i].layout), content:JSON.stringify(res.content||{},null,2),
+            colorOff:DECK[i].colorOff, theme:DECK[i].theme, scopes:DECK[i].scopes, guide:DECK[i].guide };
+  if(wantColor) recolorSlide(i);                        // reshuffle on top of the AI result
+  renderDeck();
+  const what=[wantContent&&'content', wantLayout&&'layout', wantColor&&'color'].filter(Boolean).join(' + ');
+  flashRow(i, '✓ Regenerated ('+what+') — open Preview slideshow to see it.'
+    + (res.lint_ok===false?'  ⚠ may need a fix':''), res.lint_ok!==false);
+}
+// ---- Slideshow preview: faithful SVG posters, one at a time, Next/Back ----
+let SHOW_SVGS=[], SHOW_I=0;
+function openShowAt(i){ openShow(i); }
+async function openShow(startAt){
+  if(!DECK.length){ alert('Add or generate at least one slide first.'); return; }
+  // make sure the latest textarea edits are captured (deckEdit already does this,
+  // but parse-guard so a broken JSON slide previews as an error card, not a crash)
+  const btn=document.getElementById('sl_preview_btn'); const old=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Rendering…';
+  let res;
+  try{ res=await (await fetch('/api/deck-svg',{method:'POST',
+        body:JSON.stringify({slides:DECK.map(d=>({layout:d.layout,content:d.content,theme:d.theme})), brand:brand(), images:val('sl_images'), animate:val('sl_animate')})})).json(); }
+  catch(e){ res={error:String(e)}; }
+  btn.disabled=false; btn.innerHTML=old;
+  if(!res || res.ok===false || res.error){ alert('Preview failed: '+((res&&res.error)||'unknown')); return; }
+  SHOW_SVGS=res.svgs||[];
+  if(!SHOW_SVGS.length){ alert('Nothing to preview.'); return; }
+  SHOW_I = (typeof startAt==='number' && startAt>=0) ? Math.min(startAt, SHOW_SVGS.length-1) : 0;
+  document.getElementById('sl_show').classList.add('show');
+  document.addEventListener('keydown', showKey);
+  showRender('sx-fade');
+}
+function showRender(anim){
+  const slide=document.getElementById('show_slide');
+  slide.innerHTML=SHOW_SVGS[SHOW_I]||'';
+  document.getElementById('show_count').textContent=(SHOW_I+1)+' / '+SHOW_SVGS.length;
+  document.getElementById('show_prev').disabled=(SHOW_I===0);
+  document.getElementById('show_next').disabled=(SHOW_I===SHOW_SVGS.length-1);
+  const ov=document.getElementById('sl_show');
+  ov.classList.remove('sx-fade','sx-next','sx-prev','sx-wipe');
+  if(anim){ void ov.offsetWidth; ov.classList.add(anim); }   // restart the animation
+}
+function showAnim(dir){
+  const tx=val('show_tx');
+  if(tx==='none') return null;
+  if(tx==='slide') return dir>0?'sx-next':'sx-prev';
+  if(tx==='wipe')  return 'sx-wipe';
+  return 'sx-fade';
+}
+function showNav(dir){
+  const n=SHOW_I+dir;
+  if(n<0||n>=SHOW_SVGS.length) return;
+  SHOW_I=n; showRender(showAnim(dir));
+}
+function closeShow(){
+  document.getElementById('sl_show').classList.remove('show');
+  document.removeEventListener('keydown', showKey);
+}
+function showKey(e){
+  if(e.key==='Escape'){ closeShow(); }
+  else if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); showNav(1); }
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); showNav(-1); }
+}
+const SRC_EXTS=['md','txt','markdown','text','rst','csv','tsv','log','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'];
 async function refreshSlSrc(){
   const p=val('sl_src'); const el=document.getElementById('sl_src_files'); if(!p){ el.innerHTML=''; return; }
   if(SRC_EXTS.includes(extOf(p))){ el.innerHTML='Selected file: <code>'+esc(p.split('/').pop())+'</code>'; return; }
@@ -481,27 +993,57 @@ async function refreshSlSrc(){
     ? 'Source documents ('+r.files.length+'): '+r.files.join(', ')
     : 'No documents yet — drop articles/docs (.md/.txt/.docx/.pdf) in this folder, or pick a single file.';
 }
-async function genDeck(){
-  if(!val('sl_src')){ alert('Pick a source materials folder (step 1).'); return; }
-  const prov=val('sl_provider'); if(!prov){ alert('Connect an AI account first.'); return; }
-  if(val('sl_title') && !val('sl_name')) setv('sl_name', val('sl_title'));
-  const payload={ provider:prov, source:val('sl_src'), title:val('sl_title'),
-    focus:val('sl_focus'), audience:val('sl_aud'), nslides:val('sl_n') };
-  const stop=busy('sl_gen','Generating');
-  let res; try{ res=await (await fetch('/api/generate-deck',{method:'POST',body:JSON.stringify(payload)})).json(); }
-  catch(e){ res={error:String(e)}; }
-  stop();
-  const box=document.getElementById('sl_gen_results');
-  if(res.error){ box.innerHTML=`<div class="result err">✗ ${esc(res.error)}</div>`; return; }
+// Render the final deck result (shared by the streaming + fallback paths).
+function deckResult(box, res){
   const slides=res.slides||[];
-  if(!slides.length){ box.innerHTML='<div class="result err">No slides generated.</div>'; return; }
+  if(!slides.length){ box.insertAdjacentHTML('beforeend','<div class="result err">No slides generated.</div>'); return; }
   DECK = slides.map(s=>({layout:(s.layout||'infographic'), content:JSON.stringify(s.content||{},null,2)}));
   renderDeck();
   let h=`<div class="result ok"><span>✓</span><span class="name">Generated ${res.count} slide(s) from ${(res.used_sources||[]).length} document(s)</span>
     <span class="sp"></span><span class="hint">review &amp; edit them in step 2 below</span></div>`;
   if(res.lint_ok===false) h+=`<div class="result err">⚠ Some slides may need a fix:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
-  if(res.skipped&&res.skipped.length) h+=`<div class="result err">Skipped (unsupported, e.g. PDF): ${res.skipped.join(', ')}</div>`;
-  box.innerHTML=h;
+  if(res.skipped&&res.skipped.length) h+=`<div class="result err">Skipped (unsupported, e.g. PDF): ${res.skipped.map(esc).join(', ')}</div>`;
+  box.insertAdjacentHTML('beforeend', h);
+}
+async function genDeck(){
+  if(!val('sl_src')){ alert('Pick a source materials folder (step 1).'); return; }
+  const prov=val('sl_provider'); if(!prov){ alert('Connect an AI account first.'); return; }
+  if(val('sl_title') && !val('sl_name')) setv('sl_name', val('sl_title'));
+  const payload={ provider:prov, source:val('sl_src'), title:val('sl_title'),
+    focus:val('sl_focus'), audience:val('sl_aud'), nslides:val('sl_n'), model:val('sl_model_sel'),
+    images:val('sl_images'), preset:val('sl_preset') };
+  const box=document.getElementById('sl_gen_results');
+  const go=document.getElementById('sl_gen'); go.disabled=true; go.innerHTML='<span class="spin"></span>Writing…';
+  box.innerHTML='<div class="hint" style="margin-bottom:6px">Designing the deck live (one pass):</div><pre class="gen-live" id="sl_gen_live"></pre>';
+  const live=document.getElementById('sl_gen_live');
+  const SENT="\n<<<COURSE_BUILDER_RESULT>>>\n";
+  let buf='', res=null;
+  try{
+    const resp=await fetch('/api/generate-deck-stream',{method:'POST',body:JSON.stringify(payload)});
+    if(!resp.ok||!resp.body) throw new Error('no stream');
+    const reader=resp.body.getReader(), dec=new TextDecoder();
+    while(true){ const {done,value}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const i=buf.indexOf(SENT);
+      live.textContent=(i>=0?buf.slice(0,i):buf); live.scrollTop=live.scrollHeight;
+    }
+    const i=buf.indexOf(SENT);
+    if(i>=0){ live.textContent=buf.slice(0,i);
+      try{ res=JSON.parse(buf.slice(i+SENT.length)); }catch(e){ res={error:'bad result payload: '+e}; } }
+    else res={error:'stream ended without a result'};
+  }catch(streamErr){
+    // streaming unavailable — fall back to the one-shot endpoint so generation still works
+    live.textContent='(streaming unavailable — generating…)';
+    try{ res=await (await fetch('/api/generate-deck',{method:'POST',body:JSON.stringify(payload)})).json(); }
+    catch(e){ res={error:String(e)}; }
+  }
+  go.disabled=false; go.textContent='Generate presentation';
+  if(!res || res.error || res.ok===false){
+    box.insertAdjacentHTML('beforeend',`<div class="result err">✗ ${esc((res&&res.error)||'Generation failed')}</div>`); return;
+  }
+  // collapse the live JSON into a details pane, then show the result
+  box.innerHTML=`<details class="capnote"><summary>View the generated deck JSON</summary><pre class="gen-live">${esc(live.textContent)}</pre></details>`;
+  deckResult(box, res);
 }
 function detectLayout(c){ c=c||{};
   if(c.milestones) return 'timeline';
@@ -531,8 +1073,9 @@ async function buildDeck(){
   if(!DECK.length){ alert('Generate a presentation (step 1) or add a slide first.'); return; }
   const bad=DECK.map((d,i)=>deckValidate(i)?null:(i+1)).filter(x=>x);
   if(bad.length){ alert('Fix invalid JSON on slide(s): '+bad.join(', ')); return; }
-  const payload={ slides:DECK.map(d=>({layout:d.layout, content:d.content})), brand:brand(),
-    transition:val('sl_transition'), out:val('sl_out'), name:val('sl_name')||'presentation' };
+  const payload={ slides:DECK.map(d=>({layout:d.layout, content:d.content, theme:d.theme})), brand:brand(),
+    transition:val('sl_transition'), out:val('sl_out'), name:val('sl_name')||'presentation',
+    images:val('sl_images'), animate:val('sl_animate') };
   const stop=busy('sl_go','Building');
   let res; try{ res=await (await fetch('/api/deck',{method:'POST',body:JSON.stringify(payload)})).json(); }
   catch(e){ res={error:String(e)}; }
@@ -560,6 +1103,21 @@ function applyProviders(provs){
     : '⚠ No subscription connected.<br>'+unavail.map(v=>v.install).join('<br>');
   document.getElementById('ai_status').innerHTML = statusHtml;
   const sla=document.getElementById('sl_ai_status'); if(sla) sla.innerHTML=statusHtml;
+  syncModelCtl('gen_provider','gen_model_row'); syncModelCtl('sl_provider','sl_model_row');
+}
+// P2: the Haiku/Sonnet/Opus model picker is claude-specific — run_cli ignores `model`
+// for codex (ChatGPT/Codex selects its own model via its subscription login). So when
+// a non-claude provider is chosen, disable the control instead of silently ignoring it.
+function syncModelCtl(provId, rowId){
+  const prov=document.getElementById(provId), row=document.getElementById(rowId);
+  if(!prov||!row) return;
+  const sel=row.querySelector('select'), hint=row.querySelector('.hint');
+  const isClaude = prov.value==='claude' || prov.value==='';   // '' = none picked yet → leave as claude default
+  if(sel) sel.disabled = !isClaude;
+  row.style.opacity = isClaude ? '' : '.5';
+  if(hint) hint.textContent = isClaude
+    ? (hint.getAttribute('data-default')||hint.textContent)
+    : 'ChatGPT (Codex) selects its own model on your subscription — this control is ignored.';
 }
 async function refreshAI(){ applyProviders((await (await fetch('/api/ai-status')).json()).providers||{}); }
 
@@ -599,12 +1157,13 @@ function rowEl(ic,name,onclick,isFile,muted){ const d=document.createElement('di
 function joinp(a,b){ return a.endsWith('/')?a+b:a+'/'+b; }
 function usePicker(){ setTarget(pk.path); }
 function setTarget(v){ setv(pk.target,v); closePicker(); if(pk.cb) pk.cb();
-  if(pk.target==='src') refreshSrc(); if(pk.target==='sl_src') refreshSlSrc(); }
+  if(pk.target==='src') refreshSrc(); if(pk.target==='sl_src') refreshSlSrc();
+  if(pk.target==='sl_images') renderDeck(); }   // repaint thumbnails with the new image folder
 
 /* ---- step 1: projects ---- */
 function setProjects(list){
   const sel=document.getElementById('projlist');
-  sel.innerHTML = (list&&list.length)? list.map(p=>`<option value="${p.path.replace(/"/g,'&quot;')}">${p.name}${p.updated?(' — '+p.updated.slice(0,10)):''}</option>`).join('')
+  sel.innerHTML = (list&&list.length)? list.map(p=>`<option value="${p.path.replace(/"/g,'&quot;')}">${esc(p.name)}${p.updated?(' — '+p.updated.slice(0,10)):''}</option>`).join('')
                                      : '<option value="">(no projects yet)</option>';
 }
 async function setWorkspace(){
@@ -631,12 +1190,14 @@ function loadProject(r){
   const m=r.meta||{};
   setv('gen_title',m.title||''); setv('gen_obj',m.objective||''); setv('gen_aud',m.audience||''); setv('gen_units',m.units||'');
   if(m.archetype){ const a=document.getElementById('gen_arch'); if([...a.options].some(o=>o.value===m.archetype)) a.value=m.archetype; }
+  if(m.preset){ const ps=document.getElementById('gen_preset'); if([...ps.options].some(o=>o.value===m.preset)) ps.value=m.preset; }
   if(m.brand){ const b=document.getElementById('brand'); if([...b.options].some(o=>o.value===m.brand)) b.value=m.brand; }
   if(m.provider){ const p=document.getElementById('gen_provider'); if([...p.options].some(o=>o.value===m.provider&&!o.disabled)) p.value=m.provider; }
+  syncModelCtl('gen_provider','gen_model_row');   // a restored non-claude provider must dim the model picker
   CURRENT_SCRIPT = m.script || null;
   document.getElementById('hdr_project').textContent = 'Project: '+r.name;
   document.getElementById('proj_current').innerHTML =
-    `<div class="detected">✓ Open: <b>${r.name}</b> — files live in <code>${r.path}</code>
+    `<div class="detected">✓ Open: <b>${esc(r.name)}</b> — files live in <code>${esc(r.path)}</code>
      &nbsp;<button class="ghost" onclick="saveProject(false)">Save details</button></div>`;
   STAGED=[]; document.getElementById('b_results').innerHTML='';
   document.getElementById('b_publish').innerHTML='<div class="hint">Generate a preview in step 7 first, then publish.</div>';
@@ -645,7 +1206,8 @@ function loadProject(r){
 async function saveProject(silent){
   if(!CURRENT_PROJECT){ if(!silent) alert('Create or open a project first.'); return; }
   const meta={ title:val('gen_title'), objective:val('gen_obj'), audience:val('gen_aud'), units:val('gen_units'),
-    archetype:document.getElementById('gen_arch').value, brand:brand(), provider:document.getElementById('gen_provider').value };
+    archetype:document.getElementById('gen_arch').value, preset:val('gen_preset'),
+    brand:brand(), provider:document.getElementById('gen_provider').value };
   await fetch('/api/project/save',{method:'POST',body:JSON.stringify({path:CURRENT_PROJECT,meta})});
   if(!silent){ const el=document.getElementById('proj_current');
     el.insertAdjacentHTML('beforeend','<span style="color:#1d6b48;font-size:12px;margin-left:8px">saved ✓</span>');
@@ -674,8 +1236,37 @@ async function scanScript(){
   if(!CURRENT_SCRIPT){ sel.innerHTML='<option value="1">1</option>'; syncScope(); return; }
   const r=await (await fetch('/api/scan?md='+encodeURIComponent(CURRENT_SCRIPT))).json();
   const mls=r.mls||[];
-  sel.innerHTML = mls.length? mls.map(m=>`<option value="${m.which}">${m.which}. ${m.title}</option>`).join('') : '<option value="1">1</option>';
-  syncScope();
+  sel.innerHTML = mls.length? mls.map(m=>`<option value="${m.which}">${m.which}. ${esc(m.title)}</option>`).join('') : '<option value="1">1</option>';
+  syncScope(); loadModules();
+}
+
+/* ---- regenerate a single module (without redoing the whole course) ---- */
+async function loadModules(){
+  const box=document.getElementById('script_modules'); if(!box) return;
+  if(!CURRENT_SCRIPT){ box.innerHTML=''; return; }
+  let mls=[];
+  try{ mls=((await (await fetch('/api/scan?md='+encodeURIComponent(CURRENT_SCRIPT))).json()).mls)||[]; }
+  catch(e){ box.innerHTML=''; return; }
+  if(!mls.length){ box.innerHTML=''; return; }
+  box.innerHTML='<div class="hint" style="margin:10px 0 4px">Modules in the current script — regenerate any one on its own:</div>'+
+    mls.map(m=>`<div class="result ok"><span>📝</span><span class="name">Microlearning ${m.which}: ${esc(m.title)}</span><span class="sp"></span>`
+      +`<button class="ghost xs" onclick="regenModule(${m.which})">↻ Regenerate</button></div>`).join('');
+}
+async function regenModule(which){
+  const guidance=prompt(`Regenerate Microlearning ${which}.\n\nOptional — what should change? (leave blank to just re-draft it)`, '');
+  if(guidance===null) return;                       // cancelled
+  const base=genPreflight(); if(!base) return;
+  const box=document.getElementById('script_modules');
+  box.insertAdjacentHTML('afterbegin',`<div class="result ok" id="regen_note"><span class="spin"></span><span class="name">Regenerating Microlearning ${which}…</span></div>`);
+  let r; try{ r=await (await fetch('/api/regenerate-unit',{method:'POST',
+    body:JSON.stringify({...base, script:CURRENT_SCRIPT, which, guidance})})).json(); }
+  catch(e){ r={error:String(e)}; }
+  const note=document.getElementById('regen_note'); if(note) note.remove();
+  if(!r||!r.ok){ box.insertAdjacentHTML('afterbegin',`<div class="result err">✗ Regenerate failed: ${esc((r&&r.error)||'')}</div>`); return; }
+  document.getElementById('gen_results').innerHTML=
+    `<div class="result ok"><span>✓</span><span class="name">Regenerated Microlearning ${which}${r.lint_ok===false?' — ⚠ lint issues, check it':''}</span>`
+    +`<span class="sp"></span><button class="ghost" onclick="reveal('${CURRENT_SCRIPT.replace(/'/g,"\\'")}')">Show in Finder</button></div>`;
+  scanScript();   // refreshes the unit dropdown + this module list
 }
 // "Every unit" builds one package per unit, so the single-unit picker doesn't apply.
 function syncScope(){
@@ -697,7 +1288,8 @@ function genPreflight(){
   if(!val('gen_obj')||!val('gen_aud')){ alert('Objective and audience are required.'); return null; }
   return { provider:prov, source:val('src'), images:val('img'), title:val('gen_title'),
     objective:val('gen_obj'), audience:val('gen_aud'), model:val('gen_model_sel'),
-    archetype:document.getElementById('gen_arch').value, brand:brand(), project:CURRENT_PROJECT };
+    archetype:document.getElementById('gen_arch').value, preset:val('gen_preset'),
+    brand:brand(), project:CURRENT_PROJECT };
 }
 // Render the shared final result (used by both modes).
 function genResult(box, res, extra){
@@ -706,9 +1298,16 @@ function genResult(box, res, extra){
     + `<span class="name">Drafted ${res.units} unit(s) → ${res.out.split('/').pop()}</span>`
     + `<span class="sp"></span>${res.out?`<button class="ghost" onclick="reveal('${res.out.replace(/'/g,"\\'")}')">Show in Finder</button>`:''}</div>`;
   if(bad) h+=`<div class="result err">⚠ Saved but failed the §8 lint — fix before building:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
-  if(res.review_docx&&res.review_docx.length) h+=`<div class="result ok">✓ Review doc(s): ${res.review_docx.map(d=>d.split('/').pop()).join(', ')}</div>`;
+  if(res.review_docx&&res.review_docx.length) h+=`<div class="result ok">✓ Review doc(s): ${res.review_docx.map(d=>esc(d.split('/').pop())).join(', ')}</div>`;
   box.innerHTML=h;
   CURRENT_SCRIPT=res.out; scriptStatus(); scanScript(); saveProject(true);
+}
+
+// Run worker(idx) for idx 0..n-1 with at most `limit` in flight — bounded parallelism.
+async function runPool(n, limit, worker){
+  let next=0;
+  async function run(){ const i=next++; if(i>=n) return; await worker(i); return run(); }
+  await Promise.all(Array.from({length:Math.min(limit,n)}, run));
 }
 
 // Streaming generation: ONE claude pass, streamed to the browser so you watch the
@@ -767,17 +1366,22 @@ async function generateStaged(){
       + `<div class="hint" style="margin:6px 0 2px">`+units.map((u,i)=>`${i+1}. ${esc(u.title)}`).join('<br>')+`</div>`;
     if(plan.skipped&&plan.skipped.length) log+=`<div class="result err">Skipped (unsupported): ${plan.skipped.map(esc).join(', ')}</div>`;
     box.innerHTML=log;
-    // ---- pass 3: script each unit, one at a time, with live progress ----
-    const mds=[];
-    for(let i=0;i<units.length;i++){
-      go.innerHTML=`<span class="spin"></span>Writing unit ${i+1} of ${units.length}…`;
-      box.innerHTML=log+`<div class="result ok"><span class="spin"></span><span class="name">Writing unit ${i+1} of ${units.length}: ${esc(units[i].title)}…</span></div>`;
+    // ---- pass 3: script ALL units IN PARALLEL (capped) — they generate at the
+    //      same time, so wall-clock ≈ one unit instead of the sum. ----
+    go.innerHTML=`<span class="spin"></span>Writing ${units.length} modules in parallel…`;
+    const mds=new Array(units.length), state=new Array(units.length).fill(''); let firstErr=null;
+    const paint=()=>{ box.innerHTML=log+units.map((u,i)=>{
+        const ic=state[i]==='ok'?'✓':state[i]==='err'?'✗':'<span class="spin"></span>';
+        return `<div class="result ${state[i]==='err'?'err':'ok'}"><span>${ic}</span><span class="name">Unit ${i+1}: ${esc(u.title)}</span></div>`;
+      }).join(''); };
+    paint();
+    await runPool(units.length, 4, async (i)=>{
       const r=await post('/api/script-unit',{...base, unit:units[i], all_units:units, idx:i+1, total:units.length});
-      if(!r.ok){ box.innerHTML=log+`<div class="result err">✗ Unit ${i+1} (${esc(units[i].title)}): ${esc(r.error||'failed')}</div>`; return; }
-      mds.push(r.md);
-      log+=`<div class="result ok"><span>✓</span><span class="name">Unit ${i+1}: ${esc(units[i].title)}</span></div>`;
-      box.innerHTML=log;
-    }
+      if(r.ok){ mds[i]=r.md; state[i]='ok'; } else { state[i]='err'; if(!firstErr) firstErr={i, e:r.error||'failed'}; }
+      paint();
+    });
+    if(firstErr){ box.insertAdjacentHTML('beforeend',
+      `<div class="result err">✗ Unit ${firstErr.i+1} (${esc(units[firstErr.i].title)}): ${esc(firstErr.e)} — fix and re-run.</div>`); return; }
     // ---- pass 4: assemble + save + review docs ----
     go.innerHTML='<span class="spin"></span>Saving &amp; checking…';
     const save=await post('/api/save-course',{ out:FOLDERS.drafts, title:val('gen_title'), brand:brand(),
@@ -788,7 +1392,7 @@ async function generateStaged(){
       + `<span class="name">Drafted ${save.units} unit(s) → ${save.out.split('/').pop()}</span>`
       + `<span class="sp"></span>${save.out?`<button class="ghost" onclick="reveal('${save.out.replace(/'/g,"\\'")}')">Show in Finder</button>`:''}</div>`;
     if(bad) h+=`<div class="result err">⚠ Saved but failed the §8 lint — fix before building:<br>${(save.lint_errors||[]).map(esc).join('<br>')}</div>`;
-    if(save.review_docx&&save.review_docx.length) h+=`<div class="result ok">✓ Review doc(s): ${save.review_docx.map(d=>d.split('/').pop()).join(', ')}</div>`;
+    if(save.review_docx&&save.review_docx.length) h+=`<div class="result ok">✓ Review doc(s): ${save.review_docx.map(d=>esc(d.split('/').pop())).join(', ')}</div>`;
     box.innerHTML=h;
     CURRENT_SCRIPT=save.out; scriptStatus(); scanScript(); saveProject(true);
   } finally {
@@ -813,7 +1417,7 @@ async function applyReview(){
     <span class="name">${res.ok?`Updated script (${res.comments_found} comment(s) applied) → ${res.out.split('/').pop()}`:'Update failed'}</span>
     <span class="sp"></span>${res.out?`<button class="ghost" onclick="reveal('${res.out.replace(/'/g,"\\'")}')">Show in Finder</button>`:''}</div>`;
   if(bad) html+=`<div class="result err">⚠ Saved but failed the §8 lint:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
-  if(res.review_docx&&res.review_docx.length) html+=`<div class="result ok">✓ Updated review doc(s): ${res.review_docx.map(d=>d.split('/').pop()).join(', ')}</div>`;
+  if(res.review_docx&&res.review_docx.length) html+=`<div class="result ok">✓ Updated review doc(s): ${res.review_docx.map(d=>esc(d.split('/').pop())).join(', ')}</div>`;
   box.innerHTML=html;
   if(res.ok){ CURRENT_SCRIPT=res.out; scriptStatus(); scanScript(); }
 }
@@ -825,11 +1429,18 @@ async function loadCourses(){
   let cs=[];
   try{ cs=((await (await fetch('/api/courses?dir='+encodeURIComponent(FOLDERS.output))).json()).courses)||[]; }
   catch(e){ box.innerHTML=`<div class="result err">✗ ${esc(String(e))}</div>`; return; }
-  if(!cs.length){ box.innerHTML='<div class="hint">No built courses yet — generate a preview above.</div>'; return; }
-  box.innerHTML=cs.map(c=>{
+  if(!cs.length){ box.innerHTML='<div class="hint">No built courses yet — generate a preview above (set Build to “Every unit” in step 6 to make all modules).</div>'; return; }
+  // One preview per MICROLEARNING — the HTML is identical across scorm/cmi5 and the
+  // staged/published copies, so collapse to a single button per unit (prefer published).
+  const byUnit={};
+  cs.forEach(c=>{ const m=c.name.match(/_m(\d+)_/); const k=m?('u'+m[1]):c.name;
+    if(!byUnit[k] || (!c.staged && byUnit[k].staged)) byUnit[k]={...c, unit:m?parseInt(m[1],10):null}; });
+  const list=Object.values(byUnit).sort((a,b)=>(a.unit||0)-(b.unit||0));
+  box.innerHTML=list.map(c=>{
     const purl='/preview'+encodeURI(c.index);
-    return `<div class="result ok"><span>📦</span><span class="name">${esc(c.name)}</span>`
-      + `${c.staged?' <span class="hint">· preview</span>':''}<span class="sp"></span>`
+    const label=c.unit!=null?('Microlearning '+c.unit):esc(c.name);
+    return `<div class="result ok"><span>📦</span><span class="name">${label}</span>`
+      + `${c.staged?' <span class="hint">· not yet published</span>':''}<span class="sp"></span>`
       + `<button class="ghost" onclick="window.open('${purl.replace(/'/g,"\\'")}','_blank')">👁 Preview</button></div>`;
   }).join('');
 }
@@ -852,6 +1463,22 @@ async function generateCourses(){
   STAGED=(res.results||[]).map((r,i)=>({...r,idx:i,published:null}));
   renderStaged();
 }
+function buildReportHtml(rep){
+  // C1 build report: surface silent drops / mis-scoring the engine recorded beside
+  // the artifact. Errors = correctness problems (KC mis-scoring, missing chart source);
+  // warnings = degradations (a dropped image/block). Nothing to show → render nothing.
+  if(!rep) return '';
+  const errs=rep.errors||[], warns=rep.warnings||[];
+  if(!errs.length && !warns.length) return '';
+  const items=[
+    ...errs.map(e=>`<li class="br-err">⚠ ${esc(e)}</li>`),
+    ...warns.map(w=>`<li class="br-warn">• ${esc(w)}</li>`)];
+  const n=errs.length+warns.length, sev=errs.length?'has-err':'has-warn';
+  const sum=`${errs.length?errs.length+' issue'+(errs.length>1?'s':''):''}${errs.length&&warns.length?' · ':''}${warns.length?warns.length+' warning'+(warns.length>1?'s':''):''}`;
+  return `<details class="buildreport ${sev}" open><summary>Build report — ${esc(sum)}</summary>`
+    +`<ul>${items.join('')}</ul></details>`;
+}
+
 function renderStaged(){
   const box=document.getElementById('b_results'), pub=document.getElementById('b_publish');
   if(!STAGED.length){ box.innerHTML=''; pub.innerHTML='<div class="hint">Generate a preview in step 7 first, then publish.</div>'; return; }
@@ -866,6 +1493,7 @@ function renderStaged(){
     }
     h+=`<div class="result ${r.ok?'ok':'err'}"><span>${r.ok?'✓':'✗'}</span><span class="name">${r.label}</span>
       ${r.ok?`<span class="file">→ ${fname} (preview)</span>`:''}<span class="sp"></span>${a}</div>`;
+    h+=buildReportHtml(r.report);
     if(r.log&&!r.ok) h+=`<details class="log"><summary>log · ${r.label}</summary><pre>${esc(r.log)}</pre></details>`;
   });
   box.innerHTML=h;

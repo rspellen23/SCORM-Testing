@@ -1,0 +1,17 @@
+{
+  "layout": "timeline",
+  "source": "Hand-authored + verified by James in PowerPoint, 2026-06-25 (AnimLibrary_Timeline_ToAnimate). Extracted from the real animation pane.",
+  "autostart": true,
+  "_notes": "All steps play After Previous (back-to-back). Header roles are intentionally NOT animated (present from slide start). Each milestone repeats `block`; `{u}` = 1-based unit index. Direction tokens: center = horizontal stretch from center; axisV = vertical stretch growing from the axis side (bottom for above-axis units, top for below); outV = wipe revealing away from the axis (down for above, up for below).",
+  "steps": [
+    {"roles": ["bg.rail"], "effect": "stretch", "dir": "center", "dur": 500},
+    {"per_unit": true, "block": [
+      {"roles": ["focal.node.{u}", "content.number.{u}"], "effect": "wipe", "dir": "down", "dur": 500},
+      {"roles": ["bg.connector.{u}"], "effect": "stretch", "dir": "axisV", "dur": 500},
+      {"roles": ["focal.card.{u}", "bg.cardaccent.{u}"], "effect": "wipe", "dir": "outV", "dur": 500},
+      {"roles": ["content.phase.{u}"], "effect": "fade", "dur": 250},
+      {"roles": ["content.mtitle.{u}"], "effect": "fade", "dur": 250},
+      {"roles": ["content.mbody.{u}"], "effect": "fade", "dur": 250}
+    ]}
+  ]
+}

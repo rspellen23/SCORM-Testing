@@ -34,9 +34,13 @@ def _color(i):
 def _fmt(v):
     if v is None:
         return ""
-    if isinstance(v, float) and not v.is_integer():
-        return f"{v:g}"
-    return str(int(v))
+    if isinstance(v, (int, float)):
+        if isinstance(v, float) and not v.is_integer():
+            return f"{v:g}"
+        return str(int(v))
+    # Non-numeric cell (LLMs emit "N/A"/null for missing data). Show it verbatim in
+    # the SR/print data table rather than crashing the whole chart on int("N/A").
+    return str(v)
 
 
 def _nice(x, round_down):

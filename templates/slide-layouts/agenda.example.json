@@ -1,0 +1,13 @@
+{
+  "title": "Agenda",
+  "subtitle": "What we'll cover today.",
+  "intro": "Optional single line framing the session.",
+  "columns": 1,
+  "items": [
+    {"title": "First topic", "desc": "One short line on what this section covers."},
+    {"title": "Second topic", "desc": "One short line on what this section covers."},
+    {"title": "Third topic", "desc": "One short line on what this section covers."},
+    {"title": "Fourth topic", "desc": "One short line on what this section covers."}
+  ],
+  "footer": "Optional footer line. (2 columns auto-engage past 5 items; supports up to ~8.)"
+}

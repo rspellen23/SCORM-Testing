@@ -68,6 +68,9 @@ TIMELINE_RE = re.compile(r'^\*Timeline:\*\s*(.*)$', re.I)
 COMPARISON_RE = re.compile(r'^\*Comparison:\*\s*(.*)$', re.I)
 CHART_RE = re.compile(r'^\*Chart:\*\s*(.*)$', re.I)
 INFOGRAPHIC_RE = re.compile(r'^\*Infographic:\*\s*(.*)$', re.I)
+CONTINUE_RE = re.compile(r'^\*Continue:\*\s*(.*)$', re.I)
+SCENARIO_RE = re.compile(r'^\*Scenario:\*\s*(.*)$', re.I)
+OBJECTIVES_RE = re.compile(r'^\*(?:Objectives|Learning Objectives):\*\s*(.*)$', re.I)
 
 # A fenced/keyed block must never run past the next slide / unit / meta marker:
 # if an author forgets the closing lone `:::`, the block stops here instead of
@@ -504,6 +507,109 @@ def _parse_comparison(lines, i):
     return {"type": "comparison", "panels": out}, i
 
 
+def _parse_scenario(lines, i):
+    """`*Scenario:*` then `::: scene` groups. Inside each scene:
+        title: <scene title>            (optional)
+        <prose lines>                   the scene narrative (the decision prompt)
+        - <response> [· preferred] [· feedback: <text>]   (one per choice)
+    A lone `:::` closes the block. Renders as a LINEAR decision walk-through: every
+    scene is shown and the `preferred` choice is marked (the linear-fallback
+    renderer). For practice, mark exactly ONE preferred response per scene.
+    """
+    i += 1
+    scenes, narr = [], []
+    cur = None
+
+    def _flush():
+        # fold accumulated narrative prose into the current scene's html column
+        if cur is not None and narr:
+            cur["html"] = cur.get("html", "") + "<p>" + _inline(" ".join(narr)) + "</p>"
+        narr.clear()
+
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):           # unclosed fence: stop at the next marker
+            break
+        fm = FENCE_RE.match(s)
+        if fm:
+            _flush()
+            if fm.group(1) is None:              # lone ::: closes the block
+                i += 1
+                break
+            cur = {"responses": []}              # ::: scene starts a new scene
+            scenes.append(cur)
+            i += 1
+            continue
+        if cur is None or not s:
+            i += 1
+            continue
+        mb = re.match(r'^[-*]\s+(.*)', s)
+        if mb:
+            _flush()                             # a choice line ends the narrative run
+            raw = mb.group(1)
+            # feedback: is TERMINAL — capture everything after the first `· feedback:`
+            # verbatim so the `·`/`|` chars the grammar uses elsewhere don't split the
+            # remediation prose away (A3). Only the head (response text + flags) is _segs'd.
+            mfb = re.search(r'[·|]\s*feedback\s*:\s*(.+)$', raw, re.I)
+            head = raw[:mfb.start()] if mfb else raw
+            segs = _segs(head)
+            resp = {"html": "<p>" + _inline(segs[0] if segs else "") + "</p>"}
+            for seg in segs[1:]:
+                if re.match(r'(?:preferred|correct|best)$', seg, re.I):
+                    resp["preferred"] = True
+            if mfb:
+                resp["feedback"] = "<p>" + _inline(mfb.group(1).strip()) + "</p>"
+            cur["responses"].append(resp)
+        elif re.match(r'^title\s*:', s, re.I):
+            _flush()
+            cur["title"] = _inline(s.split(':', 1)[1].strip())
+        else:
+            narr.append(s)
+        i += 1
+    _flush()
+    out = []
+    for sc in scenes:
+        scene = {}
+        if sc.get("title"):
+            scene["title"] = sc["title"]
+        if sc.get("html"):
+            scene["html"] = sc["html"]
+        if sc.get("responses"):
+            scene["responses"] = sc["responses"]
+        out.append(scene)
+    return {"type": "scenario", "scenes": out}, i
+
+
+def _parse_objectives(lines, i):
+    """`*Objectives:* [intro line]` then `- ` bullets (the learner-facing outcomes),
+    one per line, until a blank line / the next marker. The text after the marker is an
+    optional lead-in (defaults to 'After this lesson, you will be able to:'). Produces a
+    semantic `objectives` block so Slide-1 objectives are first-class, not a plain list.
+    """
+    intro = (OBJECTIVES_RE.match(lines[i].strip()).group(1) or "").strip()
+    i += 1
+    items = []
+    while i < len(lines):
+        s = lines[i].strip()
+        if not s or FENCE_BOUNDARY_RE.match(s):
+            break
+        mb = re.match(r'^[-*]\s+(.*)', s)
+        if mb:
+            items.append(_inline(mb.group(1).strip()))
+            i += 1
+            continue
+        mnum = re.match(r'^\d+\.\s+(.*)', s)
+        if mnum:
+            items.append(_inline(mnum.group(1).strip()))
+            i += 1
+            continue
+        break                                  # a non-list line ends the objectives block
+    block = {"type": "objectives", "items": items}
+    if intro:
+        block["intro"] = _inline(intro)
+    return block, i
+
+
 def _ig_split_item(raw):
     """A left-column bullet `bold — detail` -> ["bold", " — detail"] (slide-schema pair).
     No em dash -> a plain string. Matches the 'infographic' slide content shape."""
@@ -743,6 +849,17 @@ def _body_blocks(text):
         if INFOGRAPHIC_RE.match(s):
             flush_para(); flush_lst()
             block, i = _parse_infographic(lines, i); blocks.append(block); continue
+        if OBJECTIVES_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_objectives(lines, i); blocks.append(block); continue
+        if SCENARIO_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_scenario(lines, i); blocks.append(block); continue
+        mcont = CONTINUE_RE.match(s)
+        if mcont:
+            flush_para(); flush_lst()
+            label = mcont.group(1).strip()
+            blocks.append({"type": "continue", "text": label or "CONTINUE"}); i += 1; continue
         mnote = NOTE_RE.match(s)
         if mnote:
             flush_para(); flush_lst()
@@ -826,6 +943,32 @@ def _merge_image_text(blocks):
     return out
 
 
+def _kc_answer_letters(body, letters):
+    """The correct-answer letters from a `*Correct Answer:*` line, matched against the
+    option letters. Accepts ONE letter (`C`) or SEVERAL (`A, C` / `A and C` / `A/C`) —
+    more than one ⇒ a MULTI-select check ('choose all that apply').
+
+    Tokenizes the RHS left-to-right and keeps only single A–Z labels. The FIRST
+    non-label prose token ENDS the answer list, so a stray letter sitting *after*
+    prose (`A, C and also note B`) can't leak in as a third answer — that pattern
+    silently mis-scores graded quizzes; `kc_answer_issues_in` raises it in lint().
+    Returns an ordered, de-duplicated list of in-range letters."""
+    m = re.search(r'\*Correct Answer:\*\s*(.+)', body)
+    if not m:
+        return []
+    out, seen = [], set()
+    for tk in re.split(r'[,\s/&]+|\band\b', m.group(1), flags=re.I):
+        tk = tk.strip().rstrip(".)").upper()
+        if not tk:
+            continue  # separator collapse (`A and C` → ['A','','','C']) — skip, keep scanning
+        if len(tk) == 1 and tk.isalpha() and tk in letters:
+            if tk not in seen:
+                seen.add(tk); out.append(tk)
+        else:
+            break  # first prose / out-of-range token ends the list (no leak past it)
+    return out
+
+
 def _knowledge_check(body):
     q = re.search(r'\*Question:\*\s*(.+)', body)
     # accept `- A)`, `- a.`, `- B)` ... (letter + `.` or `)`); capture the letter so
@@ -834,18 +977,75 @@ def _knowledge_check(body):
     pairs = re.findall(r'^\s*-\s*([A-Za-z])[.)]\s*(.+)$', body, re.M)
     letters = [p[0].upper() for p in pairs]
     opts = [p[1] for p in pairs]
-    ans = re.search(r'\*Correct Answer:\*\s*([A-Za-z])', body)
-    ans_letter = ans.group(1).upper() if ans else None
-    correct_idx = letters.index(ans_letter) if ans_letter in letters else -1
+    # one correct letter = single-select; several (`A, C`) = multi-select ('all that apply').
+    ans_letters = _kc_answer_letters(body, letters)
+    correct = {letters.index(a) for a in ans_letters}
+    multi = len(ans_letters) > 1
     fb = re.search(r'\*Feedback\s*[—–-]\s*Correct:\*\s*(.+)', body)
     fbno = re.search(r'\*Feedback\s*[—–-]\s*Incorrect:\*\s*(.+)', body)
     return {
-        "type": "knowledgeCheck", "multi": False,
+        "type": "knowledgeCheck", "multi": multi,
         "prompt": _inline(q.group(1)) if q else "",
-        "options": [{"html": _inline(o), "correct": i == correct_idx} for i, o in enumerate(opts)],
+        "options": [{"html": _inline(o), "correct": i in correct} for i, o in enumerate(opts)],
         "feedback": _inline(fb.group(1)) if fb else "",
         "feedbackIncorrect": _inline(fbno.group(1)) if fbno else "",
     }
+
+
+def _kc_answer_has_leak(rhs, letters):
+    """True when a valid option label appears AFTER non-label prose on a
+    `*Correct Answer:*` RHS (e.g. `A, C and also note B`). The parser drops the
+    trailing label; lint surfaces it so a silently mis-scored quiz is caught.
+    Benign trailing prose with no later label (`B is the right one`) is NOT a leak."""
+    seen_prose = False
+    for tk in re.split(r'[,\s/&]+|\band\b', rhs, flags=re.I):
+        tk = tk.strip().rstrip(".)").upper()
+        if not tk:
+            continue
+        is_label = len(tk) == 1 and tk.isalpha() and tk in letters
+        if is_label and seen_prose:
+            return True
+        if not is_label:
+            seen_prose = True
+    return False
+
+
+def kc_answer_issues_in(md_text):
+    """Lint helper. Re-scans raw §8 text for knowledge-check answer-line faults the
+    parser silently absorbs, tagged by unit number:
+      (A1) a letter label AFTER prose on `*Correct Answer:*` — dropped, likely a
+           mis-scored answer the author meant to mark correct;
+      (A2) duplicate option labels — `*Correct Answer:*` maps to the FIRST match
+           only, so the wrong option can be scored correct with no crash.
+    Returns a list of human-readable messages (empty when clean)."""
+    issues = []
+    secs = re.split(r'^##\s+Microlearning\s+', md_text, flags=re.M)
+    for k in range(1, len(secs)):
+        _head, _nl, rest = secs[k].partition('\n')
+        rest = META_CUT.split(rest)[0]
+        parts = SLIDE_RE.split(rest)
+        for i in range(1, len(parts), 2):
+            s_body = META_CUT.split(parts[i + 1])[0] if i + 1 < len(parts) else ""
+            if not re.search(r'\*Question:\*', s_body):
+                continue
+            letters = [m.group(1).upper()
+                       for m in re.finditer(r'^\s*-\s*([A-Za-z])[.)]\s*.+$', s_body, re.M)]
+            if not letters:
+                continue
+            dups = sorted({l for l in letters if letters.count(l) > 1})
+            if dups:
+                issues.append(
+                    f"unit {k}: a knowledge check repeats option label(s) "
+                    f"{', '.join(dups)} — each `- A)` choice must have a UNIQUE letter "
+                    f"(the `*Correct Answer:*` letter maps to the first match only, so a "
+                    f"duplicate silently scores the wrong option)")
+            ans = re.search(r'\*Correct Answer:\*\s*(.+)', s_body)
+            if ans and _kc_answer_has_leak(ans.group(1), letters):
+                issues.append(
+                    f"unit {k}: a knowledge check's `*Correct Answer:*` line mixes answer "
+                    f"letters with prose — a letter AFTER the prose was dropped and not scored. "
+                    f"List only the answer letters (e.g. `A, C`).")
+    return issues
 
 
 def import_md(md_path, which=1, hero=None, image_dir=None):
@@ -896,10 +1096,22 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
         blocks.append({"type": "heading", "level": 2, "html": f"<p>{_inline(s_title)}</p>"})
         blocks.extend(_body_blocks(s_body))
 
+    # Gated reveals: a `*Continue:*` gate hides everything AFTER it until the learner
+    # clicks it (progressive reveal). Mirror the docx importer (docx_import.py): walk
+    # the unit's blocks; a `continue` is itself ungated (it IS the reveal trigger) and
+    # flips every following block to gated. No continue → every block ungated as before.
+    gated = False
     for b in blocks:
-        b["gated"] = False
+        if b.get("type") == "continue":
+            b["gated"] = False
+            gated = True
+        else:
+            b["gated"] = gated
 
     import os
+    from buildlog import get_logger
+    _log = get_logger(__name__)
+    warnings = []                      # operator-facing silent-drop notices → _stats
     used = {}
     cand = ({n.lower(): n for n in os.listdir(image_dir)}
             if image_dir and os.path.isdir(image_dir) else {})
@@ -915,8 +1127,13 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
             elif image_dir:
                 # An images folder WAS provided but no file matches this slot, so the
                 # asset doesn't exist — don't ship a broken <img>. Blank the src; the
-                # render layer drops the image and keeps the text.
+                # render layer drops the image and keeps the text. This is a SILENT
+                # drop for the operator, so record + log it (build report C1).
                 b["src"] = ""
+                msg = (f"visual slot “{slot}” has no matching file in the images "
+                       f"folder — the image was dropped (text kept)")
+                warnings.append(msg)
+                _log.warning("%s", msg)
             # else (no image_dir): src stays assets/<slot> — asset supplied later (§10)
 
     # resolve card/button modal media filenames against the same folder
@@ -966,7 +1183,7 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
     ir = {"schema": "course-ir/v1", "id": slugify(title), "title": title,
           "locale": "en", "accent": None, "hero": hero_block, "blocks": blocks,
           "graded": graded, "passingScore": passing, "retry": retry}
-    ir["_stats"] = {"blocks": len(blocks), "assets": len(used)}
+    ir["_stats"] = {"blocks": len(blocks), "assets": len(used), "warnings": warnings}
     from ir_validate import validate_ir
     validate_ir(ir, label=ir.get("id", "course"))
     return ir, used

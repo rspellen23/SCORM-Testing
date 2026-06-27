@@ -10,5 +10,16 @@
 python-pptx>=0.6.21   # slide / deck / to-pptx PowerPoint output
 python-docx>=0.8.11   # .docx source import + SME-review document export
 pypdf>=3.9            # reading .pdf source documents
-Pillow>=9.0           # cover / art compositing
+Pillow>=9.0           # cover / art compositing; also image loading for OCR
+pytesseract>=0.3.10   # OCR — read text out of image source files (.png/.jpg/…).
+                      # Cross-platform, but needs the Tesseract ENGINE installed:
+                      #   macOS:   brew install tesseract
+                      #   Windows: winget install UB-Mannheim.TesseractOCR  (or the UB-Mannheim installer)
+                      #   Linux:   apt-get install tesseract-ocr
+                      # On Windows the UB-Mannheim installer puts tesseract.exe in
+                      #   C:\Program Files\Tesseract-OCR\ and does NOT add it to PATH —
+                      #   the engine auto-detects that default location, so no manual
+                      #   PATH edit is needed. If you install it elsewhere, add that
+                      #   folder to PATH. Without the engine, images are skipped with a
+                      #   hint — nothing breaks.
 jsonschema>=4         # IR validation (optional at runtime; required for CI)

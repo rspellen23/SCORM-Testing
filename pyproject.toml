@@ -54,12 +54,14 @@ py-modules = [
     "md_import",
     "pptx_export",
     "pptx_transitions",
+    "pptx_animate",
     "prompts",
     "render",
     "rise_import",
     "scorm",
     "scorm_lint",
     "slide_layouts",
+    "slide_svg",
 ]
 
 [tool.pytest.ini_options]

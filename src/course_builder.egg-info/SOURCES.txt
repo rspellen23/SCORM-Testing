@@ -13,6 +13,7 @@ src/docx_review.py
 src/ir_validate.py
 src/layouts.py
 src/md_import.py
+src/pptx_animate.py
 src/pptx_export.py
 src/pptx_transitions.py
 src/prompts.py
@@ -21,6 +22,7 @@ src/rise_import.py
 src/scorm.py
 src/scorm_lint.py
 src/slide_layouts.py
+src/slide_svg.py
 src/course_builder.egg-info/PKG-INFO
 src/course_builder.egg-info/SOURCES.txt
 src/course_builder.egg-info/dependency_links.txt
@@ -29,11 +31,18 @@ src/course_builder.egg-info/requires.txt
 src/course_builder.egg-info/top_level.txt
 tests/test_block_registry.py
 tests/test_chart_guardrail.py
+tests/test_deck_presets.py
+tests/test_image_layouts.py
 tests/test_layout_crossfeed.py
 tests/test_lint_validation.py
 tests/test_md_roundtrip.py
+tests/test_new_layouts.py
+tests/test_pptx_animate.py
 tests/test_pptx_drop.py
+tests/test_regen_scope.py
 tests/test_render_snapshot.py
 tests/test_schema.py
 tests/test_scorm_manifest.py
+tests/test_slide_svg.py
+tests/test_theme_flag.py
 tests/test_unclosed_fence.py

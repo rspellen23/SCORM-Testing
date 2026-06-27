@@ -1,0 +1,11 @@
+{
+  "kicker": "OPTIONAL LABEL",
+  "title": "Thank you",
+  "subtitle": "An optional supporting line — a call to action or next step.",
+  "contact": [
+    "Name, Role",
+    "name@teletracking.com",
+    "teletracking.com"
+  ],
+  "bg": "dark"
+}

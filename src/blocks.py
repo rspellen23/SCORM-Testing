@@ -61,7 +61,8 @@ BLOCKS = {
     "transition":       _b(STABLE, True,  STRUCTURAL, "brand ribbon/wave band (decorative)"),
     "sectionStart":     _b(STABLE, True,  STRUCTURAL, "colored-section open marker"),
     "sectionEnd":       _b(STABLE, True,  STRUCTURAL, "colored-section close marker"),
-    "continue":         _b(COMING_SOON, False, DROP,  "gate that reveals the next gated run (importer-only)"),
+    "continue":         _b(STABLE, True,  DROP,       "gate that reveals the next gated run (progressive reveal)"),
+    "objectives":       _b(STABLE, True,  RENDER,     "learning-objectives list ('you will be able to…')"),
 
     # --- media ------------------------------------------------------------
     "image":            _b(STABLE, True,  RENDER,     "full-width / hero figure"),
@@ -79,7 +80,7 @@ BLOCKS = {
     "process":          _b(STABLE, True,  DROP,       "numbered ordered-step list"),
     "flashcard":        _b(STABLE, True,  DROP,       "CSS flip cards"),
     "categorize":       _b(STABLE, True,  DROP,       "sort-into-buckets (gates completion)"),
-    "scenario":         _b(COMING_SOON, False, DROP,  "branching scenario, linear fallback (importer-only)"),
+    "scenario":         _b(STABLE, True,  DROP,       "decision walk-through (situation + choices + feedback; linear)"),
     "timeline":         _b(STABLE, True,  DROP,       "vertical milestone axis"),
     "comparison":       _b(STABLE, True,  DROP,       "2-3 panel comparison"),
     "chart":            _b(STABLE, True,  DROP,       "bar/line/pie/stacked/grouped (native slide via ./build slide)"),

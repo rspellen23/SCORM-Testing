@@ -1,0 +1,14 @@
+{
+  "title": "Image beside a short point",
+  "subtitle": "Optional subtitle",
+  "image": "exact-filename-from-the-AVAILABLE-IMAGES-list",
+  "side": "left",
+  "intro": "A sentence or two introducing the visual.",
+  "items": [
+    ["Key point —", " a short supporting line"],
+    "Another concise takeaway",
+    "Keep it to a few bullets"
+  ],
+  "callout": "An optional highlighted takeaway.",
+  "footer": "Optional footer line"
+}

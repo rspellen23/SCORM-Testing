@@ -49,6 +49,38 @@ Select with `--layout <name>` (default `infographic`).
   rule · large centered title · optional subtitle · optional footer band; `bg`
   selects the background brand role (`dark` default). Use as a section break or a
   course/deck title slide. Example: `divider.example.json`.
+- **agenda** — header band · optional intro · a numbered table of contents: each
+  entry is a large accent numeral + section title + optional one-line description,
+  in 1 or 2 columns (2 auto-engages past 5 items, up to ~8). Modeled on the
+  official TeleTracking "Agenda" layout. Example: `agenda.example.json`.
+- **closing** — full-bleed branded closing/thank-you screen: optional kicker · a
+  large headline (default "Thank you") · optional supporting line · optional
+  `contact` lines · the brand wordmark centered near the bottom; `bg` selects the
+  background brand role (`dark` default). Modeled on the official "Closing Slide".
+  Example: `closing.example.json`.
+
+## Deck purpose presets
+When generating a whole deck from source material (slide-presentation tab, or
+`authoring.generate_deck(..., preset=)`), a **purpose preset** shapes the deck's
+**structure, voice, and length** — all on the *same* brand standard and the same
+layouts. The difference between a pitch and a workshop is the slide arc and tone,
+never divergent styling. Presets (`authoring.DECK_PRESETS`):
+
+- **general** — neutral default; let the material decide.
+- **formal** — executive-ready: title → agenda → section dividers → comparison /
+  infographic / process → a `statement` takeaway → `closing`. Polished, concise.
+- **debrief** — retrospective: context → `timeline`/`process` of events →
+  what-worked-vs-didn't `comparison` → takeaways `bullets` → `closing`. Candid, factual.
+- **workshop** — instructor-led training: `agenda` of objectives → one concept per
+  slide (`infographic`/`process`/`cards`) → recap → `closing`. Plain-language, "you".
+- **client** — external/customer: overview → value & capabilities (`cards`/
+  `comparison`) → how-it-works (`process`) → outcomes → `closing` with contact.
+  Benefit-led, jargon-light; internal aliases/acronyms avoided.
+- **pitch** — persuasive: problem → solution → differentiation → proof → the ask →
+  `closing`. Big confident statements, minimal text.
+
+The preset is a prompt layer only (no renderer changes). The dashboard slide tab
+exposes it as the **Purpose** selector; a drift test keeps the two in sync.
 
 ## Accents
 Card/goal `accent` is a brand role: `primary` · `secondary` · `tertiary` ·

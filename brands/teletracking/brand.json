@@ -1,8 +1,8 @@
 {
   "name": "TeleTracking",
   "defaultAccent": "#1EB16A",
-  "palette": { "green": "#1EB16A", "teal": "#069696", "blue": "#539BD2", "navy": "#003E51", "deepNavy": "#0B2C37", "yellow": "#ECBD00", "orange": "#F27D05", "red": "#BD362F", "accentGreen": "#4EE89E" },
-  "accentSnap": ["#1EB16A", "#069696", "#539BD2", "#003E51", "#0B2C37", "#ECBD00", "#F27D05", "#BD362F", "#4EE89E"],
+  "palette": { "green": "#1EB16A", "teal": "#00A5A7", "blue": "#63ACDB", "navy": "#003E51", "deepNavy": "#0B2C37", "yellow": "#F1C700", "orange": "#F69000", "red": "#CB4B3C", "light": "#EDF0F0", "accentGreen": "#4EE89E" },
+  "accentSnap": ["#1EB16A", "#00A5A7", "#63ACDB", "#003E51", "#0B2C37", "#F1C700", "#F69000", "#CB4B3C", "#4EE89E"],
   "sectionColors": ["green", "gold", "dark", "blue", "teal"],
   "logo": "Logo.png",
   "favicon": "Favicon.png",
@@ -10,7 +10,7 @@
   "fonts": { "body": "Open Sans, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", "head": "Open Sans Condensed, Open Sans, system-ui, sans-serif" },
   "cmi5IdBase": "https://teletracking.example/cmi5",
   "promptStyle": "Clean, calm healthcare-SaaS vector illustration: soft shapes, rounded edges, generous whitespace, small accent use, one clear idea per image. Avoid readable text, photorealism, anime, glossy 3D, and mascots.",
-  "promptHierarchy": "Use TeleGreen #1EB16A as the dominant color, with Teal #069696 and Deep Navy #0B2C37 as secondary; TeleGreen must always be present.",
+  "promptHierarchy": "Use TeleGreen #1EB16A as the dominant color, with Teal #00A5A7 and Deep Navy #0B2C37 as secondary; TeleGreen must always be present.",
   "renderingName": "teletracking-calm-vector",
   "cover": {
     "layout": "topic",
@@ -30,7 +30,7 @@
       "titleColor": "#003E51",
       "subtitleColor": "#1EB16A",
       "titleLeft": 0.065,
-      "circle": { "cx": 0.75, "cy": 0.315, "diameter": 0.27, "ringColor": "#539BD2", "fillColor": "#FFFFFF" },
+      "circle": { "cx": 0.75, "cy": 0.315, "diameter": 0.27, "ringColor": "#63ACDB", "fillColor": "#FFFFFF" },
       "iconColor": "#1A1A1A"
     }
   }

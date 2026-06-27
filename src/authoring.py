@@ -42,11 +42,87 @@ ARCHETYPES = {
                           "work → your first days/weeks → where to get help → KC).",
     "onboarding-role": "Onboard someone into a ROLE (your mission → core responsibilities → tools & "
                        "workflows → who you work with → what good looks like / early wins → KC).",
-    "sales-rep-onboarding": "Ramp a new sales rep (role + 30-day success → product overview → ICP & "
-                            "personas → sales process/methodology → toolkit → first 30 days → KC).",
-    "objection-handling": "Handle sales objections with LAER (cold open → instinct KC → LAER framework "
-                          "→ competitor / price / timing dialogues → scenario KC → takeaway).",
 }
+
+# Course PURPOSE presets — the course-side analogue of DECK_PRESETS. A PROMPT-LAYER
+# profile that shapes the generated course's VOICE/DEPTH, ASSESSMENT posture, and
+# LENGTH. ORTHOGONAL to the archetype (which sets the teaching STRUCTURE): a preset
+# never changes the §8 block vocabulary or the brand — only tone, depth, and how hard
+# the assessment leans. "standard" is the neutral default (no injection). The guidance
+# is something the model adapts to the material, not a rigid mandate.
+COURSE_PRESETS = {
+    "standard": {
+        "label": "Standard (default)",
+        "desc": "Let the material and archetype decide voice and depth.",
+        "voice": "", "assessment": "", "units": None,
+    },
+    "compliance": {
+        "label": "Regulatory / policy compliance",
+        "desc": "Mandatory training where the rules and their consequences must be unmissable.",
+        "voice": ("Authoritative, precise, and unambiguous. State the rule plainly, then why it "
+                  "matters and what happens if it's broken. No hedging; define every term; skip "
+                  "humor and filler."),
+        "assessment": ("Make mastery the point: prefer a graded course (`*Graded:* pass 80`) with at "
+                       "least one knowledge check per unit that tests the ACTUAL rule, not trivia. "
+                       "Use a `*Scenario:*` for a realistic judgment call where one fits."),
+        "units": None,
+    },
+    "onboarding": {
+        "label": "New-hire onboarding",
+        "desc": "A warm, orienting introduction for someone new to the company or role.",
+        "voice": ("Warm, welcoming, and relevance-first. Address the learner directly (\"you\"), "
+                  "connect to their first days and what they'll actually do, and reassure. Plain "
+                  "language; expand acronyms on first use."),
+        "assessment": ("Keep checks light and confidence-building — a knowledge check that confirms "
+                       "orientation, not a hard exam. Always point to where to get help."),
+        "units": None,
+    },
+    "product-skill": {
+        "label": "Product / software skill",
+        "desc": "Teach the learner to DO a task in the product, with practice.",
+        "voice": ("Practical and task-focused: show, then have them practice. Lead with the goal, "
+                  "walk the concrete steps (a `*Process:*`), name the common mistake, and keep it "
+                  "hands-on. Use screenshots only where 'what does it look like' genuinely helps."),
+        "assessment": ("Test APPLICATION, not recall: a `*Scenario:*` ('what would you do?') or a "
+                       "knowledge check on a realistic task decision beats a definition question."),
+        "units": None,
+    },
+    "refresher": {
+        "label": "Quick refresher",
+        "desc": "Brief reinforcement for learners who already know the basics.",
+        "voice": ("Brisk and high-signal. Assume prior exposure — skip fundamentals, lead with what "
+                  "changed or what's most often gotten wrong, and stay tight. One idea per slide."),
+        "assessment": "One focused knowledge check on the highest-stakes point is enough.",
+        "units": "1-2",
+    },
+}
+
+
+def list_course_presets():
+    """[{key,label,desc}] for the dashboard Purpose selector on the course tab."""
+    return [{"key": k, "label": v["label"], "desc": v["desc"]} for k, v in COURSE_PRESETS.items()]
+
+
+def course_preset_directive(preset):
+    """The prompt block injected for a course PURPOSE preset, or '' for the neutral
+    default / an unknown key. Tolerant of None/garbage (mirrors _preset_directive)."""
+    p = COURSE_PRESETS.get((preset or "standard"))
+    if not p or not (p.get("voice") or p.get("assessment")):
+        return ""
+    parts = [f"COURSE PURPOSE: {p['label']} — {p['desc']}"]
+    if p.get("voice"):
+        parts.append("VOICE & DEPTH: " + p["voice"])
+    if p.get("assessment"):
+        parts.append("ASSESSMENT POSTURE: " + p["assessment"])
+    if p.get("units"):
+        parts.append(f"LENGTH: unless a specific unit count is set, aim for roughly {p['units']} unit(s).")
+    return "\n".join(parts)
+
+
+def _course_preset_block(preset):
+    """The fenced PURPOSE section for a course prompt, or '' when neutral."""
+    d = course_preset_directive(preset)
+    return f"\n================= COURSE PURPOSE =================\n{d}\n" if d else ""
 
 # ── Shared design-intelligence (AUTHORING GUIDE §0b) ──────────────────────────
 # The single source of truth for "which structure fits this content." Used by BOTH
@@ -64,6 +140,11 @@ LAYOUT_MATCH = (
 # Course-only block choices, layered on top of LAYOUT_MATCH.
 COURSE_LAYOUT_EXTRA = (
     "- Parallel peer items (features, roles, components, gates) → a *Cards:* grid.\n"
+    "- A 'what would you do?' decision case → a *Scenario:* (a situation + response choices each with "
+    "feedback; mark the best choice `· preferred`). Ideal for decision/judgment practice.\n"
+    "- A predict-then-reveal, or pacing a long unit so the learner commits before a reveal → a "
+    "*Continue:* gate (hides everything after it until the learner clicks; use it deliberately, not "
+    "as decoration).\n"
     "- The teaching substance itself → ordinary paragraphs (single column).\n"
     "- Use a MULTI-COLUMN block (comparison/cards) ONLY when the items are truly parallel and short "
     "enough to scan side-by-side; if they are sequential, dependent, or long, keep ONE column "
@@ -142,9 +223,137 @@ def list_archetypes():
 
 # --------------------------------------------------------------- source reading
 
+# Formats are read CROSS-PLATFORM (pure-Python) wherever possible so PC and Mac
+# teammates get the same result. macOS `textutil` is used as a higher-fidelity
+# fallback for the rich formats when present, but is never required.
+_PLAINTEXT_EXTS = (".md", ".txt", ".markdown", ".text", ".csv", ".tsv", ".log", ".rst")
+_OCR_IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".webp")
+# Legacy binary .doc has no reliable cross-platform reader — we deliberately call it
+# out (open in Word → Save As .docx) instead of relying on a macOS-only converter,
+# so the behavior is identical for everyone on the team.
+_CALLOUT_EXTS = {".doc": "legacy .doc — open in Word and “Save As” .docx"}
+
+# C5 — ingestion bounds (defense-in-depth). A stray huge file or a decompression
+# bomb (a tiny .odt/image that expands to gigabytes) shouldn't OOM the operator's
+# machine; it should skip with a note. Limits are generous for real course sources.
+_MAX_SOURCE_BYTES = 64 * 1024 * 1024            # per-file on-disk cap (64 MB)
+_MAX_TOTAL_SOURCE_BYTES = 256 * 1024 * 1024     # cap across all sources in one read
+_MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024      # cap a single zip member (odt) decompressed
+_MAX_IMAGE_PIXELS = 64 * 1024 * 1024            # ~64 MP — caps a decompression-bomb image
+
+
+def _read_via_textutil(path):
+    """macOS-native text extraction (high fidelity). Returns text, or None when
+    textutil is unavailable (non-macOS) or the conversion fails — so the caller
+    can fall back to the cross-platform reader."""
+    import shutil
+    import subprocess
+    if not shutil.which("textutil"):
+        return None
+    try:
+        r = subprocess.run(["textutil", "-convert", "txt", "-stdout", path],
+                           capture_output=True, text=True, timeout=90)
+        return r.stdout if r.returncode == 0 else None
+    except Exception:
+        return None
+
+
+def _strip_markup(xml):
+    """Crude tag-strip + entity-unescape — good enough to turn HTML/ODT body XML
+    into readable source text for the model."""
+    import html
+    import re
+    xml = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", xml)
+    xml = re.sub(r"(?is)</(p|div|br|li|tr|h[1-6]|para|text:p)\s*>", "\n", xml)
+    xml = re.sub(r"(?s)<[^>]+>", " ", xml)
+    text = html.unescape(xml)
+    return re.sub(r"[ \t]*\n[ \t]*", "\n", re.sub(r"[ \t]+", " ", text)).strip()
+
+
+def _html_to_text(path):
+    try:
+        return _strip_markup(open(path, encoding="utf-8", errors="replace").read())
+    except OSError:
+        return ""
+
+
+def _odt_to_text(path):
+    """ODT is a zip; the body lives in content.xml. Pure-Python, cross-platform."""
+    import zipfile
+    try:
+        with zipfile.ZipFile(path) as z:
+            # C5: refuse a decompression bomb — check the member's DECLARED
+            # uncompressed size before reading it into memory.
+            if z.getinfo("content.xml").file_size > _MAX_DECOMPRESSED_BYTES:
+                return ""
+            return _strip_markup(z.read("content.xml").decode("utf-8", "replace"))
+    except Exception:
+        return ""
+
+
+def _rtf_to_text(path):
+    """Minimal RTF → text: drop control words/groups, keep the literal runs.
+    Not a full RTF parser, but enough to recover source prose cross-platform."""
+    import re
+    try:
+        rtf = open(path, encoding="latin-1", errors="replace").read()
+    except OSError:
+        return ""
+    rtf = re.sub(r"\\par[d]?\b", "\n", rtf)
+    rtf = re.sub(r"\\'[0-9a-fA-F]{2}", "", rtf)        # hex-escaped bytes
+    rtf = re.sub(r"\\[a-zA-Z]+-?\d* ?", "", rtf)       # control words
+    rtf = rtf.replace("{", "").replace("}", "")
+    return re.sub(r"\n[ \t]*", "\n", rtf).strip()
+
+
+def _tesseract_cmd():
+    """Locate the Tesseract binary cross-platform. It's on PATH on macOS/Linux
+    (brew/apt) and usually on Windows too — BUT the UB-Mannheim Windows installer
+    drops `tesseract.exe` under Program Files and does NOT add it to PATH, so an
+    operator who installs it can still hit a false "OCR not available". So when
+    `shutil.which` misses on Windows, also probe the default install locations.
+    Returns the binary path, or None if Tesseract genuinely isn't installed."""
+    found = shutil.which("tesseract")
+    if found:
+        return found
+    if os.name == "nt":
+        for base in (os.environ.get("ProgramFiles", r"C:\Program Files"),
+                     os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")):
+            cand = os.path.join(base, "Tesseract-OCR", "tesseract.exe")
+            if os.path.isfile(cand):
+                return cand
+    return None
+
+
+def _ocr_image(path):
+    """Read text out of an image via Tesseract OCR (cross-platform). Returns the
+    text, "" if the image holds no text, or None when OCR isn't available (so the
+    file is reported as skipped with an install hint rather than silently dropped).
+    Needs the `tesseract` binary (see _tesseract_cmd) + the `pytesseract` package;
+    Pillow ships with the engine already."""
+    cmd = _tesseract_cmd()
+    if not cmd:
+        return None
+    try:
+        import pytesseract
+        from PIL import Image
+    except Exception:
+        return None
+    # On Windows the binary is often off PATH (found via the install-path probe),
+    # so point pytesseract straight at it; harmless to set on every platform.
+    pytesseract.pytesseract.tesseract_cmd = cmd
+    # C5: cap pixels so a decompression-bomb image raises (and is skipped) instead
+    # of allocating gigabytes; PIL warns at the cap and errors at 2x it.
+    Image.MAX_IMAGE_PIXELS = _MAX_IMAGE_PIXELS
+    try:
+        return pytesseract.image_to_string(Image.open(path)) or ""
+    except Exception:
+        return None
+
+
 def _read_one(path):
     low = path.lower()
-    if low.endswith((".md", ".txt", ".markdown")):
+    if low.endswith(_PLAINTEXT_EXTS):
         try:
             return open(path, encoding="utf-8", errors="replace").read()
         except OSError:
@@ -154,19 +363,38 @@ def _read_one(path):
             from docx import Document
             return "\n".join(p.text for p in Document(path).paragraphs)
         except Exception:
-            return ""
+            return _read_via_textutil(path)       # mac fallback if python-docx chokes
     if low.endswith(".pdf"):
         try:
             from pypdf import PdfReader
             return "\n".join((pg.extract_text() or "") for pg in PdfReader(path).pages)
         except Exception:
             return ""
-    return None                                   # unsupported (e.g. images)
+    if low.endswith((".html", ".htm")):
+        return _read_via_textutil(path) or _html_to_text(path)
+    if low.endswith(".odt"):
+        return _read_via_textutil(path) or _odt_to_text(path)
+    if low.endswith((".rtf", ".rtfd")):
+        return _read_via_textutil(path) or _rtf_to_text(path)
+    if low.endswith(_OCR_IMAGE_EXTS):
+        return _ocr_image(path)                   # OCR (cross-platform via Tesseract)
+    return None                                   # .doc + anything else → see _CALLOUT_EXTS
+
+
+def _skip_reason(name):
+    """A human, actionable note for a file we couldn't read (shown in the UI)."""
+    ext = os.path.splitext(name)[1].lower()
+    if ext in _CALLOUT_EXTS:
+        return f"{name} ({_CALLOUT_EXTS[ext]})"
+    if ext in _OCR_IMAGE_EXTS:
+        return f"{name} (image — install Tesseract OCR to read text from images)"
+    return name
 
 
 def read_sources(path):
     """Concatenate readable source docs from a FOLDER or a single FILE.
-    Returns (text, used_files, skipped_files)."""
+    Returns (text, used_files, skipped_files). Skipped entries carry an actionable
+    note (e.g. a .doc to convert, or an image needing OCR)."""
     path = os.path.expanduser(path or "")
     used, skipped, parts = [], [], []
     if os.path.isfile(path):
@@ -176,13 +404,29 @@ def read_sources(path):
                    if not n.startswith(".")]
     else:
         return "", used, skipped
+    total = 0
     for full in targets:
         if not os.path.isfile(full):
             continue
         name = os.path.basename(full)
+        try:
+            size = os.path.getsize(full)
+        except OSError:
+            size = 0
+        # C5: skip an over-large file (and stop once the whole source set gets too
+        # big) with an actionable note, rather than loading it and risking OOM.
+        if size > _MAX_SOURCE_BYTES:
+            skipped.append(f"{name} (skipped — larger than "
+                           f"{_MAX_SOURCE_BYTES // (1024 * 1024)} MB)")
+            continue
+        if total + size > _MAX_TOTAL_SOURCE_BYTES:
+            skipped.append(f"{name} (skipped — source set exceeds the "
+                           f"{_MAX_TOTAL_SOURCE_BYTES // (1024 * 1024)} MB total cap)")
+            continue
+        total += size
         text = _read_one(full)
         if text is None:
-            skipped.append(name)                  # unsupported format (e.g. image)
+            skipped.append(_skip_reason(name))    # unreadable — with a how-to note
             continue
         if text.strip():
             parts.append(f"===== SOURCE DOCUMENT: {name} =====\n{text.strip()}")
@@ -203,6 +447,18 @@ def list_images(folder):
                   if n.lower().endswith(_IMAGE_EXTS) and not n.startswith("."))
 
 
+def brand_image_dir(brand_name):
+    """The brand's built-in image LIBRARY folder (<brand>/images), or None. Lets a
+    deck draw on on-brand template imagery by default — without the author having
+    to pick an images folder. Used as the fallback when no folder is selected."""
+    try:
+        import brand as _brand
+        d = _brand.load_brand(brand_name).asset("images")
+        return d if d and os.path.isdir(d) else None
+    except Exception:
+        return None
+
+
 def _image_directive(images):
     """Tell the model the EXACT image files it may place — or none. Without this the
     model invents slot filenames that match nothing and render as broken images."""
@@ -217,7 +473,7 @@ def _image_directive(images):
 
 
 def build_prompt(objective, audience, archetype, n_units, sources_text, course_title=None,
-                 images=None):
+                 images=None, preset=None):
     guide_path = os.path.join(TEMPLATES, "AUTHORING_GUIDE.md")
     guide = open(guide_path, encoding="utf-8").read() if os.path.isfile(guide_path) else ""
     arch_path = os.path.join(TEMPLATES, f"{archetype}.md")
@@ -282,7 +538,7 @@ HARD OUTPUT RULES:
   why a note vs prose). Keep it to 1–3 short lines, under the `**Articulate Build Notes:**` marker.
 
 {_image_directive(images)}
-
+{_course_preset_block(preset)}
 {title_line}LEARNING OBJECTIVES / INTENT (the lens for the course — NOT a table of contents, and
 NOT a cap on the number of units): {objective}
 AUDIENCE: {audience}
@@ -317,8 +573,13 @@ def _guide_and_archetype(archetype):
     return guide, arch
 
 
-def build_plan_prompt(objective, audience, archetype, n_units, sources_text, course_title=None):
-    """Pass 2 — PLAN only. Returns a short, strictly-formatted unit breakdown."""
+def build_plan_prompt(objective, audience, archetype, n_units, sources_text, course_title=None,
+                      preset=None):
+    """Pass 2 — PLAN only. Returns a short, strictly-formatted unit breakdown.
+
+    The third column is the unit's MEASURABLE outcomes — these become the seed for that
+    unit's required Slide-1 `*Objectives:*` block when the unit is scripted (so the plan
+    and the rendered objectives stay consistent: auto-derived objectives)."""
     count = (f"Produce exactly {n_units} unit(s)." if n_units
              else "Use as many 10–15-minute units as COMPLETE COVERAGE of the source needs "
                   "(driven by coverage, NOT by the number of objectives).")
@@ -333,10 +594,11 @@ later), with no redundancy. {count}
 
 OUTPUT FORMAT — output EXACTLY this and nothing else (no prose, no code fences):
 RATIONALE: <one or two sentences on why this set of units and this teaching order>
-UNIT | <short unit title> | <the specific learning points / objective this unit teaches>
+UNIT | <short unit title> | <2–4 MEASURABLE outcomes this unit teaches — what the learner will be
+able to DO, each starting with an observable verb (identify, decide, apply…), separated by "; ">
 UNIT | <short unit title> | <...>
 (one `UNIT |` line per unit, in teaching order)
-
+{_course_preset_block(preset)}
 {title_line}COURSE INTENT (the lens — NOT a cap on unit count): {objective}
 AUDIENCE: {audience}
 ARCHETYPE: {archetype} — {desc}
@@ -368,7 +630,7 @@ def parse_plan(raw):
 
 
 def build_unit_prompt(unit, all_units, idx, total, objective, audience, archetype,
-                      sources_text, course_title=None, images=None):
+                      sources_text, course_title=None, images=None, preset=None):
     """Pass 3 — write ONE unit's full §8 script, with the whole plan as context."""
     guide, arch = _guide_and_archetype(archetype)
     plan_list = "\n".join(f"{i}. {u.get('title','')} — {u.get('objective','')}"
@@ -394,6 +656,11 @@ HARD OUTPUT RULES:
 - Start the response with `## Microlearning {idx}: {unit.get('title','')}`.
 - It MUST parse the §8 grammar on the first try (Slide 1 is always Learning Objectives with a
   *Visual:*; KCs use the `- A)` form with exactly one *Correct Answer:*).
+- AUTO-DERIVED OBJECTIVES: open Slide 1 with an `*Objectives:*` block whose 3–5 outcomes come
+  DIRECTLY from this unit's plan objective above ("Teaches: {unit.get('objective','')}"). Each
+  outcome is ONE observable action the learner will be able to perform — start with a verb
+  (identify, decide, apply…), never "understand"/"know". Stay faithful to the plan; do NOT add
+  outcomes this unit doesn't actually cover.
 - Ground every slide ONLY in the SOURCE MATERIAL. Do NOT invent product behavior or facts.
 {cs_rule}
 - PEDAGOGY (AUTHORING GUIDE §0): write for an ADULT learner — open with the learner's stake/relevance
@@ -404,7 +671,7 @@ HARD OUTPUT RULES:
   (1–3 lines) naming the §0 and §0b principles behind its structure AND presentation choices.
 
 {_image_directive(images)}
-
+{_course_preset_block(preset)}
 {title_line}COURSE INTENT: {objective}
 AUDIENCE: {audience}
 
@@ -418,6 +685,23 @@ AUDIENCE: {audience}
 {sources_text}
 ================= END SOURCE MATERIAL =================
 Now write ONLY unit {idx}, starting at `## Microlearning {idx}: {unit.get('title','')}`."""
+
+
+def replace_unit(md_text, which, new_unit_md):
+    """Splice a freshly-regenerated single unit back into a course .md, replacing
+    the `## Microlearning {which}:` section in place (preamble + other units kept)."""
+    heads = list(re.finditer(r'(?m)^##\s+Microlearning\s+(\d+)\s*:', md_text))
+    target = next((h for h in heads if int(h.group(1)) == which), None)
+    if not target:
+        return md_text                                  # unit not found — no-op
+    start = target.start()
+    nxt = next((h for h in heads if h.start() > start), None)
+    end = nxt.start() if nxt else len(md_text)
+    body = clean_output(new_unit_md).strip()
+    body = re.sub(r'(?m)^##\s+Microlearning\s+\d+\s*:', f'## Microlearning {which}:', body, count=1)
+    if not re.search(r'(?m)^##\s+Microlearning\s+\d+\s*:', body):
+        body = f"## Microlearning {which}: Unit {which}\n\n{body}"
+    return (md_text[:start].rstrip() + "\n\n" + body + "\n\n" + md_text[end:].lstrip("\n")).strip() + "\n"
 
 
 def assemble_course(course_title, rationale, unit_mds):
@@ -639,6 +923,11 @@ def lint(md_text):
         for m in re.finditer(rf"(?im)^\*\s*({cs_names})\s*:\*", md_text):
             errors.append(f"`*{m.group(1)}:*` is a COMING-SOON block type — not yet "
                           f"authorable (import-only). Remove it or use the available §8 grammar.")
+    # Knowledge-check answer-line faults the parser absorbs silently: a label after
+    # prose (dropped → mis-scored) and duplicate option labels (correct answer maps to
+    # the first match only). Raw scan because the parsed IR no longer carries either signal.
+    from md_import import kc_answer_issues_in
+    errors.extend(kc_answer_issues_in(md_text))
     with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as fh:
         fh.write(md_text)
         tmp = fh.name
@@ -669,6 +958,39 @@ def lint(md_text):
                             errors.append(f"unit {k}: a knowledge check must mark exactly ONE correct "
                                           f"option (found {n_correct}) — check the `*Correct Answer:*` "
                                           f"letter is present and matches one of the listed options")
+                        if b.get("multi") and (n_correct < 2 or n_correct >= len(opts)):
+                            errors.append(f"unit {k}: a multi-select knowledge check (multiple "
+                                          f"`*Correct Answer:*` letters) must mark at least TWO correct "
+                                          f"options and leave at least one wrong (found {n_correct} of "
+                                          f"{len(opts)}) — otherwise it isn't a real 'choose all' question")
+                    if b.get("type") == "scenario":
+                        scenes = b.get("scenes") or []
+                        if not any(sc.get("responses") for sc in scenes):
+                            errors.append(f"unit {k}: a *Scenario:* has no response choices — each "
+                                          f"`::: scene` needs at least one `- <response>` line")
+                        else:
+                            # Per-scene: a scene with narrative but NO choices is an
+                            # unanswerable dead-end. The old check passed if ANY ONE
+                            # scene had choices, letting later empty scenes through.
+                            for sc in scenes:
+                                if (sc.get("title") or sc.get("html")) and not sc.get("responses"):
+                                    snip = re.sub(r"<[^>]+>", "",
+                                                  sc.get("title") or sc.get("html") or "").strip()[:40]
+                                    errors.append(f"unit {k}: a *Scenario:* scene “{snip}” has narrative "
+                                                  f"but no `- <response>` choices — every decision scene "
+                                                  f"needs at least one response (a dead-end can't be answered)")
+                                    break
+                        for sc in scenes:
+                            resps = sc.get("responses") or []
+                            if resps and not any(r.get("preferred") for r in resps):
+                                errors.append(f"unit {k}: a *Scenario:* scene has choices but none marked "
+                                              f"`· preferred` — mark the best choice so the learner gets a "
+                                              f"clear model answer")
+                                break
+                    if b.get("type") == "objectives" and not (b.get("items") or []):
+                        errors.append(f"unit {k}: an *Objectives:* block has no outcomes — list at "
+                                      f"least one learner-outcome bullet, or remove the block (an empty "
+                                      f"objectives section ships a lead-in with nothing under it)")
                     if b.get("type") == "categorize":
                         ids = {bk.get("id") for bk in (b.get("buckets") or [])}
                         for it in (b.get("pool") or []):
@@ -708,7 +1030,7 @@ def _docx_comments(path):
     return out
 
 
-def revise(provider, script_path, reviewed_docx, out_path):
+def revise(provider, script_path, reviewed_docx, out_path, model=None):
     """Apply an SME's reviewed/commented .docx back onto the canonical script.
 
     Reads the current §8 script + the reviewed doc's body text + any tracked
@@ -747,7 +1069,7 @@ HARD OUTPUT RULES:
 ================= END =================
 Now output the full updated script, bare §8 markdown only, starting at `## Microlearning 1:`."""
 
-    ok, raw, err = run_cli(provider, prompt)
+    ok, raw, err = run_cli(provider, prompt, model=model)
     if not ok:
         return {"ok": False, "error": err}
     md_text = clean_output(raw)
@@ -768,18 +1090,122 @@ LAYOUT_PURPOSE = {
     "comparison": "2–3 side-by-side panels (A vs B, old vs new, options)",
     "timeline": "3–6 milestones along a line (roadmap / phases / dates)",
     "infographic": "one big idea: a problem column + numbered framework cards + a goals row",
+    "image": "an edge-to-edge image with a title/caption. mode: \"hero\" (big image below the header, default), \"full\" (full-bleed image with the title overlaid — great for a section opener), or \"banner\" (a wide image band under the header, with an intro/caption below)",
+    "imagetext": "an image flush to one side of the slide beside a short text column (intro + a few bullets) — side left or right",
+    "cards": "2–4 equal cards for parallel items (components, options, features) — NOT a sequence",
+    "quote": "a full-bleed pull-quote with attribution",
+    "statement": "one big impact line or a single large metric (KPI), centered full-bleed",
+    "bullets": "a clean agenda / takeaways list in one or two columns",
+    "agenda": "a numbered table of contents: ordered sections, each a title + one-line description",
+    "sectionheader": "a numbered SECTION BREAK opening a major section: a big section number + title (use between sections, NOT as the deck title — that's `divider`)",
+    "cycles": "a CIRCULAR / repeating process: 3–6 steps that loop (PDCA, a feedback or continuous-improvement cycle) — NOT a one-way `process` or `timeline`. Keep it to 6 steps or fewer; for a longer sequence use `process` or `timeline` (a cycle must fit on ONE slide — never split it)",
+    "closing": "a full-bleed thank-you / closing slide (optional contact lines), with the brand wordmark",
 }
-_LAYOUT_ORDER = ["divider", "process", "comparison", "timeline", "infographic"]
+
+# layouts the deck generator may emit. image/imagetext are offered ONLY when an
+# images folder is supplied (otherwise the model has no real files to place).
+_IMAGE_LAYOUTS = ["image", "imagetext"]
+_LAYOUT_ORDER = ["divider", "agenda", "sectionheader", "process", "cycles", "comparison",
+                 "timeline", "infographic", "cards", "quote", "statement", "bullets", "closing"]
+
+# Deck PURPOSE presets — purpose-specific profiles that shape the generated deck's
+# STRUCTURE (recommended layout arc), VOICE (tone), and LENGTH. They are a prompt
+# layer only: every preset uses the SAME on-brand layouts and the active brand —
+# the difference is structure and tone, never divergent styling. "general" is the
+# neutral default (no injection). The arc is GUIDANCE the model adapts to the
+# material, not a rigid mandate.
+DECK_PRESETS = {
+    "general": {
+        "label": "General (default)",
+        "desc": "Let the material decide the structure.",
+        "arc": "", "tone": "", "slides": None,
+    },
+    "formal": {
+        "label": "Formal presentation",
+        "desc": "A polished, executive-ready presentation.",
+        "arc": ("Open with a divider title slide, then an `agenda`. Frame major sections with "
+                "`divider` section breaks. Carry the substance in `comparison`, `infographic`, "
+                "`process`, and `timeline` slides. Land key points with a `statement`. Close "
+                "with a `closing` slide."),
+        "tone": ("Polished, confident, and concise. Lead with conclusions; keep each slide to one "
+                 "clear point. Neutral-formal register; minimal jargon."),
+        "slides": "10-12",
+    },
+    "debrief": {
+        "label": "Debrief / retrospective",
+        "desc": "A candid debrief on what happened and what's next.",
+        "arc": ("Open with a divider title, then a one-slide context summary (`statement` or "
+                "`bullets`). Walk the sequence of events with `timeline` or `process`. Contrast "
+                "what worked vs. what didn't with a `comparison`. End on clear takeaways and next "
+                "steps (`bullets`), then a brief `closing`."),
+        "tone": ("Candid, factual, and outcome-focused. State what happened plainly; emphasize "
+                 "learnings and concrete next actions over narrative."),
+        "slides": "6-10",
+    },
+    "workshop": {
+        "label": "Live training workshop",
+        "desc": "An interactive, instructor-led training workshop.",
+        "arc": ("Open with a divider title, then an `agenda` of objectives. Teach one concept per "
+                "slide using `infographic`, `process`, and `cards`; use `comparison` to distinguish "
+                "related ideas. Pause on `statement` slides for emphasis. Recap with `bullets`, "
+                "then `closing`."),
+        "tone": ("Instructional, plain-language, and engaging. Address the learner directly "
+                 "(\"you\"). One idea per slide; prefer more, simpler slides over dense ones. "
+                 "Define terms on first use."),
+        "slides": "10-16",
+    },
+    "client": {
+        "label": "Client-facing",
+        "desc": "A clear, benefit-led deck for an external client audience.",
+        "arc": ("Open with a divider title, then an overview (`statement` or `bullets`). Present "
+                "value and capabilities with `cards` and `comparison`; show how it works with "
+                "`process`; evidence outcomes with `timeline` or `statement`. Close with a "
+                "`closing` slide carrying contact details."),
+        "tone": ("Benefit-led, reassuring, and jargon-light. Translate internal product/feature "
+                 "names into plain customer value. Avoid internal aliases and acronyms; never "
+                 "expose internal-only detail."),
+        "slides": "8-12",
+    },
+    "pitch": {
+        "label": "Pitch deck",
+        "desc": "A punchy, persuasive pitch deck.",
+        "arc": ("Open with a divider title, then the problem (`statement` or `infographic`), the "
+                "solution (`cards` or `process`), what makes it different (`comparison`), proof or "
+                "traction (`statement` or `timeline`), and a single clear ask (`statement`). Close "
+                "with a `closing` slide."),
+        "tone": ("Punchy and persuasive. Big, confident statements; minimal text per slide; build "
+                 "narrative momentum problem -> solution -> proof -> ask."),
+        "slides": "8-12",
+    },
+}
 
 
-def load_slide_templates():
-    """The canonical per-layout content templates — the SAME files the slide
-    renderer ships, so the deck pipeline and the slide pipeline share templates."""
+def _preset_directive(preset):
+    """The prompt block injected for a deck PURPOSE preset, or '' for the neutral
+    default / an unknown key. Tolerant of None/garbage."""
+    p = DECK_PRESETS.get((preset or "general"))
+    if not p or not (p.get("arc") or p.get("tone")):
+        return ""
+    parts = [f"PRESENTATION PURPOSE: {p['label']} — {p['desc']}"]
+    if p.get("arc"):
+        parts.append("RECOMMENDED ARC (adapt to the material; never pad with empty slides): "
+                     + p["arc"])
+    if p.get("tone"):
+        parts.append("VOICE & TONE: " + p["tone"])
+    if p.get("slides"):
+        parts.append(f"LENGTH: aim for roughly {p['slides']} slides unless the material clearly "
+                     "warrants more or fewer.")
+    return "\n".join(parts)
+
+
+def _load_layout_templates(names):
+    """Load the named per-layout example templates (the SAME files the slide
+    renderer ships), preserving order; skip any that are missing/unreadable."""
     import json as _json
     d = os.path.join(TEMPLATES, "slide-layouts")
     out = {}
     if os.path.isdir(d):
-        for lay in _LAYOUT_ORDER:
+        for lay in names:
             fp = os.path.join(d, f"{lay}.example.json")
             if os.path.isfile(fp):
                 try:
@@ -789,9 +1215,17 @@ def load_slide_templates():
     return out
 
 
-def build_deck_prompt(title, focus, audience, n_slides, sources_text):
+def load_slide_templates(images=None):
+    """The canonical per-layout content templates shared by the deck and slide
+    pipelines. The image layouts are included ONLY when image files are available
+    (so the model isn't told to place pictures that don't exist)."""
+    names = list(_LAYOUT_ORDER) + (_IMAGE_LAYOUTS if images else [])
+    return _load_layout_templates(names)
+
+
+def build_deck_prompt(title, focus, audience, n_slides, sources_text, images=None, preset=None):
     import json as _json
-    templates = load_slide_templates()
+    templates = load_slide_templates(images=images)
     guide = "\n\n".join(
         f'### layout "{lay}" — {LAYOUT_PURPOSE.get(lay, "")}\n{_json.dumps(ex, indent=2)}'
         for lay, ex in templates.items())
@@ -799,21 +1233,31 @@ def build_deck_prompt(title, focus, audience, n_slides, sources_text):
              else "Use however many slides the material warrants — typically 6–12.")
     ttl = f"PRESENTATION TITLE: {title}\n" if title else ""
     aud = f"AUDIENCE: {audience}\n" if audience else ""
+    pre = _preset_directive(preset)
+    pre_block = f"\n================= PRESENTATION PURPOSE =================\n{pre}\n" if pre else ""
+    layout_names = ", ".join(list(_LAYOUT_ORDER) + (_IMAGE_LAYOUTS if images else []))
+    img_rule = ("\n- IMAGES: on an `image` or `imagetext` slide, set \"image\" to one of the "
+                "available filenames below — never invent one. Use these layouts only where a "
+                "real image genuinely helps.\n" + _image_directive(images) if images else "")
     return f"""You are a presentation designer. Convert the SOURCE MATERIAL into an on-brand \
 slide DECK by choosing, for each slide, the best-fitting template LAYOUT and filling its content.
 
 HARD OUTPUT RULES:
 - Output ONLY a single JSON object: {{"slides": [ {{"layout": "<name>", "content": {{...}}}}, ... ]}}.
 - No preamble, no explanation, no markdown, no ``` fences. The FIRST character must be '{{'.
-- "layout" must be one of: infographic, process, comparison, timeline, divider.
+- "layout" must be one of: {layout_names}.
 - "content" MUST match that layout's schema below; omit keys you don't need.
+- "theme" is OPTIONAL per slide: "dark" or "light". Omit it to use each layout's natural
+  theme (most content layouts are light; title/divider/section/closing/quote/statement are dark).
+  Set it only to deliberately flip ONE slide — e.g. a "light" section break for contrast, or a
+  "dark" statement among light slides. Keep a deck visually consistent; don't alternate randomly.
 - Match the layout to the content (the SAME design rules the course generator uses — §0b):
 {LAYOUT_MATCH}
-- Open with a divider title slide. Ground EVERY slide ONLY in the source material; do NOT invent facts.
+- Open with a divider title slide. Ground EVERY slide ONLY in the source material; do NOT invent facts.{img_rule}
 - {count}
 
 {ttl}{aud}FOCUS / WHAT TO EMPHASIZE: {focus or "(summarize the key content faithfully)"}
-
+{pre_block}
 - "accent" is optional anywhere and must be one of primary|secondary|tertiary|dark (colors come from
   the brand). Each "items" entry is either ["bold lead"," rest of line"] or a plain string. Keep text
   tight so it fits one slide.
@@ -845,9 +1289,13 @@ def lint_deck(slides):
     Returns (ok, n, errors)."""
     if not slides:
         return False, 0, ["no slides produced"]
-    valid = {"infographic", "process", "comparison", "timeline", "divider"}
+    valid = set(_LAYOUT_ORDER) | set(_IMAGE_LAYOUTS)
     errors = [f"slide {i}: unknown layout {(s or {}).get('layout')!r}"
               for i, s in enumerate(slides, 1) if (s or {}).get("layout") not in valid]
+    # the optional cross-cutting theme override must be dark|light when present
+    errors += [f"slide {i}: invalid theme {(s or {}).get('theme')!r} (use \"dark\" or \"light\")"
+               for i, s in enumerate(slides, 1)
+               if (s or {}).get("theme") not in (None, "dark", "light")]
     if errors:
         return False, len(slides), errors
     import slide_layouts
@@ -865,17 +1313,20 @@ def lint_deck(slides):
     return (not errors), len(slides), errors
 
 
-def generate_deck(provider, source_folder, title=None, focus="", audience="", n_slides=None):
+def generate_deck(provider, source_folder, title=None, focus="", audience="", n_slides=None,
+                  model=None, images=None, preset=None):
     """Convert raw source documents into a templated slide deck (list of
     {layout, content}). Mirrors generate() but the output is a deck spec, not a
-    course script. Never raises for normal failures."""
+    course script. `images` (filenames available in the slide tab's image folder)
+    unlocks the image/imagetext layouts. Never raises for normal failures."""
     import json as _json
     sources_text, used, skipped = read_sources(source_folder)
     if not sources_text.strip():
-        return {"ok": False, "error": "No readable source documents found (.md/.txt/.docx).",
+        return {"ok": False, "error": "No readable source documents found (.md/.txt/.csv/.doc/.docx/.rtf/.odt/.html/.pdf).",
                 "skipped": skipped}
-    prompt = build_deck_prompt(title, focus, audience, n_slides, sources_text)
-    ok, raw, err = run_cli(provider, prompt)
+    prompt = build_deck_prompt(title, focus, audience, n_slides, sources_text, images=images,
+                               preset=preset)
+    ok, raw, err = run_cli(provider, prompt, model=model)
     if not ok:
         return {"ok": False, "error": err, "used_sources": used, "skipped": skipped}
     try:
@@ -893,8 +1344,118 @@ def generate_deck(provider, source_folder, title=None, focus="", audience="", n_
             "provider": provider}
 
 
+def build_regen_slide_prompt(layout, current_content, slide_summaries, idx, total,
+                             title, focus, audience, sources_text, guidance,
+                             scope_content=True, scope_layout=True, images=None):
+    """Prompt to re-draft ONE slide of an existing deck — keeps it coherent with
+    the other slides (passed as summaries) and grounded in the source. Shares the
+    canonical layout templates with build_deck_prompt.
+
+    scope_content / scope_layout narrow what may change:
+      content only  -> reword/improve the TEXT, keep the same layout
+      layout only   -> keep the wording/substance, re-express in the best-fitting layout
+      both          -> a free re-draft (may change layout AND reword)"""
+    import json as _json
+    templates = load_slide_templates(images=images)
+    guide = "\n\n".join(
+        f'### layout "{lay}" — {LAYOUT_PURPOSE.get(lay, "")}\n{_json.dumps(ex, indent=2)}'
+        for lay, ex in templates.items())
+    others = "\n".join(slide_summaries) or "(this is the only slide)"
+    cur = _json.dumps({"layout": layout, "content": current_content}, indent=2)
+    ttl = f"PRESENTATION TITLE: {title}\n" if title else ""
+    aud = f"AUDIENCE: {audience}\n" if audience else ""
+    foc = f"FOCUS / EMPHASIS: {focus}\n" if focus else ""
+    g = f"\nREVISION GUIDANCE (apply it faithfully): {guidance}\n" if guidance else ""
+    layout_names = ", ".join(list(_LAYOUT_ORDER) + (_IMAGE_LAYOUTS if images else []))
+    if scope_layout:
+        layout_rule = (f'- "layout" must be one of: {layout_names}. Keep "{layout}" unless a '
+                       f'different one of those clearly fits the revised content better.')
+    else:
+        layout_rule = (f'- "layout" MUST stay "{layout}" — do NOT change it. Output that '
+                       f'exact layout.')
+    if scope_content and not scope_layout:
+        scope_rule = ("\nREVISION SCOPE: Re-word and sharpen the TEXT only. Keep the SAME "
+                      f'layout ("{layout}") and the same overall structure; improve clarity, '
+                      "tone, and concision.\n")
+    elif scope_layout and not scope_content:
+        scope_rule = ("\nREVISION SCOPE: Keep the existing wording and substance; re-express "
+                      "THIS SAME content in whichever layout fits it best. Do not introduce new "
+                      "facts or reword beyond what the new structure requires.\n")
+    else:
+        scope_rule = ("\nREVISION SCOPE: Full re-draft — you may change the layout AND reword "
+                      "the content (still grounded only in the source).\n")
+    return f"""You are a presentation designer revising ONE slide inside an existing deck.
+Re-draft slide {idx} of {total}. Keep it coherent with the rest of the deck and do NOT \
+duplicate the other slides' content.
+{scope_rule}
+HARD OUTPUT RULES:
+- Output ONLY a single JSON object: {{"layout": "<name>", "content": {{...}}}}.
+- No preamble, no explanation, no markdown, no ``` fences. The FIRST character must be '{{'.
+{layout_rule}
+- "content" MUST match that layout's schema below; omit keys you don't need.
+- Ground the slide ONLY in the source material; do NOT invent facts.
+{LAYOUT_MATCH}
+{(chr(10) + _image_directive(images)) if images else ""}
+{ttl}{aud}{foc}{g}
+THE OTHER SLIDES (for context — keep THIS slide distinct from them):
+{others}
+
+THE CURRENT SLIDE (revise this one):
+{cur}
+
+================= LAYOUT TEMPLATES (fill these — the placeholder text shows the schema) =================
+{guide}
+
+================= SOURCE MATERIAL =================
+{sources_text}
+
+================= END SOURCE MATERIAL =================
+Now output the revised slide JSON object. First character '{{', last character '}}'. Nothing else."""
+
+
+def regenerate_slide(provider, source_folder, layout, current_content, slide_summaries,
+                     idx, total, title="", focus="", audience="", guidance="", model=None,
+                     scope_content=True, scope_layout=True, images=None):
+    """Re-draft a SINGLE slide (optionally with guidance), keeping the rest of the
+    deck untouched. `scope_content`/`scope_layout` narrow what may change (text-only,
+    layout-only, or both). Returns {ok, layout, content, lint_ok, lint_errors}. Never
+    raises for normal failures. Mirrors regenerate-one-module on the course side."""
+    import json as _json
+    sources_text, used, skipped = read_sources(source_folder)
+    if not sources_text.strip():
+        return {"ok": False, "error": "No readable source documents found (.md/.txt/.csv/.doc/.docx/.rtf/.odt/.html/.pdf)."}
+    prompt = build_regen_slide_prompt(layout, current_content, slide_summaries, idx, total,
+                                      title, focus, audience, sources_text, guidance,
+                                      scope_content=scope_content, scope_layout=scope_layout,
+                                      images=images)
+    ok, raw, err = run_cli(provider, prompt, model=model)
+    if not ok:
+        return {"ok": False, "error": err}
+    try:
+        data = _json.loads(clean_json(raw))
+    except ValueError as e:
+        return {"ok": False, "error": f"the model did not return valid JSON: {e}",
+                "raw": raw[:2000]}
+    # tolerate a {"slides":[...]} wrapper, or a bare content object with no wrapper
+    if isinstance(data, dict) and isinstance(data.get("slides"), list) and data["slides"]:
+        data = data["slides"][0] or {}
+    if isinstance(data, dict) and ("layout" in data or "content" in data):
+        lay = data.get("layout") or layout
+        content = data.get("content") if isinstance(data.get("content"), dict) else {}
+    else:                                            # model returned bare content
+        lay, content = layout, (data if isinstance(data, dict) else {})
+    valid = set(_LAYOUT_ORDER) | set(_IMAGE_LAYOUTS)
+    if lay not in valid:
+        lay = layout
+    if not scope_layout:                 # layout was locked — ignore any AI layout change
+        lay = layout
+    lint_ok, _n, lint_errors = lint_deck([{"layout": lay, "content": content}])
+    return {"ok": True, "layout": lay, "content": content, "lint_ok": lint_ok,
+            "lint_errors": lint_errors, "skipped": skipped}
+
+
 def generate(provider, source_folder, objective, audience, archetype, n_units, out_path,
-             course_title=None):
+             course_title=None, preset=None):
     """Full Stage-2 run. Returns a result dict (never raises for normal failures)."""
     if not objective or not audience:
         return {"ok": False, "error": "Objective and audience are required (no drafting without them)."}
@@ -902,10 +1463,11 @@ def generate(provider, source_folder, objective, audience, archetype, n_units, o
         return {"ok": False, "error": f"unknown archetype {archetype}"}
     sources_text, used, skipped = read_sources(source_folder)
     if not sources_text.strip():
-        return {"ok": False, "error": "No readable source documents found (.md/.txt/.docx).",
+        return {"ok": False, "error": "No readable source documents found (.md/.txt/.csv/.doc/.docx/.rtf/.odt/.html/.pdf).",
                 "skipped": skipped}
 
-    prompt = build_prompt(objective, audience, archetype, n_units, sources_text, course_title)
+    prompt = build_prompt(objective, audience, archetype, n_units, sources_text, course_title,
+                          preset=preset)
     ok, raw, err = run_cli(provider, prompt)
     if not ok:
         return {"ok": False, "error": err, "used_sources": used, "skipped": skipped}

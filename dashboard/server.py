@@ -10,7 +10,8 @@ Folder selection is an IN-BROWSER navigator (no native dialog, nothing to crash 
 the main thread). The server only shells out to src/cli.py and calls
 src/docx_review — it reimplements no engine logic.
 
-Launch (double-clickable): dashboard/launch.command   ·   or: python3 dashboard/server.py
+Launch (double-clickable): dashboard/launch.command (macOS) · dashboard/launch.bat
+(Windows)   ·   or: python3 dashboard/server.py
 """
 import os
 import re
@@ -43,13 +44,29 @@ if SRC not in sys.path:
 CSRF_TOKEN = secrets.token_urlsafe(24)
 
 
+def _platform_drive_roots():
+    """OS-specific extra roots so the folder navigator reaches external/mounted
+    drives. macOS: /Volumes. Windows: each accessible drive root (C:\\, D:\\, …) —
+    the analogue of /Volumes, so a source on a second/external drive (D:\\) isn't
+    clamped back to home. Linux: nothing extra (home + temp + repo cover it)."""
+    if os.name == "nt":
+        roots = []
+        for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+            d = f"{letter}:\\"
+            if os.path.isdir(d):
+                roots.append(d)
+        return roots
+    if os.path.isdir("/Volumes"):
+        return ["/Volumes"]               # external/mounted drives on macOS
+    return []
+
+
 def _allow_roots():
     """Directories the file endpoints may read/list/serve under — broad enough to
     keep the folder navigator useful (home + mounted drives + build staging) while
     excluding system trees (/etc) and other users' homes."""
     cands = [os.path.expanduser("~"), ROOT, tempfile.gettempdir()]
-    if os.path.isdir("/Volumes"):
-        cands.append("/Volumes")          # external/mounted drives on macOS
+    cands.extend(_platform_drive_roots())
     roots = []
     for c in cands:
         try:
@@ -90,6 +107,28 @@ def _safe_brand(b):
     if b not in list_brands():
         raise ValueError(f"unknown brand: {b}")
     return b
+
+
+def _safe_images_dir(v):
+    """Resolve an images folder for slide preview/build, confined to the allowed
+    roots (same file-read confinement as the other endpoints). Returns the
+    expanded path, or None when blank/disallowed/not-a-dir — callers then render
+    image slots as labeled placeholders rather than failing."""
+    if not v or not isinstance(v, str) or v.startswith("-") or not _within_roots(v):
+        return None
+    rp = os.path.abspath(os.path.expanduser(v))
+    return rp if os.path.isdir(rp) else None
+
+
+def _deck_images_dir(p):
+    """The effective image folder for a deck: the author's chosen folder if any,
+    otherwise the brand's built-in image LIBRARY (so on-brand template imagery is
+    available by default). The brand library is a trusted in-repo asset dir."""
+    import authoring
+    chosen = _safe_images_dir(p.get("images"))
+    if chosen:
+        return chosen
+    return authoring.brand_image_dir(_safe_brand(p.get("brand", "_default")))
 
 # project scaffold — friendly, numbered so the flow is obvious in Finder
 PROJECT_FOLDERS = {
@@ -347,13 +386,19 @@ def do_build(p):
     target = os.path.join(out_root, ".preview") if p.get("stage") else out_root
     os.makedirs(target, exist_ok=True)
     pp = dict(p); pp["out"] = target
+    import build_report
     results = []
     for j in build_jobs(pp):
         ok, log = run_cli(j["args"])
         ok = ok and os.path.exists(j["out"])
         prev = j["preview"] if (ok and j["preview"] and os.path.exists(j["preview"])) else None
+        # Structured build report (C1): the engine writes <stem>.report.json beside the
+        # artifact (it runs in a subprocess, so the report crosses the boundary on disk).
+        # Surface it so a degraded build — dropped block, mis-scored quiz — tells the
+        # operator in the UI, not just in the stderr log.
+        report = build_report.read(j["out"])
         results.append({"label": j["label"], "ok": ok, "out": j["out"], "preview": prev,
-                        "log": log, "fmt": j["fmt"]})
+                        "log": log, "fmt": j["fmt"], "report": report})
     return {"results": results, "staged": bool(p.get("stage")), "out_root": out_root}
 
 
@@ -368,7 +413,35 @@ def do_generate_deck(p):
         title=p.get("title") or None,
         focus=p.get("focus", ""),
         audience=p.get("audience", ""),
-        n_slides=int(p["nslides"]) if str(p.get("nslides", "")).strip().isdigit() else None)
+        n_slides=int(p["nslides"]) if str(p.get("nslides", "")).strip().isdigit() else None,
+        model=p.get("model"),
+        images=authoring.list_images(_deck_images_dir(p)),
+        preset=p.get("preset"))
+
+
+def do_regenerate_slide(p):
+    """Re-draft ONE slide of the deck (optional guidance), keeping the others
+    untouched. The slide-tab analogue of /api/regenerate-unit."""
+    import authoring
+    content = p.get("content")
+    if isinstance(content, str):
+        try:
+            content = json.loads(content)
+        except ValueError:
+            content = {}
+    return authoring.regenerate_slide(
+        provider=p.get("provider", "claude"),
+        source_folder=p.get("source", ""),
+        layout=p.get("layout", "infographic"),
+        current_content=content if isinstance(content, dict) else {},
+        slide_summaries=p.get("slide_summaries") or [],
+        idx=int(p.get("idx", 1)), total=int(p.get("total", 1)),
+        title=p.get("title", ""), focus=p.get("focus", ""),
+        audience=p.get("audience", ""), guidance=p.get("guidance", ""),
+        model=p.get("model"),
+        scope_content=p.get("scope_content", True),
+        scope_layout=p.get("scope_layout", True),
+        images=authoring.list_images(_deck_images_dir(p)))
 
 
 def do_deck(p):
@@ -395,18 +468,29 @@ def do_deck(p):
                 content = json.loads(content)
             except ValueError as e:
                 return {"ok": False, "out": op, "log": f"Slide {i} content is not valid JSON: {e}"}
-        norm.append({"layout": sp.get("layout", "infographic"), "content": content or {}})
+        slide = {"layout": sp.get("layout", "infographic"), "content": content or {}}
+        if sp.get("theme") in ("dark", "light"):     # carry the cross-cutting theme flag
+            slide["theme"] = sp["theme"]
+        norm.append(slide)
 
     cf = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8")
     try:
         json.dump({"slides": norm}, cf)
         cf.close()
         args = ["deck", "--content", cf.name, "--brand", _safe_brand(p.get("brand", "_default")), "--out", op]
+        imgdir = _deck_images_dir(p)
+        if imgdir:
+            args += ["--images", imgdir]
         tr = p.get("transition")
         if tr and tr in ("fade", "cut", "push", "wipe", "split", "cover"):
             args += ["--transition", tr]
             if p.get("transition_dir") in ("l", "r", "u", "d"):
                 args += ["--transition-dir", p["transition_dir"]]
+        # Per-element entrance animation (validated in PowerPoint: canonical
+        # mainSeq build, float-in, ~0.65s spacing). Baked into the built .pptx.
+        anim = p.get("animate")
+        if anim and anim in ("fade", "rise", "flyleft", "flyright"):
+            args += ["--animate", anim]
         ok, log = run_cli(args)
     finally:
         try:
@@ -415,6 +499,39 @@ def do_deck(p):
             pass
     ok = ok and os.path.exists(op)
     return {"ok": ok, "out": op, "log": log, "slides": len(norm), "out_dir": out_dir}
+
+
+def do_deck_svg(p):
+    """Render the deck to one faithful SVG poster per slide for the in-browser
+    slideshow preview. Reuses the EXACT slide_layouts geometry via slide_svg's
+    mock backend (no .pptx, no LibreOffice) so the preview matches the export."""
+    import slide_svg, brand as brandmod
+    slides = p.get("slides")
+    if not isinstance(slides, list) or not slides:
+        return {"ok": False, "error": "Add at least one slide to preview."}
+    # slide_svg parses content (dict OR JSON string) tolerantly, so a single
+    # broken slide previews as an error card instead of blanking the slideshow.
+    b = brandmod.load_brand(_safe_brand(p.get("brand", "_default")))
+    anim = bool(p.get("animate")) and p.get("animate") != "none"
+    svgs = slide_svg.render_deck_svg(slides, b, images_dir=_deck_images_dir(p),
+                                     animate=anim)
+    return {"ok": True, "svgs": svgs, "count": len(svgs)}
+
+
+def do_slide_svg(p):
+    """Render ONE slide to a faithful SVG poster — the same geometry as the
+    deck preview and the .pptx export. Backs the inline Step-2 row thumbnails,
+    which fetch per-slide (and the client caches by content) so a single
+    regenerate/recolor re-renders only its own thumbnail. Reuses
+    render_deck_svg's tolerant parsing → a broken slide becomes an error card,
+    never a 500."""
+    import slide_svg, brand as brandmod
+    b = brandmod.load_brand(_safe_brand(p.get("brand", "_default")))
+    slide = {"layout": p.get("layout", "infographic"), "content": p.get("content")}
+    if p.get("theme") in ("dark", "light"):     # carry the cross-cutting theme flag
+        slide["theme"] = p["theme"]
+    svgs = slide_svg.render_deck_svg([slide], b, images_dir=_deck_images_dir(p))
+    return {"ok": True, "svg": svgs[0] if svgs else ""}
 
 
 def do_publish(p):
@@ -485,7 +602,7 @@ def do_generate(p):
         provider=p.get("provider", "claude"), source_folder=p["source"],
         objective=p.get("objective", ""), audience=p.get("audience", ""),
         archetype=p.get("archetype", "concept-explainer"), n_units=n_units,
-        out_path=out_md, course_title=p.get("title") or None)
+        out_path=out_md, course_title=p.get("title") or None, preset=p.get("preset"))
     # auto-render review .docx when the draft parses
     if res.get("ok") and res.get("lint_ok"):
         try:
@@ -515,7 +632,7 @@ def _read_sources_or_error(source):
     import authoring
     text, used, skipped = authoring.read_sources(source)
     if not text.strip():
-        return None, {"ok": False, "error": "No readable source documents found (.md/.txt/.docx/.pdf).",
+        return None, {"ok": False, "error": "No readable source documents found (.md/.txt/.csv/.doc/.docx/.rtf/.odt/.html/.pdf).",
                       "skipped": skipped}
     return (text, used, skipped), None
 
@@ -532,7 +649,7 @@ def do_plan(p):
     prompt = authoring.build_plan_prompt(
         objective=p.get("objective", ""), audience=p.get("audience", ""),
         archetype=p.get("archetype", "concept-explainer"), n_units=n_units,
-        sources_text=text, course_title=p.get("title") or None)
+        sources_text=text, course_title=p.get("title") or None, preset=p.get("preset"))
     ok, raw, err_s = authoring.run_cli(p.get("provider", "claude"), prompt, model=p.get("model"))
     if not ok:
         return {"ok": False, "error": err_s, "used_sources": used, "skipped": skipped}
@@ -561,7 +678,7 @@ def do_script_unit(p):
         objective=p.get("objective", ""), audience=p.get("audience", ""),
         archetype=p.get("archetype", "concept-explainer"),
         sources_text=text, course_title=p.get("title") or None,
-        images=authoring.list_images(p.get("images")))
+        images=authoring.list_images(p.get("images")), preset=p.get("preset"))
     ok, raw, err_s = authoring.run_cli(p.get("provider", "claude"), prompt, model=p.get("model"))
     if not ok:
         return {"ok": False, "error": err_s, "idx": idx}
@@ -607,6 +724,55 @@ def do_save_course(p):
     return res
 
 
+def do_regenerate_unit(p):
+    """Re-draft ONE microlearning in an existing script (optionally with a guidance
+    note), splice it back in, re-lint, and re-render that unit's review .docx —
+    without touching the other modules."""
+    import authoring, importlib
+    script = p.get("script")
+    if not script or not os.path.isfile(script):
+        return {"ok": False, "error": "No script to regenerate from."}
+    which = int(p.get("which", 1))
+    got, err = _read_sources_or_error(p.get("source"))
+    if err:
+        return err
+    text, _u, _s = got
+    units = [{"title": m["title"], "objective": ""} for m in microlearnings(script)]
+    if not (0 < which <= len(units)):
+        return {"ok": False, "error": f"unit {which} is out of range (1..{len(units)})"}
+    prompt = authoring.build_unit_prompt(
+        unit=units[which - 1], all_units=units, idx=which, total=len(units),
+        objective=p.get("objective", ""), audience=p.get("audience", ""),
+        archetype=p.get("archetype", "concept-explainer"),
+        sources_text=text, course_title=p.get("title") or None,
+        images=authoring.list_images(p.get("images")), preset=p.get("preset"))
+    guidance = (p.get("guidance") or "").strip()
+    if guidance:
+        prompt += f"\n\nADDITIONAL GUIDANCE FOR THIS REVISION (apply it): {guidance}"
+    ok, raw, err_s = authoring.run_cli(p.get("provider", "claude"), prompt, model=p.get("model"))
+    if not ok:
+        return {"ok": False, "error": err_s}
+    updated = authoring.replace_unit(open(script, encoding="utf-8").read(), which, raw)
+    with open(script, "w", encoding="utf-8") as fh:
+        fh.write(updated)
+    lint_ok, units_n, lint_errors = authoring.lint(updated)
+    res = {"ok": True, "out": script, "which": which, "units": units_n,
+           "lint_ok": lint_ok, "lint_errors": lint_errors}
+    try:
+        from md_import import import_md
+        import docx_review, brand as brandmod
+        importlib.reload(docx_review)
+        b = brandmod.load_brand(p.get("brand", "_default"))
+        slug = os.path.splitext(os.path.basename(script))[0]
+        ir, _ = import_md(script, which=which)
+        dp = os.path.join(os.path.dirname(script), f"{slug}_m{which}_review.docx")
+        docx_review.render_review_docx(ir, dp, brand=b, md_path=script, which=which)
+        res["review_docx"] = [dp]
+    except Exception as e:
+        res["review_warning"] = str(e)
+    return res
+
+
 def do_revise(p):
     """Stage 5: apply the SME's reviewed .docx onto the canonical script via the
     subscription CLI; write the updated script to the Approved Scripts folder and
@@ -615,8 +781,11 @@ def do_revise(p):
     script = p["script"]
     approved_dir = p["approved_dir"]
     out_md = _os.path.join(approved_dir, _os.path.basename(script))
+    # The SME-reviewed pass is the FINAL draft -> use the most capable model (Opus),
+    # regardless of the faster model used to draft. Overridable via COURSE_BUILDER_REVIEW_MODEL.
+    review_model = os.environ.get("COURSE_BUILDER_REVIEW_MODEL", "opus").strip() or None
     res = authoring.revise(provider=p.get("provider", "claude"), script_path=script,
-                           reviewed_docx=p["reviewed"], out_path=out_md)
+                           reviewed_docx=p["reviewed"], out_path=out_md, model=review_model)
     if res.get("ok") and res.get("lint_ok"):
         slug = _os.path.splitext(_os.path.basename(out_md))[0]
         try:
@@ -713,6 +882,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        # Never let the browser serve a stale build of the UI — the page carries a
+        # per-process CSRF token and the dashboard is updated in place, so a cached
+        # copy means dead buttons + 403s on POST. Always re-fetch.
+        self.send_header("Cache-Control", "no-store, must-revalidate")
         self.end_headers()
         self.wfile.write(body)
 
@@ -776,7 +949,7 @@ class Handler(BaseHTTPRequestHandler):
                 objective=p.get("objective", ""), audience=p.get("audience", ""),
                 archetype=p.get("archetype", "concept-explainer"), n_units=n_units,
                 sources_text=text, course_title=p.get("title") or None,
-                images=authoring.list_images(p.get("images")))
+                images=authoring.list_images(p.get("images")), preset=p.get("preset"))
             ok, full, gerr = authoring.run_cli_stream(p.get("provider", "claude"), prompt, emit, model=p.get("model"))
             if not ok:
                 finish({"ok": False, "error": gerr, "skipped": skipped}); return
@@ -811,6 +984,58 @@ class Handler(BaseHTTPRequestHandler):
                 except (OSError, ValueError) as e:
                     sys.stderr.write(f"[server] could not record script: {e}\n")
             finish(result)
+        except Exception as e:
+            finish({"ok": False, "error": str(e)})
+
+    def _stream_generate_deck(self, p):
+        """Streaming deck generation: stream claude's JSON deck to the browser live
+        (same isolated, model-selectable pass the course flow uses), then parse +
+        lint and return the slide specs for the editor. Writes its OWN chunked
+        response and never raises after headers."""
+        import authoring
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+
+        def emit(t):
+            try:
+                self.wfile.write(t.encode("utf-8")); self.wfile.flush()
+            except Exception:
+                pass
+
+        def finish(obj):
+            emit(self.STREAM_SENTINEL + json.dumps(obj))
+
+        try:
+            src = p.get("source")
+            if not src:
+                finish({"ok": False, "error": "No source folder given."}); return
+            got, err = _read_sources_or_error(src)
+            if err:
+                finish(err); return
+            text, used, skipped = got
+            n_slides = int(p["nslides"]) if str(p.get("nslides", "")).strip().isdigit() else None
+            prompt = authoring.build_deck_prompt(p.get("title") or None, p.get("focus", ""),
+                                                 p.get("audience", ""), n_slides, text,
+                                                 images=authoring.list_images(_deck_images_dir(p)),
+                                                 preset=p.get("preset"))
+            ok, full, gerr = authoring.run_cli_stream(p.get("provider", "claude"), prompt, emit,
+                                                      model=p.get("model"))
+            if not ok:
+                finish({"ok": False, "error": gerr, "skipped": skipped}); return
+            try:
+                data = json.loads(authoring.clean_json(full))
+            except ValueError as e:
+                finish({"ok": False, "error": f"the model did not return valid JSON: {e}",
+                        "raw": full[:2000], "skipped": skipped}); return
+            slides = data.get("slides") if isinstance(data, dict) else data
+            if not isinstance(slides, list) or not slides:
+                finish({"ok": False, "error": "the model returned no 'slides' list.",
+                        "skipped": skipped}); return
+            lint_ok, n, lint_errors = authoring.lint_deck(slides)
+            finish({"ok": True, "slides": slides, "count": n, "lint_ok": lint_ok,
+                    "lint_errors": lint_errors, "used_sources": used, "skipped": skipped})
         except Exception as e:
             finish({"ok": False, "error": str(e)})
 
@@ -919,8 +1144,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(do_build(p))
             elif u.path == "/api/deck":
                 self._json(do_deck(p))
+            elif u.path == "/api/deck-svg":
+                self._json(do_deck_svg(p))
+            elif u.path == "/api/slide-svg":
+                self._json(do_slide_svg(p))
             elif u.path == "/api/generate-deck":
                 self._json(do_generate_deck(p))
+            elif u.path == "/api/generate-deck-stream":
+                self._stream_generate_deck(p); return
+            elif u.path == "/api/regenerate-slide":
+                self._json(do_regenerate_slide(p))
             elif u.path == "/api/review":
                 self._json(do_review(p))
             elif u.path == "/api/generate":
@@ -933,6 +1166,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(do_script_unit(p))
             elif u.path == "/api/save-course":
                 self._json(do_save_course(p))
+            elif u.path == "/api/regenerate-unit":
+                self._json(do_regenerate_unit(p))
             elif u.path == "/api/publish":
                 self._json(do_publish(p))
             elif u.path == "/api/revise":

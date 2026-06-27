@@ -61,8 +61,14 @@ Reusable single-slide PowerPoint templates live in `templates/slide-layouts/`
 ## Dashboard (GUI)
 ```bash
 ./dashboard/launch.command         # double-click on macOS
-# or: python3 ./dashboard/server.py
+dashboard\launch.bat               # double-click on Windows (or launch.ps1)
+# or: python3 ./dashboard/server.py    (python on Windows)
 ```
+On Windows, `build.bat` is the equivalent of `./build`.
+
+To stand the tool up on a fresh machine and run a course/deck end-to-end, see
+**[OPERATOR_GUIDE.md](OPERATOR_GUIDE.md)** (install → launch → generate → review →
+build → export, plus reading the build report and recovering a failed build).
 
 ## Layout
 ```

@@ -1,0 +1,12 @@
+{
+  "title": "Agenda or key takeaways",
+  "subtitle": "Optional subtitle",
+  "intro": "An optional lead line.",
+  "columns": 1,
+  "items": [
+    ["Key point —", " a short supporting clause"],
+    "A plain bullet line",
+    "Another concise takeaway"
+  ],
+  "footer": "Optional footer line"
+}

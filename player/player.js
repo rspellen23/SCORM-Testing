@@ -38,6 +38,29 @@
     return last;   // smallest rung; still valid JSON even if a pathological course exceeds the budget
   }
 
+  /* ============================ KC scoring (pure) ============================
+     Extracted so the multi-select/retry/grading decisions are unit-testable in
+     node without a DOM (tests/test_player.js) — the browser handlers below call
+     these too, so a test guards the live logic, not a copy. */
+  // multi-select is correct iff EVERY option's correctness matches whether it was
+  // selected (all the right ones, none of the wrong ones). `corrects[oi]` = true if
+  // option oi is a correct answer; `sel` = the list of selected option indexes.
+  function multiAllCorrect(corrects, sel){
+    return corrects.every(function(c,oi){ return c === (sel.indexOf(oi) >= 0); });
+  }
+  // a KC answer is terminal (locks) when it's correct, the course is one-shot
+  // (maxTries falsy), or the learner has used their last attempt; else it retries.
+  function kcLocks(ok, tries, maxTries){ return ok || !maxTries || tries >= maxTries; }
+  // graded score as a 0..100 integer percent (0 when there are no KCs).
+  function scorePct(correct, total){ return total ? Math.round(correct/total*100) : 0; }
+  // parse a packed multi-select rung's `opt` ("0,2") back to option indexes [0,2].
+  // A degraded/packed rung (no opt) yields [] — the rung resumes as a bare correct.
+  function parseMultiSel(optStr){
+    return String(optStr).split(",").filter(function(x){ return x !== ""; }).map(Number);
+  }
+
+  var HAS_DOM = typeof window !== "undefined" && typeof document !== "undefined";
+
   /* ============================ SCORM 1.2 / 2004 adapter ============================ */
   function makeScorm() {
     var api = null, ver = null, started = 0, finished = false, terminated = false, lastState = null;
@@ -217,7 +240,7 @@
   /* ============================ Course flow ============================ */
   function ready(fn){ document.readyState!=="loading" ? fn() : document.addEventListener("DOMContentLoaded", fn); }
 
-  ready(function () {
+  if (HAS_DOM) ready(function () {
     makeRuntime().then(function (sel) {
       var RT = sel.rt, resumed = sel.info && sel.info.resumed;
 
@@ -252,7 +275,7 @@
       function save(){ if (!restoring && RT) RT.save({ g:gates.reduce(function(a,g,i){ if(g.dataset.passed==="1")a.push(i); return a; },[]),
         k:kcSeen, m:Object.keys(mediaSeen), o:Object.keys(openSeen), s:sortSeen, loc:loc }); }
       function gradedScore(){ var correct=0; Object.keys(kcSeen).forEach(function(i){ if(kcSeen[i]&&kcSeen[i].ok) correct++; });
-        var raw = kcs.length ? Math.round(correct/kcs.length*100) : 0;
+        var raw = scorePct(correct, kcs.length);
         return { raw:raw, min:0, max:100, scaled:(raw/100).toFixed(2), passed: raw>=passMark }; }
 
       function enableEndButton(){
@@ -296,7 +319,9 @@
         Object.keys(kcTries).forEach(function(k){ delete kcTries[k]; });
         Object.keys(sortSeen).forEach(function(k){ delete sortSeen[k]; });
         kcs.forEach(function(kc){
-          Array.prototype.slice.call(kc.querySelectorAll(".nv-kc-opt")).forEach(function(o){ o.classList.remove("correct","incorrect","is-disabled"); });
+          var isMulti=kc.classList.contains("nv-kc--multi");
+          Array.prototype.slice.call(kc.querySelectorAll(".nv-kc-opt")).forEach(function(o){ o.classList.remove("correct","incorrect","is-disabled","is-selected"); o.disabled=false; var mk=o.querySelector(".nv-kc-mark"); if(mk)mk.remove(); if(isMulti)o.setAttribute("aria-pressed","false"); });
+          var sub=kc.querySelector(".nv-kc-submit"); if(sub)sub.disabled=false;
           var fb=kc.querySelector(".nv-kc-fb"); if(fb){ fb.classList.remove("show","ok","no"); fb.innerHTML=""; }
         });
         sorts.forEach(function(sort){
@@ -328,14 +353,31 @@
       function revealAfter(gate){ var r = gate.nextElementSibling;
         while (r){ if (r.classList && r.classList.contains("nv-gated")){ r.classList.add("revealed"); break; } r = r.nextElementSibling; } return r; }
       function passGate(gate,i){ gate.dataset.passed="1"; var b=gate.querySelector(".nv-btn"); if(b)b.disabled=true; revealAfter(gate); loc={t:"g",i:i}; }
+      // a11y: append an off-screen "(correct answer)"/"(incorrect)" tag to a locked
+      // option so a screen-reader user gets the verdict that's otherwise color-only.
+      // Idempotent — clears any prior tag first (graded retry re-locks the same options).
+      function srMarkOpt(o){ var ex=o.querySelector(".nv-kc-mark"); if(ex)ex.remove();
+        var t = o.classList.contains("correct") ? " (correct answer)" : (o.classList.contains("incorrect") ? " (incorrect)" : "");
+        if(t){ var s=document.createElement("span"); s.className="nv-sr-only nv-kc-mark"; s.textContent=t; o.appendChild(s); } }
       // terminal KC render: mark choice, reveal correct if wrong, lock, show feedback, record.
       function lockKc(kc,i,oi,ok){ var opts=Array.prototype.slice.call(kc.querySelectorAll(".nv-kc-opt")), fb=kc.querySelector(".nv-kc-fb"), opt=opts[oi];
         if(opt) opt.classList.add(ok?"correct":"incorrect");
         if(!ok) opts.forEach(function(o){ if(o.dataset.correct==="1")o.classList.add("correct"); });
-        opts.forEach(function(o){ o.classList.add("is-disabled"); });
+        opts.forEach(function(o){ o.classList.add("is-disabled"); o.disabled=true; srMarkOpt(o); });
         if(fb){ var m = ok?fb.getAttribute("data-fb-correct"):fb.getAttribute("data-fb-incorrect");
           fb.innerHTML='<span class="nv-sr-only">'+(ok?"Correct. ":"Incorrect. ")+'</span>'+(m||""); fb.classList.remove("ok","no"); fb.classList.add("show", ok?"ok":"no"); }
         kcSeen[i]={opt:oi,ok:ok}; loc={t:"kc",i:i}; }
+      // terminal multi-select render: reveal the full correct set, flag wrong picks, lock, record.
+      function lockKcMulti(kc,i,sel,ok){ var opts=Array.prototype.slice.call(kc.querySelectorAll(".nv-kc-opt")), fb=kc.querySelector(".nv-kc-fb"), submit=kc.querySelector(".nv-kc-submit");
+        opts.forEach(function(o,oi){ var want=o.dataset.correct==="1", got=sel.indexOf(oi)>=0;
+          o.setAttribute("aria-pressed", got?"true":"false");
+          if(want) o.classList.add("correct");                 // always show the correct answers
+          else if(got) o.classList.add("incorrect");           // a wrong pick the learner made
+          o.classList.add("is-disabled"); o.disabled=true; srMarkOpt(o); });
+        if(submit) submit.disabled=true;
+        if(fb){ var m = ok?fb.getAttribute("data-fb-correct"):fb.getAttribute("data-fb-incorrect");
+          fb.innerHTML='<span class="nv-sr-only">'+(ok?"Correct. ":"Incorrect. ")+'</span>'+(m||""); fb.classList.remove("ok","no"); fb.classList.add("show", ok?"ok":"no"); }
+        kcSeen[i]={opt:sel.join(","),ok:ok,multi:1}; loc={t:"kc",i:i}; }
 
       /* Modals */
       var modals = {}, lastFocus = null;
@@ -363,13 +405,39 @@
       media.forEach(function(el,i){ el.addEventListener("ended", function(){ mediaSeen["m"+i]=true; updateProgress(); }); });
       gates.forEach(function(gate,i){ var b=gate.querySelector(".nv-btn"); if(!b)return; b.addEventListener("click", function(){ passGate(gate,i); var r=revealAfter(gate); updateProgress(); (r||gate).scrollIntoView({behavior:"smooth",block:"start"}); if(r){ try{ r.focus(); }catch(e){} } }); });
       kcs.forEach(function(kc,i){ var opts=Array.prototype.slice.call(kc.querySelectorAll(".nv-kc-opt")), fb=kc.querySelector(".nv-kc-fb");
+        if (kc.classList.contains("nv-kc--multi")){                               // multi-select: toggle + submit
+          var submit = kc.querySelector(".nv-kc-submit");
+          opts.forEach(function(opt){ opt.addEventListener("click", function(){
+            if (kcSeen[i]) return;                                                // locked
+            var on = opt.getAttribute("aria-pressed")==="true";
+            opt.setAttribute("aria-pressed", on?"false":"true"); opt.classList.toggle("is-selected", !on);
+          }); });
+          if (submit) submit.addEventListener("click", function(){
+            if (kcSeen[i]) return;
+            var sel=[]; opts.forEach(function(o,oi){ if(o.getAttribute("aria-pressed")==="true") sel.push(oi); });
+            if (!sel.length){                                                     // empty submit: prompt politely, don't silently no-op
+              if (fb){ fb.textContent="Select at least one option, then choose Submit."; fb.classList.remove("ok","no"); fb.classList.add("show"); }
+              return; }
+            kcTries[i] = (kcTries[i]||0) + 1;
+            var ok = multiAllCorrect(opts.map(function(o){ return o.dataset.correct==="1"; }), sel);
+            if (kcLocks(ok, kcTries[i], maxTries)) { lockKcMulti(kc,i,sel,ok); updateProgress(); }
+            else {                                                                // retry: keep picks, prompt again
+              if (fb){ var left = maxTries - kcTries[i];
+                fb.innerHTML = '<span class="nv-sr-only">Incorrect. </span>' +
+                  (fb.getAttribute("data-fb-incorrect") || "Not quite.") +
+                  ' <em class="nv-kc-retry">Try again — ' + left + ' attempt' + (left===1?'':'s') + ' left.</em>';
+                fb.classList.remove("ok"); fb.classList.add("show","no"); }
+            }
+          });
+          return;
+        }
         opts.forEach(function(opt,oi){ opt.addEventListener("click", function(){
           if (kcSeen[i] || opt.classList.contains("is-disabled")) return;        // terminal, or an eliminated wrong choice
           kcTries[i] = (kcTries[i]||0) + 1;
           var ok = opt.dataset.correct === "1";
-          if (ok || !maxTries || kcTries[i] >= maxTries) { lockKc(kc,i,oi,ok); updateProgress(); }   // terminal
+          if (kcLocks(ok, kcTries[i], maxTries)) { lockKc(kc,i,oi,ok); updateProgress(); }   // terminal
           else {                                                                  // retry: eliminate this choice, prompt again
-            opt.classList.add("incorrect","is-disabled");
+            opt.classList.add("incorrect","is-disabled"); opt.disabled=true; srMarkOpt(opt);
             if (fb){ var left = maxTries - kcTries[i];
               fb.innerHTML = '<span class="nv-sr-only">Incorrect. </span>' +
                 (fb.getAttribute("data-fb-incorrect") || "Not quite.") +
@@ -444,7 +512,9 @@
       /* Restore prior progress */
       if (resumed) { restoring = true;
         (resumed.g||[]).forEach(function(gi){ if(gates[gi]) passGate(gates[gi],gi); });
-        Object.keys(resumed.k||{}).forEach(function(ki){ var r=resumed.k[ki]; if(kcs[ki]&&r) lockKc(kcs[ki],+ki,r.opt,r.ok); });
+        Object.keys(resumed.k||{}).forEach(function(ki){ var r=resumed.k[ki]; if(kcs[ki]&&r){
+          if(r.multi) lockKcMulti(kcs[ki], +ki, parseMultiSel(r.opt), r.ok);
+          else lockKc(kcs[ki],+ki,r.opt,r.ok); } });
         (resumed.m||[]).forEach(function(mk){ mediaSeen[mk]=true; });
         (resumed.o||[]).forEach(function(ok){ openSeen[ok]=true; });
         Object.keys(resumed.s||{}).forEach(function(sk){ var idx=+sk.slice(1), st=resumed.s[sk];
@@ -477,7 +547,7 @@
      "0"), IntersectionObserver is available, and motion is allowed — so a no-JS,
      no-observer, reduced-motion, or animations-off visitor always sees fully-
      visible content. Gated blocks (their own reveal) and modals are skipped. */
-  ready(function () {
+  if (HAS_DOM) ready(function () {
     if (document.body.getAttribute("data-anim") === "0") return;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce || !("IntersectionObserver" in window)) return;
@@ -511,4 +581,13 @@
     }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
     blocks.forEach(function (el) { ro.observe(el); });
   });
+
+  // Node-only: expose the pure helpers for unit tests (no-op in the browser,
+  // where `module` is undefined). The DOM bootstrap above is HAS_DOM-guarded, so
+  // requiring this file under node defines + exports without touching the DOM.
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { utf8len: utf8len, packSorts: packSorts, packKcs: packKcs,
+      fitSuspend: fitSuspend, multiAllCorrect: multiAllCorrect, kcLocks: kcLocks,
+      scorePct: scorePct, parseMultiSel: parseMultiSel };
+  }
 })();

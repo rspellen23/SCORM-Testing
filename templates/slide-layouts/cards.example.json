@@ -1,0 +1,12 @@
+{
+  "title": "A set of parallel items",
+  "subtitle": "Use for components, options, features — not a sequence",
+  "intro": "Optional one-line lead introducing the set.",
+  "columns": 3,
+  "cards": [
+    {"title": "First", "body": "A short description of this item.", "accent": "primary"},
+    {"title": "Second", "body": "A short description of this item.", "accent": "secondary"},
+    {"title": "Third", "body": "A short description of this item.", "accent": "tertiary"}
+  ],
+  "footer": "Optional footer line"
+}

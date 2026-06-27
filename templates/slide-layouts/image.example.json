@@ -1,0 +1,8 @@
+{
+  "title": "A picture that carries the point",
+  "subtitle": "Use for a hero shot or a section visual",
+  "image": "exact-filename-from-the-AVAILABLE-IMAGES-list",
+  "mode": "hero",
+  "caption": "A one-line caption explaining what the image shows.",
+  "footer": "Optional footer line"
+}

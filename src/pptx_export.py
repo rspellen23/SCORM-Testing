@@ -235,6 +235,20 @@ def _render_textflow(tf, blocks, accent, unmatched=None):
                 pre.font.size = Pt(14); pre.font.color.rgb = accent
                 pre.font.bold = True; pre.font.name = "Open Sans"
                 _add_runs(p, paras[0], 14)
+        elif t == "objectives":
+            intro = b.get("intro") or "After this lesson, you will be able to:"
+            for para in html_paras(intro) or [[]]:
+                p = _new_para(tf, first); p.space_after = Pt(4)
+                _add_runs(p, para, 14, NAVY)
+                for r in p.runs:
+                    r.font.bold = True
+            for item in b.get("items", []):
+                paras = html_paras(item) or [[]]
+                p = _new_para(tf, first); p.level = 0
+                pre = p.add_run(); pre.text = "•  "
+                pre.font.size = Pt(14); pre.font.color.rgb = accent
+                pre.font.bold = True; pre.font.name = "Open Sans"
+                _add_runs(p, paras[0], 14)
         elif t == "note":
             for para in html_paras(b.get("html")):
                 p = _new_para(tf, first); p.space_before = Pt(6)
@@ -285,6 +299,13 @@ def _render_kc(tf, b, accent, first):
         _add_runs(p, para, 15, NAVY)
         for r in p.runs:
             r.font.bold = True
+    if b.get("multi"):
+        # multi-select: tell the reader they're meant to choose every correct option
+        # (the flattened slide marks several ✓, which is ambiguous without this cue).
+        p = _new_para(tf, first)
+        cue = p.add_run(); cue.text = "Select all that apply."
+        cue.font.size = Pt(11); cue.font.italic = True
+        cue.font.color.rgb = GREY; cue.font.name = "Open Sans"
     for o in b.get("options", []):
         p = _new_para(tf, first); p.level = 0
         mark = p.add_run()

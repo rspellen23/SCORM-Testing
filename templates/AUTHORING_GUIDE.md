@@ -103,6 +103,9 @@ Match the *shape of the content* to the block. The engine's structures and what 
 - **Parallel peer items** (features, roles, components, gates) → `*Cards:*` grid.
 - **Real quantitative data from the source** → `*Chart:*` (numbers must appear LITERALLY in the
   source; cite a `source:` — never fabricate; see §2 / the build rejects a sourceless chart).
+- **A "what would you do?" decision case** → `*Scenario:*` (situation + choices + feedback; mark the
+  best `preferred`) — judgment practice, not a scored question.
+- **A predict-then-reveal / paced reveal** → a `*Continue:*` gate (hides what follows until clicked).
 - **The teaching substance itself** → ordinary **paragraphs**, single-column.
 
 Density rule: use a **multi-column** block (comparison / cards) **only** when the items are *truly
@@ -150,6 +153,12 @@ is several units in one `.md`, each built separately and bundled in an your LMS 
   ```
   **≥2 options, exactly one correct.** KCs are **unscored** (completion-only) by default. A KC with
   zero parsed options is dropped — always use the `- A)` form.
+- **Multi-select ("choose all that apply").** List **more than one** letter on the answer line —
+  `*Correct Answer:* A, C` (also `A and C` / `A/C`) — and the check becomes multi-select: the options
+  render as toggles the learner commits with a **Submit** button, scored **all-correct / none-wrong**
+  (every right option picked, no wrong one). Use it only for genuine "select all" questions: mark
+  **at least two** correct and **leave at least one wrong** (the lint rejects "all correct"). One
+  letter = ordinary single-select. Both feedback lines work the same.
 - **Retry (optional).** Add a course-level line `*Retry:* <N>` to give learners up to **N attempts**
   per KC: a wrong answer eliminates that choice and prompts "try again" until they're correct or
   attempts run out (then it locks + reveals). Omit it (or `0`) for one-shot. In a **graded** course
@@ -162,9 +171,18 @@ is several units in one `.md`, each built separately and bundled in an your LMS 
   `--format scorm` (default) or `--format cmi5`; under cmi5 the same pass mark becomes the AU
   `masteryScore` and pass/fail is reported as xAPI `passed`/`failed` statements.)
 - **Slide 1 is ALWAYS Learning Objectives, with a visual.** Every unit opens with
-  `**Slide 1 — Learning Objectives**`, a `*Visual:*` line, and a short "you will be able to…" list
-  (3–5 learner-facing outcomes). These mirror the formal objectives in Build Notes. *(This is a
-  required standard — never omit the objectives slide.)*
+  `**Slide 1 — Learning Objectives**`, a `*Visual:*` line, and an `*Objectives:*` block — a short
+  "you will be able to…" list (3–5 learner-facing outcomes). These mirror the formal objectives in
+  Build Notes. *(This is a required standard — never omit the objectives slide.)* Grammar:
+  ```
+  *Objectives:* After this lesson, you will be able to:
+  - Identify the three transfer types
+  - Decide which queue a request belongs in
+  - Escalate an urgent case correctly
+  ```
+  The text after the marker is an optional lead-in (a sensible default is supplied if you omit it);
+  each `- ` bullet is one outcome. Start outcomes with an observable verb (identify, decide, apply —
+  not "understand"). Use `*Objectives:*` only for the Slide-1 outcomes list, not for ordinary bullets.
 - **In-slide visuals use the `*Visual:*` directive** (parser-supported — parallel to `*Question:*`):
   ```
   *Visual:* <type> · <description / alt text> · slot: `<asset-filename>`
@@ -234,6 +252,35 @@ is several units in one `.md`, each built separately and bundled in an your LMS 
   ```
   `accent` is a brand role (`primary|secondary|tertiary|dark`; omit to auto-cycle). Repeat `::: card`
   and `::: goal` per item. Every section is optional — drop the fences you don't need.
+- **Decision practice → `*Scenario:*` (parser-supported).** A "what would you do?" case: one or more
+  scenes, each a situation plus response choices with feedback, with the best choice marked
+  `preferred`. It renders as a LINEAR decision walk-through (every scene shown, the preferred path
+  marked) — use it for judgment/decision practice (a natural fit for the **decision-scenario**
+  archetype), NOT as a scored question (use a KC for that). Grammar (`::: scene` fences; a lone `:::`
+  closes the block):
+  ```
+  *Scenario:*
+  ::: scene
+  title: Urgent ICU transfer
+  A nurse calls about an urgent ICU transfer with no bed assigned yet. What do you do first?
+  - Accept and start the bed assignment · preferred · feedback: Right — for an urgent case, secure the bed first.
+  - Ask them to submit a written request · feedback: Too slow; urgent cases can't wait on paperwork.
+  :::
+  ```
+  Each scene: an optional `title:`, prose narrative lines (the situation / the decision prompt), then
+  `- ` response lines. On a response, append `· preferred` to mark the model answer and
+  `· feedback: <text>` for its coaching. **Mark exactly one `preferred` response per scene** (the lint
+  flags a scene with choices but no preferred). Repeat `::: scene` for a multi-step case.
+- **Progressive reveal → `*Continue:*` (parser-supported).** Insert `*Continue:* <button label>` to
+  GATE the rest of the unit: everything after the marker is hidden until the learner clicks the
+  button. Use it deliberately — to make learners commit before a reveal (predict-then-confirm) or to
+  pace a dense unit — never as filler. Omit the label for a default **CONTINUE**; multiple gates give
+  a step-by-step reveal.
+  ```
+  Predict what the system does before you continue.
+  *Continue:* Reveal the answer
+  Here's what actually happens: …
+  ```
 - **Author-meta block — ORDERING IS LOAD-BEARING.** The build cuts everything from the first line
   that starts `**Articulate Build Notes` or `**Sources`. So:
   - The meta block **must open with** `**Articulate Build Notes:**`.
@@ -250,11 +297,10 @@ is several units in one `.md`, each built separately and bundled in an your LMS 
   demo GIF, video, diagram), **do not** write a markdown image. Instead record it under
   **Build Notes** as a **VISUAL line** (see §4) — Segment C inserts the real `image`/`video`/`audio`/
   `embed` block into the IR by slot-name during the build.
-- **Coming-soon block types — do NOT author them.** `scenario`, `continue` (gated reveal), and
-  `headingParagraph` render and validate, but have **no authoring grammar yet** — they are
-  produced only by the Rise/docx importers (import-only stubs). The lint rejects a `*Scenario:*` /
-  `*Continue:*` / `*HeadingParagraph:*` marker so it can't silently degrade. Use the available
-  grammar (e.g. `*Statement:*` + a KC, or a `*Process:*`) until these graduate.
+- **Coming-soon block type — do NOT author it.** `headingParagraph` renders and validates but has
+  **no authoring grammar yet** — it is produced only by the docx importer (import-only stub). The
+  lint rejects a `*HeadingParagraph:*` marker so it can't silently degrade. (`scenario` and
+  `continue` are now fully authorable — see their grammar in §2.)
 
 ## 4. The Build-Notes block (under the cut marker)
 

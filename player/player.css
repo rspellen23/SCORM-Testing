@@ -152,10 +152,33 @@ img { max-width: 100%; height: auto; display: block; }
 .nv-kc-opt.correct { border-color: var(--brand-correct); background: #e9faf1; }
 .nv-kc-opt.incorrect { border-color: var(--brand-incorrect); background: #fbeceb; }
 .nv-kc-opt.is-disabled { pointer-events: none; opacity: .85; }
+/* multi-select ('choose all that apply'): options are toggles, committed with Submit. */
+.nv-kc-hint { font-size: .9rem; opacity: .85; margin: 0 0 .8rem; }
+.nv-kc--multi .nv-kc-opt { padding-left: 2.6rem; position: relative; }
+.nv-kc--multi .nv-kc-opt::before {
+  content: ""; position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+  width: 1.05rem; height: 1.05rem; border: 2px solid var(--brand-accent); border-radius: 5px; background: #fff;
+}
+.nv-kc--multi .nv-kc-opt[aria-pressed="true"]::before {
+  background: var(--brand-accent); border-color: var(--brand-accent);
+  box-shadow: inset 0 0 0 .12rem #fff, inset 0 0 0 .28rem var(--brand-accent);
+}
+.nv-kc--multi .nv-kc-opt.is-selected { border-color: var(--brand-accent); }
+.nv-kc-submit { margin-top: 1rem; }
+.nv-kc-submit:disabled { opacity: .6; cursor: default; }
 .nv-kc-fb { margin-top: 1rem; padding: .9rem 1.1rem; border-radius: 10px; background: rgba(255,255,255,.12); display: none; }
 .nv-kc-fb.show { display: block; }
 .nv-kc-fb.ok { border-left: 5px solid var(--brand-correct); }
 .nv-kc-fb.no { border-left: 5px solid var(--brand-incorrect); }
+
+/* ---- Learning objectives block (Slide-1 outcomes) ---- */
+.nv-objectives {
+  background: var(--brand-light); border-left: 5px solid var(--brand-accent);
+  border-radius: var(--brand-radius-lg); padding: 1.3rem 1.5rem; margin: var(--brand-gap) 0;
+}
+.nv-obj-intro { font-family: var(--brand-font-head); font-weight: 700; color: var(--brand-ink); margin: 0 0 .7rem; }
+.nv-obj-list { margin: 0; padding-left: 1.3rem; }
+.nv-obj-list li { margin: .35rem 0; }
 
 /* ---- Branded CTA buttons (re-skinned from Uiverse MIT snippets: gradient sweep + arrow) ---- */
 /* Shared base for library buttons AND the continue/exit controls, so everything matches. */

@@ -1,0 +1,142 @@
+{
+  "_comment": "MASTER BLUEPRINT for the TeleTracking 2026 template. The engine is brand-agnostic; this file is what makes a TeleTracking deck look like the official 2026 PowerPoint template. Each engine layout maps to a visual recipe (theme + header treatment) drawn from the real template; themes resolve to the brand palette. Color values may be a brand-palette key (e.g. 'green', 'deepNavy') or a literal #hex. A brand with no blueprint.json falls back to the engine's neutral drawkit look (the client-agnostic default).",
+  "name": "TeleTracking 2026",
+  "source": "~/KB-Intake/2026.01_TeleTracking Template.pptx",
+
+  "backgrounds": {
+    "dark":  "backgrounds/template-dark.png",
+    "light": "backgrounds/template-light.png"
+  },
+  "logos": {
+    "dark":  "logos/logo-white.png",
+    "light": "logos/logo-color.png"
+  },
+
+  "defaults": { "theme": "light", "header": "rule" },
+
+  "design": {
+    "_comment": "DESIGN LANGUAGE — the template's elements decomposed into tokens the generative renderer draws from, so slides are template-faithful AND adapt to content. Color values are semantic theme keys (card/cardInk/ink/muted/node/title_ink/rule_color, resolved per theme) or #hex. Measured from the 2026 template; tune here, no code change. A brand without `design` uses the engine's built-in (agnostic) defaults.",
+    "card": {
+      "radiusPct": 7.6, "outlinePt": 3, "outlineColor": "card",
+      "fillColor": "card", "fillAlpha": 82, "shadow": true,
+      "padIn": 0.24, "gapIn": 0.34,
+      "titleSizePt": 15, "titleColor": "cardInk",
+      "bodySizePt": 11.5, "bodyColor": "muted", "minBodyPt": 9.0,
+      "accentStripPt": 0
+    },
+    "image": {
+      "_comment": "image / imagetext framing — the template uses frameless, edge-to-edge pictures (no floating rounded card). fit cover fills the box; framePt 0 = no outline; radiusPct 0 = square corners. overlay* tints a full-bleed image so overlaid title text stays legible. bannerIn/insetIn set the header-banner height and the imagetext picture-column width.",
+      "fit": "cover",
+      "framePt": 0, "frameColor": "card", "radiusPct": 0, "shadow": false,
+      "padIn": 0.0,
+      "captionSizePt": 13, "captionColor": "muted",
+      "introSizePt": 16, "bodySizePt": 14, "calloutSizePt": 14,
+      "bannerIn": 2.7, "insetIn": 6.0,
+      "overlayColor": "dark", "overlayAlpha": 42
+    },
+    "timeline": {
+      "cardRadiusPct": 9.6, "cardOutlinePt": 3, "cardOutlineColor": "node",
+      "cardFillColor": "none", "cardFillAlpha": 0,
+      "nodeDiaIn": 0.34, "nodeColor": "node", "numberColor": "dark",
+      "axisPt": 1.5, "axisColor": "rail",
+      "phaseColor": "node", "titleColor": "ink", "bodyColor": "muted",
+      "minBodyPt": 8.5
+    },
+    "sectionheader": {
+      "_comment": "numbered SECTION BREAK (template 'Section Header'): a left number+kicker lockup, a large title, an accent rule, a supporting line. Drawn full-bleed on the dark background; distinct from the centered `divider` title screen.",
+      "numberSizePt": 96, "numberColor": "rule_color",
+      "kickerSizePt": 15, "kickerColor": "rule_color", "kickerCaps": true,
+      "titleSizePt": 40, "subSizePt": 18, "subColor": "muted",
+      "ruleColor": "rule_color", "rulePt": 3
+    },
+    "cycles": {
+      "_comment": "CIRCULAR process (template 'Cycles'): a ring of numbered nodes on the left + a numbered legend column on the right. The ring places nodes evenly for any 3-6 steps; the faint hub can hold a center label. dotColor draws small loop markers between nodes. A cycle is ONE visualization and is NEVER paginated — a too-long sequence should use `process`/`timeline` instead. Tune ring geometry here.",
+      "ringRadiusIn": 1.95, "nodeDiaIn": 0.92, "nodeNumPt": 19, "numberColor": "#FFFFFF",
+      "dotDiaIn": 0.16, "dotColor": "rule_color",
+      "hubDiaIn": 1.95, "hubColor": "card", "hubAlpha": 60,
+      "centerSizePt": 13, "centerColor": "ink",
+      "chipDiaIn": 0.46, "legendTitlePt": 14.5, "legendTitleColor": "ink",
+      "legendBodyPt": 11.5, "legendBodyColor": "muted", "minBodyPt": 9.0,
+      "ruleColor": "rail", "rulePt": 1
+    },
+    "type": {
+      "titleSizePt": 28, "titleColor": "title_ink",
+      "kickerSizePt": 13, "kickerColor": "rule_color", "kickerCaps": true,
+      "introSizePt": 13, "introColor": "muted",
+      "bodySizePt": 14, "bodyColor": "ink", "minBodyPt": 10,
+      "dividerTitlePt": 48, "dividerSubPt": 18
+    },
+    "rule": { "pt": 1.5, "color": "rule_color" },
+    "capacity": { "cards": 8, "timeline": 5, "bulletsPerColumn": 7, "comparisonItems": 8 }
+  },
+
+
+  "themes": {
+    "dark": {
+      "bg": "dark",
+      "ink": "#FFFFFF",
+      "muted": "#C7D3D9",
+      "card": "#13404E",
+      "cardInk": "#FFFFFF",
+      "title": "#FFFFFF",
+      "rule": "green",
+      "rail": "#5A7682",
+      "node": "accentGreen",
+      "logo": "dark"
+    },
+    "light": {
+      "bg": "light",
+      "ink": "#0B2C37",
+      "muted": "#444B4F",
+      "card": "#FFFFFF",
+      "cardInk": "#0B2C37",
+      "title": "#0B2C37",
+      "rule": "green",
+      "rail": "#9FB2BB",
+      "node": "green",
+      "logo": "light"
+    }
+  },
+
+  "native": {
+    "_comment": "NATIVE TEMPLATE-LAYOUT rendering: when present, the engine builds on this brand's real PowerPoint template and pours content into the named layout's placeholders, so the template's actual elements/styles/image slots come through. Each engine layout lists candidate template layouts; the engine picks by item `count` (a candidate with no `count` matches any). If no candidate fits, the engine falls back to its generative renderer on the brand background. `title`/`intro`/`subtitle` are placeholder idxs; `slots` are the repeating content holders in visual order; `kind` says how to fill them.",
+    "template": "template.pptx",
+    "layouts": {
+      "divider": [
+        { "layout": "Divider dark", "kind": "text", "title": 10, "subtitle": 11 }
+      ],
+      "bullets": [
+        { "layout": "Title and Content - Light", "kind": "bullets", "title": 0, "slots": [1] }
+      ],
+      "comparison": [
+        { "count": 2, "layout": "Two Content - Light", "kind": "panels", "title": 0, "slots": [23, 24] },
+        { "count": 3, "layout": "Three Content - Light", "kind": "panels", "title": 0, "slots": [17, 1, 2] }
+      ],
+      "cards": [
+        { "count": 4, "layout": "4 Content Blocks", "kind": "cards", "title": 0, "intro": 10, "slots": [11, 12, 13, 14] }
+      ],
+      "timeline": [
+        { "count": 4, "layout": "Timeline - Dark", "kind": "milestones", "title": 0, "intro": 10, "slots": [22, 30, 31, 32] }
+      ]
+    }
+  },
+
+  "layouts": {
+    "divider":      { "theme": "dark",  "header": "none" },
+    "sectionheader":{ "theme": "dark",  "header": "none" },
+    "cycles":       { "theme": "light", "header": "rule" },
+    "closing":    { "theme": "dark",  "header": "none" },
+    "quote":      { "theme": "dark",  "header": "none" },
+    "statement":  { "theme": "dark",  "header": "none" },
+    "timeline":   { "theme": "dark",  "header": "rule" },
+    "agenda":     { "theme": "dark",  "header": "rule" },
+    "comparison": { "theme": "light", "header": "rule" },
+    "cards":      { "theme": "light", "header": "rule" },
+    "bullets":    { "theme": "light", "header": "rule" },
+    "process":    { "theme": "light", "header": "rule" },
+    "infographic":{ "theme": "light", "header": "rule" },
+    "chart":      { "theme": "light", "header": "rule" },
+    "image":      { "theme": "light", "header": "rule" },
+    "imagetext":  { "theme": "light", "header": "rule" }
+  }
+}

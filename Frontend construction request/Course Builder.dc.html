@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Open+Sans:wght@400;600;700;800&family=Open+Sans+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; }
+  @keyframes cb-spin { to { transform:rotate(360deg); } }
+  @keyframes cb-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  @keyframes cb-fadeup { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+  @keyframes cb-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  @keyframes cb-sheen { from{background-position:-120px 0} to{background-position:240px 0} }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#F1EDE6; color:#262320; font-family:'Hanken Grotesk',system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased;">
+
+  <!-- ============ TOP BAR ============ -->
+  <header style="position:sticky; top:0; z-index:30; background:rgba(248,246,241,.86); backdrop-filter:saturate(1.2) blur(10px); border-bottom:1px solid #E3DDD2; display:flex; align-items:center; gap:18px; padding:11px 22px;">
+    <div style="display:flex; align-items:center; gap:11px;">
+      <div style="width:30px; height:30px; border-radius:8px; background:linear-gradient(150deg,#C0664A,#9E4F37); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; letter-spacing:.5px; box-shadow:0 1px 3px rgba(158,79,55,.4);">CB</div>
+      <div style="line-height:1.05;">
+        <div style="font-size:15px; font-weight:700; letter-spacing:-.2px;">Course Builder</div>
+        <div style="font-size:10.5px; color:#9A9389; font-weight:500; letter-spacing:.3px;">local · single-user</div>
+      </div>
+    </div>
+
+    <!-- mode switch -->
+    <div style="display:inline-flex; background:#ECE6DB; border:1px solid #E0D9CD; border-radius:10px; padding:3px; gap:2px; margin-left:8px;">
+      <button onClick="{{ onModeCourse }}" style="{{ modeCourseStyle }}">Course creation</button>
+      <button onClick="{{ onModeSlide }}" style="{{ modeSlideStyle }}">Slide presentation</button>
+    </div>
+
+    <div style="margin-left:auto; display:flex; align-items:center; gap:16px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span title="The output brand drives every preview, thumbnail and exported file. The tool chrome stays neutral; the content it produces is branded." style="font-size:11.5px; font-weight:600; color:#6F675E; display:inline-flex; align-items:center; gap:5px;">Output brand
+          <span style="width:14px; height:14px; border-radius:50%; border:1px solid #C9C1B4; color:#9A9389; font-size:9px; display:inline-flex; align-items:center; justify-content:center; cursor:help;">i</span>
+        </span>
+        <div style="position:relative; display:flex; align-items:center;">
+          <span style="position:absolute; left:9px; width:9px; height:9px; border-radius:50%; background:#1EB16A; box-shadow:0 0 0 2px #fff;"></span>
+          <select value="{{ brand }}" onChange="{{ onBrand }}" style="appearance:none; padding:7px 26px 7px 24px; border:1px solid #DAD3C6; border-radius:8px; background:#FBF9F5; font-family:inherit; font-size:12.5px; font-weight:600; color:#262320; cursor:pointer;">
+            <option value="teletracking">TeleTracking</option>
+            <option value="_default">Default (unbranded)</option>
+          </select>
+          <span style="position:absolute; right:9px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+        </div>
+      </div>
+      <sc-if value="{{ isCourse }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; align-items:center; gap:7px; padding:6px 12px; background:#FBF9F5; border:1px solid #E3DDD2; border-radius:8px;">
+          <span style="font-size:11px; color:#9A9389; font-weight:600;">Project</span>
+          <span style="font-size:12.5px; font-weight:700; color:#262320;">{{ project }}</span>
+          <span title="Saved" style="font-size:10.5px; color:#3F7D5F; font-weight:600; display:inline-flex; align-items:center; gap:3px;">✓ saved</span>
+        </div>
+      </sc-if>
+    </div>
+  </header>
+
+  <!-- ============ BODY: rail + main ============ -->
+  <div style="display:flex; align-items:flex-start; gap:0; max-width:1240px; margin:0 auto;">
+
+    <!-- progress rail -->
+    <aside style="flex:0 0 282px; align-self:stretch; padding:30px 24px 40px; position:sticky; top:54px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:#A89F92; margin-bottom:4px;">{{ railKicker }}</div>
+      <div style="font-size:13px; font-weight:600; color:#6F675E; margin-bottom:22px;">{{ progressLabel }}</div>
+
+      <div style="display:flex; flex-direction:column;">
+        <sc-for list="{{ steps }}" as="step" hint-placeholder-count="8">
+          <div onClick="{{ step.onClick }}" style="display:flex; gap:13px; cursor:pointer;">
+            <div style="display:flex; flex-direction:column; align-items:center; align-self:stretch;">
+              <div style="{{ step.dotStyle }}">{{ step.dotInner }}</div>
+              <div style="{{ step.lineStyle }}"></div>
+            </div>
+            <div style="padding-bottom:18px; min-width:0;">
+              <div style="{{ step.titleStyle }}">{{ step.title }}</div>
+              <div style="font-size:11px; color:#A89F92; font-weight:500; margin-top:1px;">{{ step.statusLabel }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </aside>
+
+    <!-- main stage panel -->
+    <main style="flex:1; min-width:0; padding:30px 40px 80px; max-width:920px;">
+
+      <!-- ===================== COURSE MODE ===================== -->
+      <sc-if value="{{ isCourse }}" hint-placeholder-val="{{ true }}">
+      <div>
+
+        <!-- stage header -->
+        <div style="margin-bottom:22px; ">
+          <div style="font-size:11.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:#C0664A; margin-bottom:7px;">{{ stageKicker }}</div>
+          <h1 style="margin:0; font-size:27px; font-weight:800; letter-spacing:-.6px; color:#1F1C19;">{{ stageTitle }}</h1>
+          <p style="margin:9px 0 0; font-size:14.5px; line-height:1.5; color:#6F675E; max-width:640px;">{{ stageDesc }}</p>
+        </div>
+
+        <!-- STAGE 1 — Project -->
+        <sc-if value="{{ isC1 }}">
+        <div style="">
+          <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:22px; box-shadow:0 1px 2px rgba(60,50,40,.04);">
+            <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Workspace folder</label>
+            <div style="display:flex; gap:8px;">
+              <input readonly value="~/CourseBuilder/projects" style="flex:1; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#F4F0E8; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6F675E;">
+              <button onClick="{{ onOpenPicker }}" style="padding:10px 15px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; color:#4A443D; cursor:pointer;">Browse…</button>
+              <button style="padding:10px 18px; border:none; border-radius:9px; background:#262320; color:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">Use</button>
+            </div>
+
+            <div style="height:1px; background:#EAE4D9; margin:22px 0;"></div>
+
+            <div style="display:flex; gap:24px; flex-wrap:wrap;">
+              <div style="flex:1; min-width:240px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">New project</label>
+                <div style="display:flex; gap:8px;">
+                  <input placeholder="e.g. Q3 Compliance Refresh" style="flex:1; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px;">
+                  <button style="padding:10px 16px; border:none; border-radius:9px; background:#C0664A; color:#fff; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 1px 2px rgba(158,79,55,.35);">Create</button>
+                </div>
+              </div>
+              <div style="flex:1; min-width:240px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Open existing</label>
+                <div style="display:flex; gap:8px;">
+                  <div style="position:relative; flex:1;">
+                    <select style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                      <option>Q3 Compliance Refresh</option>
+                      <option>Bed Management Onboarding</option>
+                      <option>EVS Quick-Start</option>
+                    </select>
+                    <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+                  </div>
+                  <button style="padding:10px 16px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">Open</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <div style="font-size:11.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:#A89F92; margin-bottom:10px;">Recent projects</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;">
+              <div style="background:#fff; border:1.5px solid #C0664A; border-radius:12px; padding:14px 16px; position:relative;">
+                <span style="position:absolute; top:13px; right:14px; font-size:10px; font-weight:700; color:#C0664A; background:#F6E9E2; padding:2px 8px; border-radius:20px;">OPEN</span>
+                <div style="font-size:14px; font-weight:700; color:#1F1C19;">Q3 Compliance Refresh</div>
+                <div style="font-size:11.5px; color:#9A9389; margin-top:4px;">Updated 8 min ago · 5 microlearnings</div>
+              </div>
+              <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:12px; padding:14px 16px;">
+                <div style="font-size:14px; font-weight:700; color:#1F1C19;">Bed Management Onboarding</div>
+                <div style="font-size:11.5px; color:#9A9389; margin-top:4px;">Updated yesterday · 3 microlearnings</div>
+              </div>
+              <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:12px; padding:14px 16px;">
+                <div style="font-size:14px; font-weight:700; color:#1F1C19;">EVS Quick-Start</div>
+                <div style="font-size:11.5px; color:#9A9389; margin-top:4px;">Updated Jun 21 · 2 microlearnings</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- STAGE 2 — AI account -->
+        <sc-if value="{{ isC2 }}">
+        <div style="">
+          <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:22px;">
+            <div style="display:flex; align-items:center; gap:13px; flex-wrap:wrap;">
+              <div style="{{ aiPillStyle }}">{{ aiPillText }}</div>
+              <div style="font-size:13px; color:#6F675E; flex:1; min-width:220px;">{{ aiStatusText }}</div>
+              <button onClick="{{ onRecheck }}" style="padding:9px 15px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">↻ Re-check</button>
+            </div>
+            <div style="height:1px; background:#EAE4D9; margin:20px 0;"></div>
+            <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Provider CLI</label>
+            <div style="position:relative; max-width:280px;">
+              <select value="{{ provider }}" onChange="{{ onProvider }}" style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                <option value="claude">claude — Anthropic CLI</option>
+                <option value="codex">codex — OpenAI CLI</option>
+              </select>
+              <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+            </div>
+            <p style="font-size:12.5px; color:#9A9389; margin:12px 0 0; line-height:1.55; max-width:560px;">Generation runs entirely on your CLI subscription — there's no metered API cost. Log into the CLI once in your terminal and the tool picks it up here.</p>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- STAGE 3 — Source materials -->
+        <sc-if value="{{ isC3 }}">
+        <div style="">
+          <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:22px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <label style="font-size:12px; font-weight:700; color:#4A443D;">Source documents</label>
+              <button onClick="{{ onOpenPicker }}" style="padding:8px 13px; border:1px solid #DAD3C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer;">Browse… <span style="color:#9A9389; font-weight:500;">md · txt · docx · pdf</span></button>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#9A9389; margin:8px 0 12px;">~/sources/patient-flow/</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <div style="display:inline-flex; align-items:center; gap:7px; padding:7px 11px; background:#fff; border:1px solid #E3DDD2; border-radius:8px; font-size:12.5px;"><span style="color:#C0664A;">▤</span> flow-overview.docx</div>
+              <div style="display:inline-flex; align-items:center; gap:7px; padding:7px 11px; background:#fff; border:1px solid #E3DDD2; border-radius:8px; font-size:12.5px;"><span style="color:#C0664A;">▤</span> command-center.pdf</div>
+              <div style="display:inline-flex; align-items:center; gap:7px; padding:7px 11px; background:#fff; border:1px solid #E3DDD2; border-radius:8px; font-size:12.5px;"><span style="color:#C0664A;">▤</span> bed-turnaround.md</div>
+              <div style="display:inline-flex; align-items:center; gap:7px; padding:7px 11px; background:#fff; border:1px solid #E3DDD2; border-radius:8px; font-size:12.5px;"><span style="color:#C0664A;">▤</span> shift-roles.md</div>
+            </div>
+            <div style="font-size:12px; color:#9A9389; margin-top:9px;">4 documents detected</div>
+
+            <div style="height:1px; background:#EAE4D9; margin:20px 0;"></div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <label style="font-size:12px; font-weight:700; color:#4A443D;">Images folder <span style="font-weight:500; color:#9A9389;">optional</span></label>
+              <button onClick="{{ onOpenPicker }}" style="padding:8px 13px; border:1px solid #DAD3C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer;">Browse…</button>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#9A9389; margin:8px 0 12px;">~/sources/patient-flow/img/</div>
+            <div style="display:flex; gap:9px;">
+              <div style="width:74px; height:52px; border-radius:7px; background:repeating-linear-gradient(45deg,#EEE7DA,#EEE7DA 6px,#E7DFD0 6px,#E7DFD0 12px); border:1px solid #E0D9CC;"></div>
+              <div style="width:74px; height:52px; border-radius:7px; background:repeating-linear-gradient(45deg,#EEE7DA,#EEE7DA 6px,#E7DFD0 6px,#E7DFD0 12px); border:1px solid #E0D9CC;"></div>
+              <div style="width:74px; height:52px; border-radius:7px; background:repeating-linear-gradient(45deg,#EEE7DA,#EEE7DA 6px,#E7DFD0 6px,#E7DFD0 12px); border:1px solid #E0D9CC;"></div>
+              <div style="display:flex; align-items:center; font-size:12.5px; color:#9A9389;">3 images</div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- STAGE 4 — GENERATE (HERO) -->
+        <sc-if value="{{ isC4 }}" hint-placeholder-val="{{ true }}">
+        <div style="">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+              <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Course title</label>
+              <input value="{{ genTitle }}" onInput="{{ onGenTitle }}" style="width:100%; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px;">
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Course structure <span title="An archetype implies a teaching shape — e.g. concept-explainer goes intro → explain → check; software-procedure goes goal → steps → demo → mistakes → recap." style="color:#9A9389; cursor:help; font-weight:500;">ⓘ</span></label>
+              <div style="position:relative;">
+                <select value="{{ genArch }}" onChange="{{ onGenArch }}" style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                  <option value="concept-explainer">Concept explainer</option>
+                  <option value="software-procedure">Software procedure</option>
+                  <option value="decision-scenario">Decision scenario</option>
+                  <option value="policy-acceptable-use">Policy / acceptable use</option>
+                  <option value="onboarding-company">Onboarding — company</option>
+                  <option value="onboarding-role">Onboarding — role</option>
+                </select>
+                <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:14px;">
+            <div>
+              <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Learning objectives</label>
+              <textarea oninput="{{ onGenObj }}" style="width:100%; height:74px; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; resize:vertical; line-height:1.5;">Recognize how bed turnaround affects patient flow; locate status on the command center board; describe the role each shift plays.</textarea>
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Audience</label>
+              <textarea oninput="{{ onGenAud }}" style="width:100%; height:74px; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; resize:vertical; line-height:1.5;">New nursing and EVS staff in their first two weeks on the floor.</textarea>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:16px; align-items:flex-end; margin-top:14px; flex-wrap:wrap;">
+            <div style="width:140px;">
+              <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Units</label>
+              <input value="{{ genUnits }}" onInput="{{ onGenUnits }}" style="width:100%; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px;">
+            </div>
+            <div style="flex:1; min-width:220px;">
+              <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Model <span title="Drafts run on Sonnet (balanced). The SME-review pass automatically steps up to Opus for the highest quality." style="color:#9A9389; cursor:help; font-weight:500;">ⓘ</span></label>
+              <div style="position:relative;">
+                <select value="{{ genModel }}" onChange="{{ onGenModel }}" style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                  <option value="haiku">Fastest — Haiku</option>
+                  <option value="sonnet">Balanced — Sonnet</option>
+                  <option value="opus">Best — Opus</option>
+                  <option value="default">CLI default</option>
+                </select>
+                <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- generation mode toggle -->
+          <div style="margin-top:18px;">
+            <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:8px;">Generation mode</label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div onClick="{{ onModeParallel }}" style="{{ parallelCardStyle }}">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:15px;">🧩</span>
+                  <span style="font-size:13.5px; font-weight:700;">Parallel</span>
+                  <span style="{{ parallelDotStyle }}"></span>
+                </div>
+                <div style="font-size:12px; color:#857C71; margin-top:5px; line-height:1.45;">Plan, then draft all modules at once. Fastest.</div>
+              </div>
+              <div onClick="{{ onModeStreaming }}" style="{{ streamingCardStyle }}">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:15px;">⚡</span>
+                  <span style="font-size:13.5px; font-weight:700;">Streaming</span>
+                  <span style="{{ streamingDotStyle }}"></span>
+                </div>
+                <div style="font-size:12px; color:#857C71; margin-top:5px; line-height:1.45;">One live pass — watch it write the script.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- capability note -->
+          <details style="margin-top:16px; border:1px solid #E6E0D5; background:#FBF9F5; border-radius:11px; padding:0; overflow:hidden;">
+            <summary style="cursor:pointer; list-style:none; padding:13px 16px; font-size:12.5px; font-weight:700; color:#4A443D; display:flex; align-items:center; gap:8px;"><span style="color:#C0664A;">＋</span> What can the AI build into a module?</summary>
+            <div style="padding:0 16px 15px; font-size:12.5px; color:#6F675E; line-height:1.6;">
+              Beyond text and visuals, each microlearning can include <strong style="color:#4A443D;">knowledge checks</strong>, <strong style="color:#4A443D;">drag-to-sort</strong> and categorize interactions, <strong style="color:#4A443D;">flashcards</strong>, accordions, process &amp; timeline diagrams, comparison tables, charts, and scroll-triggered animations — all chosen to fit the content and your archetype.
+            </div>
+          </details>
+
+          <!-- ACTION / WAIT STATE -->
+          <div style="margin-top:20px;">
+            <sc-if value="{{ genIdle }}">
+              <button onClick="{{ onGenerate }}" style="padding:13px 24px; border:none; border-radius:11px; background:linear-gradient(135deg,#C0664A,#A4523A); color:#fff; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; box-shadow:0 3px 12px rgba(158,79,55,.32); display:inline-flex; align-items:center; gap:9px;">Generate scripts <span style="font-size:16px;">→</span></button>
+              <div style="font-size:12px; color:#9A9389; margin-top:9px;">Writes the draft script + an SME review document into the project folder. Typically 30s–3 min.</div>
+            </sc-if>
+
+            <!-- RUNNING -->
+            <sc-if value="{{ genRunning }}">
+            <div style="border:1px solid #E6E0D5; border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(60,50,40,.05);">
+              <div style="display:flex; align-items:center; gap:12px; padding:14px 18px; background:#FBF9F5; border-bottom:1px solid #EAE4D9;">
+                <span style="width:15px; height:15px; border:2.5px solid #E0D2C9; border-top-color:#C0664A; border-radius:50%; display:inline-block; animation:cb-spin .8s linear infinite;"></span>
+                <span style="font-size:13.5px; font-weight:700; color:#1F1C19;">{{ phaseLabel }}</span>
+                <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#857C71;">{{ elapsedFmt }}</span>
+                <button onClick="{{ onCancelGen }}" style="padding:6px 12px; border:1px solid #DAD3C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12px; font-weight:600; color:#857C71; cursor:pointer;">Stop</button>
+              </div>
+
+              <!-- parallel: per-unit progress -->
+              <sc-if value="{{ showUnits }}">
+              <div style="padding:8px 18px 14px;">
+                <sc-for list="{{ units }}" as="u" hint-placeholder-count="5">
+                  <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #F0EBE1;">
+                    <span style="{{ u.dotStyle }}">{{ u.dotInner }}</span>
+                    <span style="font-size:13px; color:#3A352F; flex:1;">{{ u.name }}</span>
+                    <span style="{{ u.statusStyle }}">{{ u.statusText }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              </sc-if>
+
+              <!-- streaming: live console -->
+              <sc-if value="{{ showStream }}">
+              <div style="padding:0;">
+                <pre style="margin:0; background:#15201C; color:#CFE9DC; padding:16px 18px; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.55; max-height:300px; overflow:auto; white-space:pre-wrap; word-break:break-word;">{{ streamText }}<span style="display:inline-block; width:8px; height:14px; background:#7FD8A8; vertical-align:-2px; animation:cb-blink 1s step-end infinite;"></span></pre>
+              </div>
+              </sc-if>
+            </div>
+            </sc-if>
+
+            <!-- DONE -->
+            <sc-if value="{{ genDone }}">
+            <div style="">
+              <div style="display:flex; align-items:center; gap:11px; padding:13px 16px; background:#E9F2EC; border:1px solid #CBE3D5; border-radius:11px;">
+                <span style="width:22px; height:22px; border-radius:50%; background:#3F7D5F; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;">✓</span>
+                <div style="flex:1;">
+                  <div style="font-size:13.5px; font-weight:700; color:#23503B;">Script generated — {{ genCount }} microlearnings · lint passed</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5E8A72; margin-top:2px;">projects/q3-compliance/script.md</div>
+                </div>
+                <button style="padding:8px 13px; border:1px solid #BBD9C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12.5px; font-weight:600; color:#2C6047; cursor:pointer;">Open</button>
+              </div>
+
+              <div style="font-size:11.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:#A89F92; margin:20px 0 10px;">Generated modules — regenerate any one</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <sc-for list="{{ modules }}" as="m" hint-placeholder-count="5">
+                  <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:#FBF9F5; border:1px solid #E6E0D5; border-radius:10px;">
+                    <span style="width:24px; height:24px; border-radius:7px; background:#262320; color:#fff; font-size:12px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ m.n }}</span>
+                    <span style="font-size:13.5px; font-weight:600; color:#2A2620; flex:1;">{{ m.name }}</span>
+                    <span style="{{ m.flashStyle }}">{{ m.flash }}</span>
+                    <button onClick="{{ m.onRegen }}" style="padding:7px 12px; border:1px solid #DAD3C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12px; font-weight:600; color:#4A443D; cursor:pointer;">↻ Regenerate</button>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- STAGE 5 — SME review -->
+        <sc-if value="{{ isC5 }}">
+        <div style="">
+          <div style="display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:700; color:#B07D2A; background:#F6EDD9; border:1px solid #EBDCB6; padding:5px 11px; border-radius:20px; margin-bottom:16px;">Optional · skip if no changes were requested</div>
+          <div style="display:flex; align-items:stretch; gap:14px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:240px; background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:20px;">
+              <div style="font-size:13px; font-weight:700; color:#1F1C19;">1 · Send to SME</div>
+              <p style="font-size:12.5px; color:#6F675E; line-height:1.55; margin:7px 0 14px;">A reviewer-ready Word document is rendered from the current script. They edit with tracked changes and comments.</p>
+              <button style="padding:9px 14px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">Render review .docx</button>
+            </div>
+            <div style="display:flex; align-items:center; color:#C9C1B4; font-size:20px;">→</div>
+            <div style="flex:1; min-width:240px; background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:20px;">
+              <div style="font-size:13px; font-weight:700; color:#1F1C19;">2 · Apply their edits</div>
+              <p style="font-size:12.5px; color:#6F675E; line-height:1.55; margin:7px 0 14px;">Upload the reviewed document. Tracked changes and comments are merged back and the script is re-saved.</p>
+              <div style="display:flex; gap:8px;">
+                <button onClick="{{ onOpenPicker }}" style="padding:9px 14px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">Choose .docx…</button>
+                <button style="padding:9px 16px; border:none; border-radius:9px; background:#C0664A; color:#fff; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- STAGE 6 — Output format -->
+        <sc-if value="{{ isC6 }}">
+        <div style="">
+          <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:22px;">
+            <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:11px;">Formats to produce</label>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <label style="display:inline-flex; align-items:center; gap:9px; padding:11px 15px; background:#fff; border:1.5px solid #C0664A; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600;"><span style="width:16px; height:16px; border-radius:5px; background:#C0664A; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">✓</span> SCORM 1.2 <span style="font-size:10px; font-weight:700; color:#C0664A; background:#F6E9E2; padding:1px 7px; border-radius:20px;">default</span></label>
+              <label style="display:inline-flex; align-items:center; gap:9px; padding:11px 15px; background:#fff; border:1px solid #DED7CA; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; color:#857C71;"><span style="width:16px; height:16px; border-radius:5px; border:1.5px solid #C9C1B4; display:inline-block;"></span> cmi5 / xAPI</label>
+              <label style="display:inline-flex; align-items:center; gap:9px; padding:11px 15px; background:#fff; border:1px solid #DED7CA; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; color:#857C71;"><span style="width:16px; height:16px; border-radius:5px; border:1.5px solid #C9C1B4; display:inline-block;"></span> PowerPoint</label>
+            </div>
+
+            <div style="display:flex; gap:24px; margin-top:18px; flex-wrap:wrap;">
+              <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;"><span style="width:16px; height:16px; border-radius:5px; background:#C0664A; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">✓</span> Run lint <span title="Checks SCORM/cmi5 conformance before packaging." style="color:#9A9389; cursor:help;">ⓘ</span></label>
+              <label style="display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600; cursor:pointer;"><span style="width:16px; height:16px; border-radius:5px; background:#C0664A; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">✓</span> Include animations</label>
+            </div>
+
+            <div style="height:1px; background:#EAE4D9; margin:20px 0;"></div>
+
+            <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:10px;">Build scope</label>
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+              <div style="display:inline-flex; background:#EFE9DE; border-radius:9px; padding:3px;">
+                <button style="padding:8px 15px; border:none; border-radius:7px; background:#fff; font-family:inherit; font-size:12.5px; font-weight:700; color:#1F1C19; cursor:pointer; box-shadow:0 1px 2px rgba(60,50,40,.08);">This unit</button>
+                <button style="padding:8px 15px; border:none; border-radius:7px; background:transparent; font-family:inherit; font-size:12.5px; font-weight:600; color:#857C71; cursor:pointer;">Every unit</button>
+              </div>
+              <div style="position:relative; min-width:260px;">
+                <select style="appearance:none; width:100%; padding:9px 28px 9px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                  <option>Microlearning 1 — Why flow matters</option>
+                  <option>Microlearning 2 — Inside the command center</option>
+                  <option>Microlearning 3 — Bed turnaround basics</option>
+                </select>
+                <span style="position:absolute; right:11px; top:11px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+              </div>
+            </div>
+            <p style="font-size:12px; color:#9A9389; margin:14px 0 0; line-height:1.55;">Each microlearning ships as its own independent single-SCO package — the LMS sequences them.</p>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- STAGE 7 — Generate preview -->
+        <sc-if value="{{ isC7 }}">
+        <div style="">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <button onClick="{{ onBuildPreview }}" style="padding:12px 20px; border:none; border-radius:11px; background:linear-gradient(135deg,#C0664A,#A4523A); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 2px 10px rgba(158,79,55,.3);">Generate preview</button>
+            <button style="padding:11px 15px; border:1px solid #DAD3C6; border-radius:10px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">↻ Refresh</button>
+            <span style="font-size:12px; color:#9A9389;">Nothing reaches the output folder yet — this is the trust gate before publishing.</span>
+          </div>
+
+          <sc-if value="{{ previewBuilt }}">
+          <div style="">
+            <div style="display:flex; align-items:center; gap:11px; padding:12px 15px; background:#E9F2EC; border:1px solid #CBE3D5; border-radius:11px; margin-bottom:16px;">
+              <span style="width:20px; height:20px; border-radius:50%; background:#3F7D5F; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">✓</span>
+              <div style="flex:1;"><span style="font-size:13px; font-weight:700; color:#23503B;">SCORM 1.2 (preview)</span> <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5E8A72;">build/preview/ml-01.zip</span></div>
+              <button style="padding:7px 14px; border:none; border-radius:8px; background:#3F7D5F; color:#fff; font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer;">👁 Preview</button>
+            </div>
+            <div style="font-size:11.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:#A89F92; margin-bottom:10px;">All built courses</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px;">
+              <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:12px; padding:14px;">
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:15px;">📦</span><span style="font-size:13px; font-weight:700;">Microlearning 1</span><span style="margin-left:auto; font-size:10px; font-weight:700; color:#B07D2A; background:#F6EDD9; padding:2px 8px; border-radius:20px;">not yet published</span></div>
+                <button style="margin-top:11px; padding:7px 13px; border:1px solid #DAD3C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer;">👁 Preview course</button>
+              </div>
+              <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:12px; padding:14px;">
+                <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:15px;">📦</span><span style="font-size:13px; font-weight:700;">Microlearning 2</span><span style="margin-left:auto; font-size:10px; font-weight:700; color:#B07D2A; background:#F6EDD9; padding:2px 8px; border-radius:20px;">not yet published</span></div>
+                <button style="margin-top:11px; padding:7px 13px; border:1px solid #DAD3C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer;">👁 Preview course</button>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ previewEmpty }}">
+          <div style="border:1.5px dashed #DAD3C6; border-radius:14px; padding:40px; text-align:center; background:#FBF9F5;">
+            <div style="font-size:30px; opacity:.4;">⬚</div>
+            <div style="font-size:14px; font-weight:700; color:#4A443D; margin-top:8px;">No preview built yet</div>
+            <div style="font-size:12.5px; color:#9A9389; margin-top:5px;">Click <strong>Generate preview</strong> to build the courses and review each before publishing.</div>
+          </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- STAGE 8 — Publish -->
+        <sc-if value="{{ isC8 }}">
+        <div style="">
+          <div style="display:flex; align-items:center; gap:11px; padding:13px 16px; background:#FBF1E9; border:1px solid #ECD6C4; border-radius:12px; margin-bottom:18px;">
+            <span style="font-size:16px;">⚠</span>
+            <span style="font-size:13px; color:#8A5A38; line-height:1.5;">Publishing copies approved packages into the project's <strong>output</strong> folder — ready to upload to the LMS. This is the final, deliberate step.</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <div style="font-size:11.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:#A89F92;">Pending · {{ pendingCount }}</div>
+                <button onClick="{{ onPublishAll }}" style="padding:7px 13px; border:none; border-radius:8px; background:#C0664A; color:#fff; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;">Publish all approved</button>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <sc-for list="{{ pending }}" as="p" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; background:#FBF9F5; border:1px solid #E6E0D5; border-radius:10px;">
+                    <span style="font-size:14px;">📦</span>
+                    <span style="font-size:13px; font-weight:600; flex:1;">{{ p.name }}</span>
+                    <button onClick="{{ p.onPublish }}" style="padding:7px 13px; border:none; border-radius:8px; background:#262320; color:#fff; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer;">Publish ▸</button>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ pendingEmpty }}">
+                  <div style="font-size:12.5px; color:#9A9389; padding:14px; text-align:center; border:1px dashed #DED7CA; border-radius:10px;">All approved courses published.</div>
+                </sc-if>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <div style="font-size:11.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:#A89F92;">Published · {{ publishedCount }}</div>
+                <button style="padding:7px 13px; border:1px solid #DAD3C6; border-radius:8px; background:#fff; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer;">Open output folder</button>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <sc-for list="{{ published }}" as="p" hint-placeholder-count="1">
+                  <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; background:#E9F2EC; border:1px solid #CBE3D5; border-radius:10px;">
+                    <span style="width:18px; height:18px; border-radius:50%; background:#3F7D5F; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;">✓</span>
+                    <span style="font-size:13px; font-weight:600; flex:1; color:#23503B;">{{ p.name }}</span>
+                    <button style="padding:6px 11px; border:1px solid #BBD9C6; border-radius:8px; background:#fff; font-family:inherit; font-size:11.5px; font-weight:600; color:#2C6047; cursor:pointer;">Show in Finder</button>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ publishedEmpty }}">
+                  <div style="font-size:12.5px; color:#9A9389; padding:14px; text-align:center; border:1px dashed #DED7CA; border-radius:10px;">Nothing published yet.</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- footer nav -->
+        <div style="display:flex; align-items:center; gap:12px; margin-top:32px; padding-top:20px; border-top:1px solid #E3DDD2;">
+          <button onClick="{{ onBack }}" style="{{ backBtnStyle }}">← Back</button>
+          <div style="flex:1;"></div>
+          <span style="font-size:12px; color:#A89F92;">{{ progressLabel }}</span>
+          <button onClick="{{ onNext }}" style="{{ nextBtnStyle }}">{{ nextLabel }}</button>
+        </div>
+
+      </div>
+      </sc-if>
+
+      <!-- ===================== SLIDE MODE ===================== -->
+      <sc-if value="{{ isSlide }}">
+      <div>
+        <div style="margin-bottom:22px; ">
+          <div style="font-size:11.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:#C0664A; margin-bottom:7px;">{{ stageKicker }}</div>
+          <h1 style="margin:0; font-size:27px; font-weight:800; letter-spacing:-.6px; color:#1F1C19;">{{ stageTitle }}</h1>
+          <p style="margin:9px 0 0; font-size:14.5px; line-height:1.5; color:#6F675E; max-width:640px;">{{ stageDesc }}</p>
+        </div>
+
+        <!-- SLIDE STAGE 1 — Source & generate -->
+        <sc-if value="{{ isS1 }}">
+        <div style="">
+          <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:22px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Source content</label>
+                <div style="display:flex; gap:8px;">
+                  <input readonly value="~/sources/qbr-deck.docx" style="flex:1; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#F4F0E8; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#6F675E;">
+                  <button onClick="{{ onOpenPicker }}" style="padding:10px 14px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">Browse…</button>
+                </div>
+              </div>
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Deck title</label>
+                <input value="Q2 Operations Review" style="width:100%; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px;">
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:14px;">
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Purpose preset <span title="Presets change the deck's arc, voice and length — same layouts, same brand." style="color:#9A9389; cursor:help; font-weight:500;">ⓘ</span></label>
+                <div style="position:relative;">
+                  <select style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                    <option>General — let the material decide</option>
+                    <option>Formal — exec-ready, 10–12</option>
+                    <option>Debrief — retrospective, 6–10</option>
+                    <option>Workshop — instructional, 10–16</option>
+                    <option>Client — benefit-led, 8–12</option>
+                    <option>Pitch — persuasive, 8–12</option>
+                  </select>
+                  <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+                </div>
+              </div>
+              <div style="display:flex; gap:14px;">
+                <div style="width:110px;">
+                  <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Slides</label>
+                  <input value="auto" style="width:100%; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px;">
+                </div>
+                <div style="flex:1;">
+                  <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Model</label>
+                  <div style="position:relative;">
+                    <select style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                      <option>Balanced — Sonnet</option>
+                      <option>Fastest — Haiku</option>
+                      <option>Best — Opus</option>
+                    </select>
+                    <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:18px;">
+              <button onClick="{{ onGenDeck }}" style="padding:12px 22px; border:none; border-radius:11px; background:linear-gradient(135deg,#C0664A,#A4523A); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 2px 10px rgba(158,79,55,.3);">Generate presentation →</button>
+              <span style="font-size:12px; color:#9A9389; margin-left:12px;">Converts your content into slides using the shared layout templates.</span>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- SLIDE STAGE 2 — REVIEW & EDIT (HERO) -->
+        <sc-if value="{{ isS2 }}">
+        <div style="">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+            <button onClick="{{ onOpenShow }}" style="padding:11px 18px; border:none; border-radius:10px; background:#262320; color:#fff; font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">▶ Preview slideshow</button>
+            <div style="flex:1;"></div>
+            <div style="position:relative;">
+              <select value="{{ addLayout }}" onChange="{{ onAddLayoutChange }}" style="appearance:none; padding:9px 28px 9px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:12.5px; cursor:pointer;">
+                <option value="bullets">bullets</option>
+                <option value="process">process</option>
+                <option value="comparison">comparison</option>
+                <option value="chart">chart</option>
+                <option value="quote">quote</option>
+                <option value="statement">statement</option>
+              </select>
+              <span style="position:absolute; right:11px; top:11px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+            </div>
+            <button onClick="{{ onAddSlide }}" style="padding:9px 14px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer;">+ Add slide</button>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <sc-for list="{{ slides }}" as="s" hint-placeholder-count="6">
+              <div style="display:flex; gap:14px; padding:13px; background:#FBF9F5; border:1px solid #E6E0D5; border-radius:13px; box-shadow:0 1px 2px rgba(60,50,40,.04);">
+                <!-- thumbnail -->
+                <div onClick="{{ s.onOpen }}" title="Open in slideshow" style="flex:0 0 168px; height:95px; border-radius:8px; overflow:hidden; cursor:pointer; border:1px solid #DDD6C8; box-shadow:0 1px 3px rgba(0,0,0,.08); position:relative;">{{ s.thumbEl }}</div>
+
+                <!-- controls -->
+                <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:9px;">
+                  <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">
+                    <span style="width:23px; height:23px; border-radius:7px; background:#0B2C37; color:#fff; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ s.n }}</span>
+                    <span style="font-size:13.5px; font-weight:700; color:#1F1C19; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.title }}</span>
+                    <div style="flex:1;"></div>
+                    <div style="position:relative;">
+                      <select value="{{ s.layout }}" onChange="{{ s.onLayout }}" title="Layout" style="appearance:none; padding:6px 24px 6px 10px; border:1px solid #DED7CA; border-radius:8px; background:#fff; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer;">
+                        <option value="divider">divider</option>
+                        <option value="agenda">agenda</option>
+                        <option value="statement">statement</option>
+                        <option value="process">process</option>
+                        <option value="comparison">comparison</option>
+                        <option value="chart">chart</option>
+                        <option value="quote">quote</option>
+                        <option value="cards">cards</option>
+                        <option value="timeline">timeline</option>
+                        <option value="bullets">bullets</option>
+                        <option value="closing">closing</option>
+                      </select>
+                      <span style="position:absolute; right:9px; top:8px; color:#9A9389; font-size:9px; pointer-events:none;">▾</span>
+                    </div>
+                    <div style="position:relative;">
+                      <select value="{{ s.theme }}" onChange="{{ s.onTheme }}" title="Theme" style="{{ s.themeSelStyle }}">
+                        <option value="auto">Auto theme</option>
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                      </select>
+                      <span style="position:absolute; right:9px; top:8px; color:#9A9389; font-size:9px; pointer-events:none;">▾</span>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <span style="font-size:11px; font-weight:700; color:#A89F92; text-transform:uppercase; letter-spacing:.4px;">Regenerate</span>
+                    <div style="display:inline-flex; background:#EFE9DE; border-radius:8px; padding:3px; gap:2px;">
+                      <button onClick="{{ s.onScopeContent }}" title="AI rewords text, keeps layout & colors" style="{{ s.scContentStyle }}">Content</button>
+                      <button onClick="{{ s.onScopeLayout }}" title="AI picks a better-fitting layout" style="{{ s.scLayoutStyle }}">Layout</button>
+                      <button onClick="{{ s.onScopeColor }}" title="Instant local accent reshuffle — no AI" style="{{ s.scColorStyle }}">Color</button>
+                    </div>
+                    <button onClick="{{ s.onRegen }}" style="padding:6px 13px; border:none; border-radius:8px; background:#C0664A; color:#fff; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">↻ Run</button>
+                    <span style="{{ s.flashStyle }}">{{ s.flash }}</span>
+                    <div style="flex:1;"></div>
+                    <button onClick="{{ s.onUp }}" title="Move up" style="width:28px; height:28px; border:1px solid #DED7CA; border-radius:8px; background:#fff; cursor:pointer; color:#857C71; font-size:12px;">↑</button>
+                    <button onClick="{{ s.onDown }}" title="Move down" style="width:28px; height:28px; border:1px solid #DED7CA; border-radius:8px; background:#fff; cursor:pointer; color:#857C71; font-size:12px;">↓</button>
+                    <button onClick="{{ s.onRemove }}" title="Remove slide" style="width:28px; height:28px; border:1px solid #ECD3CC; border-radius:8px; background:#fff; cursor:pointer; color:#A23A2C; font-size:12px;">✕</button>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="color:#C9C1B4; font-size:13px;">↳</span>
+                    <input value="{{ s.guide }}" onInput="{{ s.onGuide }}" placeholder="what should change? (guides Content / Layout regen)" style="flex:1; min-width:160px; padding:6px 11px; border:1px solid #E3DDD2; border-radius:8px; background:#fff; font-family:inherit; font-size:12px;">
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- SLIDE STAGE 3 — Build -->
+        <sc-if value="{{ isS3 }}">
+        <div style="">
+          <div style="background:#FBF9F5; border:1px solid #E6E0D5; border-radius:14px; padding:22px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">File name</label>
+                <input value="q2-operations-review.pptx" style="width:100%; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:'IBM Plex Mono',monospace; font-size:12.5px;">
+              </div>
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Output folder</label>
+                <div style="display:flex; gap:8px;">
+                  <input readonly value="~/Desktop/decks" style="flex:1; padding:10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#F4F0E8; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#6F675E;">
+                  <button onClick="{{ onOpenPicker }}" style="padding:10px 14px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">Browse…</button>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:14px;">
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Deck transition</label>
+                <div style="position:relative;">
+                  <select style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                    <option>Fade</option><option>None</option><option>Cut</option><option>Push</option><option>Wipe</option><option>Split</option><option>Cover</option>
+                  </select>
+                  <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+                </div>
+              </div>
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#4A443D; margin-bottom:7px;">Element animation</label>
+                <div style="position:relative;">
+                  <select style="appearance:none; width:100%; padding:10px 28px 10px 12px; border:1px solid #DED7CA; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer;">
+                    <option>Rise</option><option>Fade</option><option>Fly left</option><option>Fly right</option><option>None</option>
+                  </select>
+                  <span style="position:absolute; right:11px; top:12px; color:#9A9389; font-size:10px; pointer-events:none;">▾</span>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:18px;">
+              <button style="padding:12px 22px; border:none; border-radius:11px; background:linear-gradient(135deg,#C0664A,#A4523A); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 2px 10px rgba(158,79,55,.3);">Build presentation</button>
+              <span style="font-size:12px; color:#9A9389; margin-left:12px;">Renders to an editable, on-brand PowerPoint deck.</span>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- slide footer nav -->
+        <div style="display:flex; align-items:center; gap:12px; margin-top:32px; padding-top:20px; border-top:1px solid #E3DDD2;">
+          <button onClick="{{ onBack }}" style="{{ backBtnStyle }}">← Back</button>
+          <div style="flex:1;"></div>
+          <span style="font-size:12px; color:#A89F92;">{{ progressLabel }}</span>
+          <button onClick="{{ onNext }}" style="{{ nextBtnStyle }}">{{ nextLabel }}</button>
+        </div>
+      </div>
+      </sc-if>
+
+    </main>
+  </div>
+
+  <!-- ============ SLIDESHOW OVERLAY ============ -->
+  <sc-if value="{{ showOpen }}">
+  <div style="position:fixed; inset:0; z-index:60; background:rgba(12,10,8,.975); display:flex; flex-direction:column; ">
+    <div style="display:flex; align-items:center; gap:16px; padding:14px 22px; color:#E8E2D6;">
+      <span style="font-size:13px; font-weight:700; letter-spacing:.3px;">Slideshow preview</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; opacity:.7;">{{ showCount }}</span>
+      <div style="flex:1;"></div>
+      <span style="font-size:12px; opacity:.6;">Transition</span>
+      <div style="position:relative;">
+        <select value="{{ showTx }}" onChange="{{ onShowTx }}" style="appearance:none; padding:6px 24px 6px 11px; border:1px solid rgba(255,255,255,.2); border-radius:8px; background:rgba(255,255,255,.06); color:#E8E2D6; font-family:inherit; font-size:12.5px; cursor:pointer;">
+          <option value="fade">Fade</option>
+          <option value="slide">Slide</option>
+          <option value="wipe">Wipe</option>
+          <option value="none">None</option>
+        </select>
+        <span style="position:absolute; right:9px; top:8px; color:#9A9389; font-size:9px; pointer-events:none;">▾</span>
+      </div>
+      <button onClick="{{ onShowClose }}" style="width:34px; height:34px; border:none; border-radius:9px; background:rgba(255,255,255,.08); color:#E8E2D6; font-size:17px; cursor:pointer;">✕</button>
+    </div>
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:0 26px 12px; min-height:0;">
+      <div style="width:min(90vw, calc((100vh - 170px) * 16 / 9)); aspect-ratio:16/9; border-radius:10px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.6);">{{ showPosterEl }}</div>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:center; gap:14px; padding:0 0 26px;">
+      <button onClick="{{ onShowPrev }}" style="padding:11px 22px; border:1px solid rgba(255,255,255,.18); border-radius:10px; background:rgba(255,255,255,.06); color:#E8E2D6; font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;">‹ Back</button>
+      <button onClick="{{ onShowNext }}" style="padding:11px 26px; border:none; border-radius:10px; background:#1EB16A; color:#fff; font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer;">Next ›</button>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ FILE PICKER MODAL ============ -->
+  <sc-if value="{{ pickerOpen }}">
+  <div onClick="{{ onClosePicker }}" style="position:fixed; inset:0; z-index:70; background:rgba(20,16,12,.42); display:flex; align-items:center; justify-content:center; ">
+    <div onClick="{{ stop }}" style="width:560px; max-width:92vw; max-height:80vh; background:#FBF9F5; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 30px 80px rgba(0,0,0,.35);">
+      <div style="padding:16px 20px; border-bottom:1px solid #EAE4D9; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:14px; font-weight:700; color:#1F1C19;">Choose a folder</span>
+        <span style="font-size:11px; color:#9A9389; background:#EFE9DE; padding:2px 9px; border-radius:20px;">folders only</span>
+      </div>
+      <div style="padding:10px 20px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#857C71; background:#F4F0E8;">~ / CourseBuilder / projects</div>
+      <div style="flex:1; overflow:auto; padding:6px 0;">
+        <div onClick="{{ stop }}" style="padding:10px 20px; display:flex; align-items:center; gap:10px; font-size:13.5px; color:#9A9389; cursor:default;"><span>↰</span> ..</div>
+        <div style="padding:10px 20px; display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer; background:#F6E9E2;"><span style="color:#C0664A;">📁</span> q3-compliance</div>
+        <div style="padding:10px 20px; display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer;"><span style="color:#C0664A;">📁</span> bed-management</div>
+        <div style="padding:10px 20px; display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer;"><span style="color:#C0664A;">📁</span> evs-quickstart</div>
+        <div style="padding:10px 20px; display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer;"><span style="color:#C0664A;">📁</span> _archive</div>
+      </div>
+      <div style="padding:14px 20px; border-top:1px solid #EAE4D9; display:flex; align-items:center; gap:12px;">
+        <span style="flex:1; font-size:11.5px; color:#857C71; font-family:'IBM Plex Mono',monospace;">Selected: projects/q3-compliance</span>
+        <button onClick="{{ onClosePicker }}" style="padding:9px 15px; border:1px solid #DAD3C6; border-radius:9px; background:#fff; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;">Cancel</button>
+        <button onClick="{{ onClosePicker }}" style="padding:9px 18px; border:none; border-radius:9px; background:#262320; color:#fff; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">Use folder</button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    mode: 'course',
+    brand: 'teletracking',
+    project: 'Q3 Compliance Refresh',
+    courseStep: 4,
+    slideStep: 2,
+    provider: 'claude',
+    aiConnected: true,
+
+    // generate hero
+    genTitle: 'Patient Flow Fundamentals',
+    genArch: 'concept-explainer',
+    genUnits: 'auto',
+    genModel: 'sonnet',
+    genMode: 'parallel',
+    genPhase: 'idle',      // idle | planning | units | stream | done
+    elapsed: 0,
+    units: [],
+    streamText: '',
+    modules: [],
+
+    // course 7/8
+    previewBuilt: false,
+    pending: [
+      { id: 1, name: 'Microlearning 1 — Why flow matters' },
+      { id: 2, name: 'Microlearning 2 — Inside the command center' },
+      { id: 3, name: 'Microlearning 3 — Bed turnaround basics' },
+    ],
+    published: [],
+
+    // slide hero
+    addLayout: 'bullets',
+    slides: [
+      { layout:'divider', theme:'auto', title:'Q2 Operations Review', scopes:{content:false,layout:false,color:false}, guide:'', flash:'', content:{ kicker:'Quarterly Business Review', title:'Q2 Operations Review' } },
+      { layout:'agenda', theme:'auto', title:'What we will cover', scopes:{content:false,layout:false,color:false}, guide:'', flash:'', content:{ title:'Agenda', items:['Volume & throughput','The command center','Bed turnaround','What changes in Q3'] } },
+      { layout:'statement', theme:'light', title:'A single principle', scopes:{content:false,layout:false,color:false}, guide:'', flash:'', content:{ text:'Every minute a bed sits dirty is a minute a patient waits.' } },
+      { layout:'process', theme:'auto', title:'The turnaround loop', scopes:{content:false,layout:false,color:true}, guide:'tighten the step labels', flash:'', content:{ title:'Bed turnaround, end to end', steps:['Discharge ordered','Bed marked dirty','EVS cleans','Bed ready'] } },
+      { layout:'comparison', theme:'dark', title:'Manual vs TeleTracking', scopes:{content:false,layout:false,color:false}, guide:'', flash:'', content:{ title:'Where the time goes', cols:[{h:'Manual',items:['Phone tag','Guesswork','No audit trail']},{h:'TeleTracking',items:['Live status','Auto-assign','Full history']}] } },
+      { layout:'chart', theme:'light', title:'Turnaround trend', scopes:{content:false,layout:false,color:false}, guide:'', flash:'', content:{ title:'Avg turnaround time (min)', bars:[{l:'Q1',v:62},{l:'Q2',v:48},{l:'Target',v:35}] } },
+      { layout:'quote', theme:'dark', title:'Voice from the floor', scopes:{content:false,layout:false,color:false}, guide:'', flash:'', content:{ text:'Visibility changed how the whole unit behaves.', who:'Charge Nurse, 6 West' } },
+      { layout:'closing', theme:'auto', title:'Closing', scopes:{content:false,layout:false,color:false}, guide:'', flash:'', content:{ title:'Questions?', sub:'flow@teletracking · ops command center' } },
+    ],
+
+    showOpen: false,
+    showIdx: 0,
+    showTx: 'fade',
+    pickerOpen: false,
+  };
+
+  componentDidMount() {
+    this._key = (e) => {
+      if (!this.state.showOpen) return;
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); this.showNext(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); this.showPrev(); }
+      else if (e.key === 'Escape') { this.setState({ showOpen:false }); }
+    };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._key);
+    clearInterval(this._timer); clearInterval(this._si);
+  }
+
+  // ---------- generation simulation ----------
+  unitNames() {
+    return ['Why flow matters','Inside the command center','Bed turnaround basics','Reading the status board','Your role on shift'];
+  }
+  runGenerate() {
+    if (this.state.genPhase === 'planning' || this.state.genPhase === 'units' || this.state.genPhase === 'stream') return;
+    this._t0 = Date.now();
+    clearInterval(this._timer);
+    this._timer = setInterval(() => this.setState({ elapsed: Math.floor((Date.now()-this._t0)/1000) }), 250);
+    this.setState({ elapsed:0, streamText:'', modules:[] });
+    if (this.state.genMode === 'parallel') this.runParallel();
+    else this.runStream();
+  }
+  runParallel() {
+    this.setState({ genPhase:'planning', units:[] });
+    const names = this.unitNames();
+    setTimeout(() => {
+      this.setState({ genPhase:'units', units: names.map(n => ({ name:n, status:'queued' })) });
+      names.forEach((n,i) => {
+        setTimeout(() => this.updUnit(i,'running'), 500 + i*220);
+        setTimeout(() => this.updUnit(i,'done'), 500 + i*220 + 1100 + Math.random()*500);
+      });
+      setTimeout(() => this.finishGen(), 500 + names.length*220 + 1900);
+    }, 1200);
+  }
+  updUnit(i, status) {
+    this.setState(s => {
+      const units = s.units.map((u,idx) => idx===i ? { ...u, status } : u);
+      return { units };
+    });
+  }
+  runStream() {
+    const txt = this.streamScript();
+    this.setState({ genPhase:'stream', streamText:'' });
+    let i = 0;
+    clearInterval(this._si);
+    this._si = setInterval(() => {
+      i += 3 + Math.floor(Math.random()*6);
+      this.setState({ streamText: txt.slice(0, i) });
+      if (i >= txt.length) { clearInterval(this._si); this.finishGen(); }
+    }, 38);
+  }
+  finishGen() {
+    clearInterval(this._timer); clearInterval(this._si);
+    this.setState({
+      genPhase:'done',
+      modules: this.unitNames().map((n,i) => ({ id:i, name:`Microlearning ${i+1} — ${n}`, flash:'' })),
+    });
+  }
+  cancelGen() {
+    clearInterval(this._timer); clearInterval(this._si);
+    this.setState({ genPhase:'idle', units:[], streamText:'' });
+  }
+  regenModule(id) {
+    this.setState(s => ({ modules: s.modules.map(m => m.id===id ? { ...m, flash:'regenerating…' } : m) }));
+    setTimeout(() => this.setState(s => ({ modules: s.modules.map(m => m.id===id ? { ...m, flash:'✓ updated' } : m) })), 1400);
+    setTimeout(() => this.setState(s => ({ modules: s.modules.map(m => m.id===id ? { ...m, flash:'' } : m) })), 3200);
+  }
+  streamScript() {
+    return [
+      '# Patient Flow Fundamentals',
+      '',
+      '*Graded:* pass 80   *Retry:* 2',
+      '',
+      'Planning curriculum from 4 source documents…',
+      '  → flow-overview.docx, command-center.pdf, bed-turnaround.md, shift-roles.md',
+      'Archetype: concept-explainer  ·  audience: new floor staff',
+      '',
+      '## Microlearning 1: Why flow matters',
+      '',
+      '*Visual:* a full hospital where one blocked bed ripples to the ED.',
+      'Patient flow is the movement of patients through the hospital — admit,',
+      'treat, discharge. When one stage stalls, every upstream stage backs up.',
+      '',
+      '*Statement:* One blocked bed is felt three departments away.',
+      '',
+      '*KnowledgeCheck:* Where does a discharge delay show up first?',
+      '  - The emergency department  ✓',
+      '  - The cafeteria',
+      '  - The parking garage',
+      '',
+      '## Microlearning 2: Inside the command center',
+      '',
+      '*Process:* Discharge ordered → Bed dirty → EVS cleans → Bed ready',
+      'The board is the single source of truth. Color tells you state at a glance.',
+      '',
+      'Assembling units, linting blocks, saving script.md … ',
+    ].join('\n');
+  }
+
+  buildPreview() { this.setState({ previewBuilt:true }); }
+  publishOne(id) {
+    this.setState(s => {
+      const item = s.pending.find(p => p.id===id);
+      return { pending: s.pending.filter(p => p.id!==id), published: item ? [...s.published, item] : s.published };
+    });
+  }
+  publishAll() {
+    this.setState(s => ({ published:[...s.published, ...s.pending], pending:[] }));
+  }
+
+  // ---------- slide ops ----------
+  natural(layout) {
+    const light = ['statement','chart','process','cards','imagetext'];
+    return light.includes(layout) ? 'light' : 'dark';
+  }
+  setSlide(i, patch) {
+    this.setState(s => ({ slides: s.slides.map((sl,idx) => idx===i ? { ...sl, ...patch } : sl) }));
+  }
+  toggleScope(i, key) {
+    this.setState(s => ({ slides: s.slides.map((sl,idx) => idx===i ? { ...sl, scopes:{ ...sl.scopes, [key]:!sl.scopes[key] } } : sl) }));
+  }
+  regenSlide(i) {
+    const sl = this.state.slides[i];
+    const sc = sl.scopes;
+    if (!sc.content && !sc.layout && !sc.color) {
+      this.flash(i, '⚠ pick a scope first', true); return;
+    }
+    if (sc.color && !sc.content && !sc.layout) {
+      // instant local accent reshuffle
+      this.setSlide(i, { content: { ...sl.content, _shuffle: (sl.content._shuffle||0)+1 } });
+      this.flash(i, '✓ colors reshuffled', false);
+      return;
+    }
+    this.flash(i, 'regenerating…', false, true);
+    setTimeout(() => { this.flash(i, '✓ regenerated', false); }, 1600);
+  }
+  flash(i, text, err, sticky) {
+    this.setSlide(i, { flash: text, flashErr: !!err, flashBusy: !!sticky });
+    if (!sticky) setTimeout(() => this.setSlide(i, { flash:'' }), err ? 2200 : 2600);
+  }
+  moveSlide(i, dir) {
+    this.setState(s => {
+      const a = [...s.slides]; const j = i+dir;
+      if (j<0 || j>=a.length) return {};
+      [a[i],a[j]] = [a[j],a[i]];
+      return { slides:a };
+    });
+  }
+  removeSlide(i) { this.setState(s => ({ slides: s.slides.filter((_,idx)=>idx!==i) })); }
+  addSlide() {
+    const layout = this.state.addLayout;
+    const blank = { layout, theme:'auto', title:`New ${layout} slide`, scopes:{content:false,layout:false,color:false}, guide:'', flash:'',
+      content: layout==='process' ? {title:'New process',steps:['Step one','Step two','Step three']}
+        : layout==='comparison' ? {title:'Compare',cols:[{h:'Option A',items:['Point','Point']},{h:'Option B',items:['Point','Point']}]}
+        : layout==='chart' ? {title:'New chart',bars:[{l:'A',v:40},{l:'B',v:65},{l:'C',v:30}]}
+        : layout==='quote' ? {text:'A memorable line goes here.',who:'Source'}
+        : layout==='statement' ? {text:'A single, bold principle.'}
+        : {title:'New slide', items:['First point','Second point','Third point']} };
+    this.setState(s => ({ slides:[...s.slides, blank] }));
+  }
+
+  openShow(i) { this.setState({ showOpen:true, showIdx: i||0 }); }
+  showNext() { this.setState(s => ({ showIdx: Math.min(s.slides.length-1, s.showIdx+1) })); }
+  showPrev() { this.setState(s => ({ showIdx: Math.max(0, s.showIdx-1) })); }
+
+  // ---------- SVG poster (branded content) ----------
+  posterSVG(sl, opts) {
+    opts = opts || {};
+    const layout = sl.layout;
+    const theme = (sl.theme && sl.theme !== 'auto') ? sl.theme : this.natural(layout);
+    const dark = theme === 'dark';
+    const TT = { green:'#1EB16A', teal:'#00A5A7', blue:'#63ACDB', yellow:'#F1C700', orange:'#F69000', navy:'#003E51', deep:'#0B2C37' };
+    const accents = [TT.green, TT.teal, TT.blue, TT.yellow];
+    const sh = (sl.content && sl.content._shuffle) || 0;
+    const acc = (k) => accents[(k + sh) % accents.length];
+    const bg = dark ? TT.navy : '#FFFFFF';
+    const ink = dark ? '#FFFFFF' : TT.deep;
+    const sub = dark ? '#9FC7D2' : '#5A6B72';
+    const panel = dark ? 'rgba(255,255,255,.07)' : '#F1F5F6';
+    const line = dark ? 'rgba(255,255,255,.16)' : '#DCE4E6';
+    const esc = (t) => String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const wrap = (text, max) => {
+      const words = String(text||'').split(' '); const lines=[]; let cur='';
+      words.forEach(w => { if ((cur+' '+w).trim().length>max){ if(cur)lines.push(cur); cur=w; } else cur=(cur+' '+w).trim(); });
+      if (cur) lines.push(cur); return lines;
+    };
+    const c = sl.content || {};
+    let body = '';
+
+    if (layout === 'divider' || layout === 'sectionheader') {
+      const kick = c.kicker || 'Section';
+      const title = c.title || sl.title;
+      const lines = wrap(title, 18);
+      body += `<text x="84" y="250" fill="${TT.green}" font-size="26" font-weight="700" letter-spacing="2" font-family="'Open Sans Condensed',sans-serif" text-transform="uppercase">${esc(kick.toUpperCase())}</text>`;
+      body += `<rect x="84" y="272" width="64" height="6" rx="3" fill="${TT.green}"/>`;
+      lines.forEach((ln,idx) => { body += `<text x="84" y="${360+idx*78}" fill="${ink}" font-size="68" font-weight="800" font-family="'Open Sans',sans-serif">${esc(ln)}</text>`; });
+    } else if (layout === 'agenda') {
+      body += `<text x="84" y="150" fill="${ink}" font-size="44" font-weight="800" font-family="'Open Sans',sans-serif">${esc(c.title||'Agenda')}</text>`;
+      (c.items||[]).slice(0,5).forEach((it,idx) => {
+        const y = 240 + idx*84;
+        body += `<text x="84" y="${y+6}" fill="${acc(idx)}" font-size="40" font-weight="800" font-family="'Open Sans',sans-serif">${idx+1}</text>`;
+        body += `<text x="150" y="${y}" fill="${ink}" font-size="30" font-weight="600" font-family="'Open Sans',sans-serif">${esc(it)}</text>`;
+        body += `<line x1="150" y1="${y+26}" x2="1120" y2="${y+26}" stroke="${line}" stroke-width="1.5"/>`;
+      });
+    } else if (layout === 'statement') {
+      const lines = wrap(c.text || sl.title, 26);
+      const total = lines.length;
+      lines.forEach((ln,idx) => { body += `<text x="84" y="${360 - (total-1)*38 + idx*76}" fill="${ink}" font-size="56" font-weight="800" font-family="'Open Sans',sans-serif">${esc(ln)}</text>`; });
+      body += `<rect x="84" y="${360 - (total-1)*38 + total*76 + 6}" width="120" height="8" rx="4" fill="${TT.green}"/>`;
+    } else if (layout === 'process') {
+      body += `<text x="84" y="140" fill="${ink}" font-size="40" font-weight="800" font-family="'Open Sans',sans-serif">${esc(c.title||'Process')}</text>`;
+      const steps = (c.steps||[]).slice(0,4); const n = steps.length || 1;
+      const gap = 40; const w = (1112 - (n-1)*gap) / n;
+      steps.forEach((st,idx) => {
+        const x = 84 + idx*(w+gap); const col = acc(idx);
+        body += `<rect x="${x}" y="270" width="${w}" height="200" rx="16" fill="${panel}" stroke="${line}" stroke-width="1.5"/>`;
+        body += `<circle cx="${x+38}" cy="320" r="26" fill="${col}"/>`;
+        body += `<text x="${x+38}" y="330" fill="#fff" font-size="26" font-weight="800" text-anchor="middle" font-family="'Open Sans',sans-serif">${idx+1}</text>`;
+        wrap(st, 16).slice(0,3).forEach((ln,li) => { body += `<text x="${x+24}" y="${392+li*30}" fill="${ink}" font-size="22" font-weight="600" font-family="'Open Sans',sans-serif">${esc(ln)}</text>`; });
+        if (idx < n-1) body += `<text x="${x+w+10}" y="378" fill="${sub}" font-size="34" font-weight="800" text-anchor="middle" font-family="'Open Sans',sans-serif">›</text>`;
+      });
+    } else if (layout === 'comparison') {
+      body += `<text x="84" y="140" fill="${ink}" font-size="40" font-weight="800" font-family="'Open Sans',sans-serif">${esc(c.title||'Comparison')}</text>`;
+      const cols = (c.cols||[]).slice(0,3); const n = cols.length||1;
+      const gap = 36; const w = (1112 - (n-1)*gap)/n;
+      cols.forEach((col,idx) => {
+        const x = 84 + idx*(w+gap); const ac = acc(idx);
+        body += `<rect x="${x}" y="210" width="${w}" height="300" rx="16" fill="${panel}" stroke="${line}" stroke-width="1.5"/>`;
+        body += `<rect x="${x}" y="210" width="${w}" height="60" rx="16" fill="${ac}"/>`;
+        body += `<rect x="${x}" y="240" width="${w}" height="30" fill="${ac}"/>`;
+        body += `<text x="${x+24}" y="250" fill="#fff" font-size="26" font-weight="800" font-family="'Open Sans',sans-serif">${esc(col.h)}</text>`;
+        (col.items||[]).slice(0,4).forEach((it,li) => {
+          body += `<circle cx="${x+30}" cy="${312+li*46}" r="4" fill="${ac}"/>`;
+          body += `<text x="${x+48}" y="${319+li*46}" fill="${ink}" font-size="22" font-weight="500" font-family="'Open Sans',sans-serif">${esc(it)}</text>`;
+        });
+      });
+    } else if (layout === 'chart') {
+      body += `<text x="84" y="140" fill="${ink}" font-size="40" font-weight="800" font-family="'Open Sans',sans-serif">${esc(c.title||'Chart')}</text>`;
+      const bars = (c.bars||[]).slice(0,6); const max = Math.max(...bars.map(b=>b.v), 1);
+      const baseY = 520; const h = 250; const n = bars.length||1;
+      const gap = 56; const bw = Math.min(150, (1000 - (n-1)*gap)/n);
+      body += `<line x1="84" y1="${baseY}" x2="1120" y2="${baseY}" stroke="${line}" stroke-width="2"/>`;
+      bars.forEach((b,idx) => {
+        const x = 130 + idx*(bw+gap); const bh = (b.v/max)*h;
+        body += `<rect x="${x}" y="${baseY-bh}" width="${bw}" height="${bh}" rx="8" fill="${acc(idx)}"/>`;
+        body += `<text x="${x+bw/2}" y="${baseY-bh-16}" fill="${ink}" font-size="26" font-weight="800" text-anchor="middle" font-family="'Open Sans',sans-serif">${esc(b.v)}</text>`;
+        body += `<text x="${x+bw/2}" y="${baseY+34}" fill="${sub}" font-size="22" font-weight="600" text-anchor="middle" font-family="'Open Sans',sans-serif">${esc(b.l)}</text>`;
+      });
+    } else if (layout === 'quote') {
+      body += `<text x="84" y="210" fill="${TT.green}" font-size="160" font-weight="800" font-family="'Open Sans',sans-serif">“</text>`;
+      const lines = wrap(c.text || sl.title, 24);
+      lines.forEach((ln,idx) => { body += `<text x="200" y="${280+idx*64}" fill="${ink}" font-size="46" font-weight="700" font-family="'Open Sans',sans-serif">${esc(ln)}</text>`; });
+      body += `<text x="200" y="${280+lines.length*64+30}" fill="${sub}" font-size="26" font-weight="600" font-family="'Open Sans',sans-serif">— ${esc(c.who||'')}</text>`;
+    } else if (layout === 'cards') {
+      body += `<text x="84" y="140" fill="${ink}" font-size="40" font-weight="800" font-family="'Open Sans',sans-serif">${esc(c.title||'Cards')}</text>`;
+      const items = (c.items||['One','Two','Three']).slice(0,3);
+      const gap=36; const w=(1112-(items.length-1)*gap)/items.length;
+      items.forEach((it,idx) => { const x=84+idx*(w+gap);
+        body += `<rect x="${x}" y="230" width="${w}" height="250" rx="16" fill="${panel}" stroke="${line}" stroke-width="1.5"/>`;
+        body += `<rect x="${x+28}" y="262" width="46" height="8" rx="4" fill="${acc(idx)}"/>`;
+        wrap(it,16).slice(0,3).forEach((ln,li)=>{ body += `<text x="${x+28}" y="${330+li*34}" fill="${ink}" font-size="26" font-weight="700" font-family="'Open Sans',sans-serif">${esc(ln)}</text>`; });
+      });
+    } else if (layout === 'timeline') {
+      body += `<text x="84" y="140" fill="${ink}" font-size="40" font-weight="800" font-family="'Open Sans',sans-serif">${esc(c.title||'Timeline')}</text>`;
+      const phases = (c.phases||['NOW','NEXT','LATER']);
+      body += `<line x1="120" y1="350" x2="1100" y2="350" stroke="${line}" stroke-width="3"/>`;
+      phases.slice(0,4).forEach((p,idx)=>{ const x=160+idx*((900)/(Math.max(1,phases.length-1)));
+        body += `<circle cx="${x}" cy="350" r="12" fill="${acc(idx)}"/>`;
+        body += `<text x="${x}" y="310" fill="${ink}" font-size="24" font-weight="800" text-anchor="middle" font-family="'Open Sans',sans-serif">${esc(p)}</text>`;
+      });
+    } else if (layout === 'closing') {
+      const lines = wrap(c.title || 'Thank you', 20);
+      lines.forEach((ln,idx)=>{ body += `<text x="640" y="${330+idx*74}" fill="${ink}" font-size="64" font-weight="800" text-anchor="middle" font-family="'Open Sans',sans-serif">${esc(ln)}</text>`; });
+      body += `<text x="640" y="${330+lines.length*74+30}" fill="${sub}" font-size="26" font-weight="600" text-anchor="middle" font-family="'Open Sans',sans-serif">${esc(c.sub||'')}</text>`;
+    } else {
+      body += `<text x="84" y="150" fill="${ink}" font-size="42" font-weight="800" font-family="'Open Sans',sans-serif">${esc(c.title||sl.title)}</text>`;
+      (c.items||['First point','Second point','Third point']).slice(0,5).forEach((it,idx)=>{ const y=250+idx*64;
+        body += `<rect x="84" y="${y-18}" width="10" height="10" rx="2" fill="${acc(idx)}"/>`;
+        body += `<text x="116" y="${y-7}" fill="${ink}" font-size="28" font-weight="500" font-family="'Open Sans',sans-serif">${esc(it)}</text>`;
+      });
+    }
+
+    // footer brand band
+    const band = dark
+      ? `<rect x="0" y="660" width="1280" height="60" fill="${TT.green}"/><text x="84" y="699" fill="#fff" font-size="24" font-weight="700" letter-spacing="1" font-family="'Open Sans Condensed',sans-serif">TeleTracking</text>`
+      : `<rect x="0" y="690" width="1280" height="30" fill="${TT.green}"/><text x="84" y="678" fill="${TT.navy}" font-size="22" font-weight="700" letter-spacing="1" font-family="'Open Sans Condensed',sans-serif">TeleTracking</text>`;
+
+    return `<svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%;background:${bg};"><rect width="1280" height="720" fill="${bg}"/>${body}${band}</svg>`;
+  }
+
+  posterEl(sl) {
+    return React.createElement('div', { style:{ width:'100%', height:'100%' }, dangerouslySetInnerHTML:{ __html: this.posterSVG(sl) } });
+  }
+
+  // ---------- step model ----------
+  courseSteps() { return ['Project','AI account','Source materials','Generate scripts','SME review','Output format','Generate preview','Publish']; }
+  slideSteps() { return ['Source & generate','Review & edit','Build deck']; }
+
+  buildSteps() {
+    const isC = this.state.mode === 'course';
+    const titles = isC ? this.courseSteps() : this.slideSteps();
+    const cur = isC ? this.state.courseStep : this.state.slideStep;
+    const accent = '#C0664A';
+    return titles.map((title, idx) => {
+      const n = idx+1;
+      const status = n < cur ? 'done' : (n === cur ? 'current' : 'upcoming');
+      const last = idx === titles.length-1;
+      let dotStyle, dotInner, titleStyle, lineColor;
+      if (status === 'done') {
+        dotStyle = { width:'26px', height:'26px', borderRadius:'50%', background:'#262320', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:700, flex:'none' };
+        dotInner = '✓'; titleStyle = { fontSize:'13.5px', fontWeight:600, color:'#6F675E' }; lineColor = '#C7BFAF';
+      } else if (status === 'current') {
+        dotStyle = { width:'26px', height:'26px', borderRadius:'50%', background:accent, color:'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:800, flex:'none', boxShadow:'0 0 0 4px #F1DDD3' };
+        dotInner = String(n); titleStyle = { fontSize:'14px', fontWeight:800, color:'#1F1C19', letterSpacing:'-.2px' }; lineColor = '#E3DDD2';
+      } else {
+        dotStyle = { width:'26px', height:'26px', borderRadius:'50%', background:'#FBF9F5', border:'1.5px solid #D8D2C7', color:'#A89F92', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12.5px', fontWeight:700, flex:'none' };
+        dotInner = String(n); titleStyle = { fontSize:'13.5px', fontWeight:500, color:'#A89F92' }; lineColor = '#E3DDD2';
+      }
+      const lineStyle = { width:'2px', flex:1, minHeight:'14px', marginTop:'5px', marginBottom:'1px', background: last ? 'transparent' : lineColor, borderRadius:'2px' };
+      const statusLabel = status === 'done' ? 'Done' : status === 'current' ? 'In progress' : 'Up next';
+      return { n, title, dotStyle, dotInner, titleStyle, lineStyle, statusLabel,
+        onClick: () => { if (isC) this.setState({ courseStep:n }); else this.setState({ slideStep:n }); } };
+    });
+  }
+
+  segStyle(active) {
+    return active
+      ? { padding:'7px 16px', border:'none', borderRadius:'8px', background:'#262320', color:'#fff', fontFamily:'inherit', fontSize:'12.5px', fontWeight:700, cursor:'pointer', boxShadow:'0 1px 3px rgba(0,0,0,.18)' }
+      : { padding:'7px 16px', border:'none', borderRadius:'8px', background:'transparent', color:'#6F675E', fontFamily:'inherit', fontSize:'12.5px', fontWeight:600, cursor:'pointer' };
+  }
+  scopeBtn(active) {
+    return active
+      ? { padding:'5px 11px', border:'none', borderRadius:'6px', background:'#C0664A', color:'#fff', fontFamily:'inherit', fontSize:'11.5px', fontWeight:700, cursor:'pointer' }
+      : { padding:'5px 11px', border:'none', borderRadius:'6px', background:'transparent', color:'#857C71', fontFamily:'inherit', fontSize:'11.5px', fontWeight:600, cursor:'pointer' };
+  }
+  modeCard(active) {
+    return active
+      ? { border:'1.5px solid #C0664A', borderRadius:'11px', padding:'13px 15px', cursor:'pointer', background:'#FBEFE9', transition:'all .15s' }
+      : { border:'1px solid #E0D9CC', borderRadius:'11px', padding:'13px 15px', cursor:'pointer', background:'#FBF9F5', transition:'all .15s' };
+  }
+  modeDot(active) {
+    return active
+      ? { marginLeft:'auto', width:'14px', height:'14px', borderRadius:'50%', border:'4px solid #C0664A', background:'#fff', boxSizing:'border-box' }
+      : { marginLeft:'auto', width:'14px', height:'14px', borderRadius:'50%', border:'2px solid #CFC7B8', background:'#fff', boxSizing:'border-box' };
+  }
+
+  renderVals() {
+    const st = this.state;
+    const isC = st.mode === 'course';
+    const cur = isC ? st.courseStep : st.slideStep;
+    const maxStep = isC ? 8 : 3;
+
+    // stage headers
+    const courseHead = {
+      1:['Step 1','Project','Every project keeps its files in its own folder, so you can reopen and continue any time. This is your workspace home base.'],
+      2:['Step 2','AI account','Generation runs on your subscription — no metered API cost. Connect once by logging into the provider CLI.'],
+      3:['Step 3','Source materials','The documents and images the course is built from. These are filled in from your project — change them if needed.'],
+      4:['Step 4','Generate microlearning scripts','Draft the script and an SME review document into the project folder. This is the heaviest, most-watched step.'],
+      5:['Step 5','Apply the SME review','Upload the reviewed Word document — tracked changes and comments are merged back and the script re-saved.'],
+      6:['Step 6','Output format','Choose the formats and the scope to produce. Each microlearning ships as its own single-SCO package.'],
+      7:['Step 7','Generate preview','Build the courses to a preview area and review each before publishing. Nothing reaches the output folder yet.'],
+      8:['Step 8','Publish final courses','Publish the approved packages into the output folder — ready to upload to the LMS.'],
+    };
+    const slideHead = {
+      1:['Step 1','Source & generate','Point at your raw content. The AI converts it into slides using the shared layout templates — same pipeline as a course.'],
+      2:['Step 2','Review & edit slides','Change a layout, flip its theme, reorder, add or remove, or regenerate the checked aspects of any slide.'],
+      3:['Step 3','Build presentation','Render the slides to an editable, on-brand PowerPoint deck.'],
+    };
+    const head = isC ? courseHead[cur] : slideHead[cur];
+
+    // generate hero state
+    const phase = st.genPhase;
+    const elapsedFmt = `${Math.floor(st.elapsed/60)}:${String(st.elapsed%60).padStart(2,'0')}`;
+    const phaseLabel = phase==='planning' ? 'Planning curriculum…' : phase==='units' ? 'Drafting modules in parallel…' : phase==='stream' ? 'Writing script — live…' : 'Working…';
+    const units = st.units.map((u,i) => {
+      let dotStyle, dotInner, statusText, statusStyle;
+      if (u.status==='done') { dotStyle={ width:'20px',height:'20px',borderRadius:'50%',background:'#3F7D5F',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:700,flex:'none' }; dotInner='✓'; statusText='done'; statusStyle={ fontSize:'12px',fontWeight:700,color:'#3F7D5F' }; }
+      else if (u.status==='running') { dotStyle={ width:'20px',height:'20px',borderRadius:'50%',border:'2.5px solid #E0D2C9',borderTopColor:'#C0664A',flex:'none',animation:'cb-spin .8s linear infinite' }; dotInner=''; statusText='generating…'; statusStyle={ fontSize:'12px',fontWeight:600,color:'#C0664A' }; }
+      else { dotStyle={ width:'20px',height:'20px',borderRadius:'50%',border:'2px solid #D8D2C7',flex:'none' }; dotInner=''; statusText='queued'; statusStyle={ fontSize:'12px',fontWeight:500,color:'#A89F92' }; }
+      return { name:u.name, dotStyle, dotInner, statusText, statusStyle };
+    });
+
+    const modules = st.modules.map(m => ({
+      n: String(m.id+1), name: m.name, flash: m.flash,
+      flashStyle: { fontSize:'11.5px', fontWeight:700, color: m.flash==='✓ updated' ? '#3F7D5F' : '#C0664A' },
+      onRegen: () => this.regenModule(m.id),
+    }));
+
+    // slides
+    const slides = st.slides.map((sl,i) => ({
+      n: String(i+1), title: sl.title, layout: sl.layout, theme: sl.theme,
+      guide: sl.guide, flash: sl.flash,
+      thumbEl: this.posterEl(sl),
+      themeSelStyle: { appearance:'none', padding:'6px 24px 6px 10px', border:'1px solid #DED7CA', borderRadius:'8px', background: sl.theme!=='auto' ? '#0B2C37' : '#fff', color: sl.theme!=='auto' ? '#fff' : '#3A474C', fontFamily:'inherit', fontSize:'12px', fontWeight: sl.theme!=='auto'?700:600, cursor:'pointer' },
+      scContentStyle: this.scopeBtn(sl.scopes.content),
+      scLayoutStyle: this.scopeBtn(sl.scopes.layout),
+      scColorStyle: this.scopeBtn(sl.scopes.color),
+      flashStyle: { fontSize:'11.5px', fontWeight:700, color: sl.flashErr ? '#A23A2C' : (sl.flashBusy ? '#C0664A' : '#3F7D5F'), whiteSpace:'nowrap' },
+      onOpen: () => this.openShow(i),
+      onLayout: (e) => this.setSlide(i, { layout: e.target.value }),
+      onTheme: (e) => this.setSlide(i, { theme: e.target.value }),
+      onScopeContent: () => this.toggleScope(i,'content'),
+      onScopeLayout: () => this.toggleScope(i,'layout'),
+      onScopeColor: () => this.toggleScope(i,'color'),
+      onRegen: () => this.regenSlide(i),
+      onUp: () => this.moveSlide(i,-1),
+      onDown: () => this.moveSlide(i,1),
+      onRemove: () => this.removeSlide(i),
+      onGuide: (e) => this.setSlide(i, { guide: e.target.value }),
+    }));
+
+    const showSlide = st.slides[Math.min(st.showIdx, st.slides.length-1)] || st.slides[0];
+
+    return {
+      isCourse: isC, isSlide: !isC,
+      brand: st.brand, onBrand: (e)=>this.setState({ brand:e.target.value }),
+      project: st.project,
+      onModeCourse: ()=>this.setState({ mode:'course' }),
+      onModeSlide: ()=>this.setState({ mode:'slide' }),
+      modeCourseStyle: this.segStyle(isC),
+      modeSlideStyle: this.segStyle(!isC),
+
+      // rail
+      railKicker: isC ? 'Course creation' : 'Slide presentation',
+      progressLabel: `Step ${cur} of ${maxStep}`,
+      steps: this.buildSteps(),
+
+      // stage header
+      stageKicker: head[0], stageTitle: head[1], stageDesc: head[2],
+
+      // course step flags
+      isC1: cur===1, isC2: cur===2, isC3: cur===3, isC4: cur===4, isC5: cur===5, isC6: cur===6, isC7: cur===7, isC8: cur===8,
+      isS1: cur===1, isS2: cur===2, isS3: cur===3,
+
+      // AI status
+      aiPillStyle: st.aiConnected
+        ? { fontSize:'11.5px', fontWeight:700, padding:'5px 12px', borderRadius:'20px', background:'#E9F2EC', color:'#2C6047', display:'inline-flex', alignItems:'center', gap:'6px' }
+        : { fontSize:'11.5px', fontWeight:700, padding:'5px 12px', borderRadius:'20px', background:'#EFE9DE', color:'#857C71' },
+      aiPillText: st.aiConnected ? '● Connected' : '○ Not connected',
+      aiStatusText: st.aiConnected ? 'claude CLI detected (v1.x). Anthropic provider ready — generation will use your logged-in subscription.' : 'No provider CLI found. Install the claude CLI and run `claude login`, then re-check.',
+      provider: st.provider, onProvider:(e)=>this.setState({ provider:e.target.value }),
+      onRecheck: ()=>{},
+
+      // generate hero
+      genTitle: st.genTitle, onGenTitle:(e)=>this.setState({ genTitle:e.target.value }),
+      genArch: st.genArch, onGenArch:(e)=>this.setState({ genArch:e.target.value }),
+      genUnits: st.genUnits, onGenUnits:(e)=>this.setState({ genUnits:e.target.value }),
+      genModel: st.genModel, onGenModel:(e)=>this.setState({ genModel:e.target.value }),
+      onGenObj:()=>{}, onGenAud:()=>{},
+      onModeParallel: ()=>this.setState({ genMode:'parallel' }),
+      onModeStreaming: ()=>this.setState({ genMode:'streaming' }),
+      parallelCardStyle: this.modeCard(st.genMode==='parallel'),
+      streamingCardStyle: this.modeCard(st.genMode==='streaming'),
+      parallelDotStyle: this.modeDot(st.genMode==='parallel'),
+      streamingDotStyle: this.modeDot(st.genMode==='streaming'),
+      onGenerate: ()=>this.runGenerate(),
+      onCancelGen: ()=>this.cancelGen(),
+      genIdle: phase==='idle',
+      genRunning: phase==='planning'||phase==='units'||phase==='stream',
+      genDone: phase==='done',
+      showUnits: phase==='units' || (phase==='planning' && st.genMode==='parallel'),
+      showStream: phase==='stream',
+      phaseLabel, elapsedFmt,
+      units, streamText: st.streamText,
+      genCount: String(st.modules.length || 5),
+      modules,
+
+      // course 7/8
+      onBuildPreview: ()=>this.buildPreview(),
+      previewBuilt: st.previewBuilt, previewEmpty: !st.previewBuilt,
+      pending: st.pending.map(p => ({ name:p.name, onPublish:()=>this.publishOne(p.id) })),
+      published: st.published.map(p => ({ name:p.name })),
+      pendingCount: String(st.pending.length), publishedCount: String(st.published.length),
+      pendingEmpty: st.pending.length===0, publishedEmpty: st.published.length===0,
+      onPublishAll: ()=>this.publishAll(),
+
+      // slides
+      slides,
+      addLayout: st.addLayout, onAddLayoutChange:(e)=>this.setState({ addLayout:e.target.value }),
+      onAddSlide: ()=>this.addSlide(),
+      onGenDeck: ()=>this.setState({ slideStep:2 }),
+
+      // slideshow
+      showOpen: st.showOpen,
+      showCount: `${Math.min(st.showIdx+1, st.slides.length)} / ${st.slides.length}`,
+      showPosterEl: showSlide ? this.posterEl(showSlide) : null,
+      showTx: st.showTx, onShowTx:(e)=>this.setState({ showTx:e.target.value }),
+      onShowPrev: ()=>this.showPrev(), onShowNext: ()=>this.showNext(),
+      onShowClose: ()=>this.setState({ showOpen:false }),
+      onOpenShow: ()=>this.openShow(0),
+
+      // picker
+      pickerOpen: st.pickerOpen,
+      onOpenPicker: ()=>this.setState({ pickerOpen:true }),
+      onClosePicker: ()=>this.setState({ pickerOpen:false }),
+      stop: (e)=>{ e.stopPropagation(); },
+
+      // footer nav
+      onBack: ()=>{ if (isC) this.setState({ courseStep: Math.max(1, cur-1) }); else this.setState({ slideStep: Math.max(1, cur-1) }); },
+      onNext: ()=>{ if (isC) this.setState({ courseStep: Math.min(maxStep, cur+1) }); else this.setState({ slideStep: Math.min(maxStep, cur+1) }); },
+      nextLabel: cur===maxStep ? 'Done' : 'Continue →',
+      backBtnStyle: { padding:'10px 18px', border:'1px solid #DAD3C6', borderRadius:'10px', background: cur===1 ? '#F4F0E8' : '#fff', color: cur===1 ? '#C0BBAE' : '#4A443D', fontFamily:'inherit', fontSize:'13.5px', fontWeight:600, cursor: cur===1 ? 'default' : 'pointer' },
+      nextBtnStyle: { padding:'10px 22px', border:'none', borderRadius:'10px', background:'#262320', color:'#fff', fontFamily:'inherit', fontSize:'13.5px', fontWeight:700, cursor:'pointer' },
+    };
+  }
+}
+</script>
+</body>
+</html>

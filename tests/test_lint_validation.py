@@ -73,3 +73,46 @@ def test_cardgrid_columns_clamped():
         os.unlink(f.name)
     grid = next(b for b in ir["blocks"] if b["type"] == "cardGrid")
     assert grid["columns"] == 4, grid.get("columns")
+
+
+# --- B1: a multi-scene scenario where a later scene has no choices ----------
+# (the old check passed if ANY ONE scene had responses, letting dead-ends through)
+
+_SCEN_HEAD = ("*Scenario:* A patient-flow decision\n"
+              "::: scene\n"
+              "title: First\n"
+              "The unit is full. What do you do?\n"
+              "- Escalate to the charge nurse · preferred · feedback: right call\n"
+              "- Do nothing\n")
+
+
+def test_scenario_dead_end_scene_fails_lint():
+    extra = _SCEN_HEAD + ("::: scene\n"
+                          "title: Second\n"
+                          "Now the transfer arrives — but this scene has no choices.\n")
+    ok, _, errs = _lint(extra)
+    assert not ok and any("dead-end" in e for e in errs), errs
+
+
+def test_scenario_all_scenes_with_choices_passes():
+    extra = _SCEN_HEAD + ("::: scene\n"
+                          "title: Second\n"
+                          "The transfer arrives.\n"
+                          "- Accept it · preferred · feedback: good\n"
+                          "- Refuse it\n")
+    ok, _, errs = _lint(extra)
+    assert ok, errs
+
+
+# --- B2: an objectives block with no outcome bullets ------------------------
+
+def test_empty_objectives_block_fails_lint():
+    # *Objectives:* lead-in with NO `- ` bullets under it
+    ok, _, errs = _lint("*Objectives:* By the end you will be able to:\n\nSome prose.\n")
+    assert not ok and any("no outcomes" in e for e in errs), errs
+
+
+def test_objectives_block_with_items_passes():
+    ok, _, errs = _lint("*Objectives:* By the end you will be able to:\n"
+                        "- Identify the flow bottleneck\n- Escalate correctly\n")
+    assert ok, errs

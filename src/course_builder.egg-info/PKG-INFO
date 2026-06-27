@@ -4,10 +4,10 @@ Version: 0.1.0
 Summary: Agnostic course system: .docx/.md/Rise sources -> branded HTML -> SCORM 1.2 / cmi5. Branding is external; the engine carries no company references.
 Requires-Python: >=3.8
 Provides-Extra: export
-Requires-Dist: python-pptx; extra == "export"
-Requires-Dist: python-docx; extra == "export"
-Requires-Dist: pypdf; extra == "export"
-Requires-Dist: Pillow; extra == "export"
+Requires-Dist: python-pptx>=0.6.21; extra == "export"
+Requires-Dist: python-docx>=0.8.11; extra == "export"
+Requires-Dist: pypdf>=3.9; extra == "export"
+Requires-Dist: Pillow>=9.0; extra == "export"
 Provides-Extra: dev
 Requires-Dist: pytest>=7; extra == "dev"
 Requires-Dist: jsonschema>=4; extra == "dev"

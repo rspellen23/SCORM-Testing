@@ -16,7 +16,8 @@ if _HERE not in sys.path:
 import render, scorm, cmi5, brand  # noqa: E402
 
 
-def _emit(ir, asset_blobs, out_zip, keep_dir=False, validate=False, fmt="scorm", brand_name="_default", animate=True):
+def _emit(ir, asset_blobs, out_zip, keep_dir=False, validate=False, fmt="scorm",
+          brand_name="_default", animate=True, lint_md=None):
     b = brand.load_brand(brand_name)
     course_dir = os.path.splitext(out_zip)[0] + ".course"
     render.render_course(ir, course_dir, asset_blobs, brand=b, animate=animate)
@@ -33,20 +34,58 @@ def _emit(ir, asset_blobs, out_zip, keep_dir=False, validate=False, fmt="scorm",
     print(f"  blocks={st.get('blocks')} assets={st.get('assets')} "
           f"skipped={st.get('skipped', {})}")
     print(f"  {fmt.upper()} → {out_zip} ({os.path.getsize(out_zip)//1024} KB)")
+    conf_errors, conf_warnings = ([], [])
     if validate:
-        _run_lint(out_zip)
+        conf_errors, conf_warnings = _run_lint(out_zip)
+    # Structured build report (C1): fold the §8 lint pass + conformance results +
+    # the IR's import-time drop warnings into one JSON beside the artifact so the
+    # dashboard can show the operator when a build degraded — not just stderr.
+    _write_report(ir, out_zip, lint_md=lint_md,
+                  conformance_errors=conf_errors, conformance_warnings=conf_warnings)
+    if validate and conf_errors:
+        raise SystemExit(f"✗ conformance lint failed for {out_zip}")
+
+
+def _md_lint_errors(lint_md):
+    """Run the §8 authoring lint over a source .md at BUILD time (surfaces KC
+    mis-scoring and friends even for hand-authored md that never went through
+    generation). Returns a list of error strings (empty on clean / non-md)."""
+    if not (lint_md and os.path.isfile(lint_md)):
+        return []
+    try:
+        import authoring
+        _ok, _n, errs = authoring.lint(open(lint_md, encoding="utf-8").read())
+        return errs
+    except Exception as e:                      # lint must never break a build
+        return [f"lint pass could not run: {e}"]
+
+
+def _write_report(ir, out_path, lint_md=None, dropped=None,
+                  conformance_errors=None, conformance_warnings=None):
+    import build_report
+    report = build_report.assemble(
+        ir, lint_errors=_md_lint_errors(lint_md), dropped=dropped,
+        conformance_errors=conformance_errors, conformance_warnings=conformance_warnings)
+    build_report.write(report, out_path)
+    n = len(report["warnings"]) + len(report["errors"])
+    if n:
+        print(f"  build report: {len(report['errors'])} error(s), "
+              f"{len(report['warnings'])} warning(s) → {build_report.report_path(out_path)}")
+    return report
 
 
 def _run_lint(out_zip):
+    """Run SCORM conformance lint; print results. Returns (errors, warnings).
+    The caller decides whether errors are fatal (so the report is written first)."""
     import scorm_lint
     errors, warnings = scorm_lint.lint_zip(out_zip)
     for w in warnings:
         print(f"  lint warning: {w}")
-    if errors:
-        for e in errors:
-            print(f"  lint ERROR: {e}")
-        raise SystemExit(f"✗ conformance lint failed for {out_zip}")
-    print("  ✓ conformance lint passed")
+    for e in errors:
+        print(f"  lint ERROR: {e}")
+    if not errors:
+        print("  ✓ conformance lint passed")
+    return errors, warnings
 
 
 def cmd_from_rise(a):
@@ -74,7 +113,8 @@ def cmd_from_md(a):
     ir, used = import_md(a.md, which=a.which, hero=a.hero, image_dir=a.images)
     blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
     _emit(ir, blobs, a.out, a.keep_dir, getattr(a, "validate", False), getattr(a, "format", "scorm"),
-          getattr(a, "brand", "_default"), animate=not getattr(a, "no_animate", False))
+          getattr(a, "brand", "_default"), animate=not getattr(a, "no_animate", False),
+          lint_md=a.md)
 
 
 def cmd_from_md_course(a):
@@ -103,6 +143,7 @@ def cmd_from_md_course(a):
     b = brand.load_brand(getattr(a, "brand", "_default"))
     render.copy_shared(course_dir, b)                       # active brand + player/ once at the root
     scos, graded, passing, lang = [], False, 80, "en"
+    agg_blocks, agg_assets, agg_warnings = 0, 0, []   # roll up per-unit stats for one course report
     for k in range(1, n + 1):
         ir, used = import_md(a.md, which=k, image_dir=a.images)
         blobs = {rel: open(src, "rb").read() for rel, src in used.items()}
@@ -112,6 +153,10 @@ def cmd_from_md_course(a):
                              animate=not getattr(a, "no_animate", False))
         scos.append({"id": ir["id"], "title": ir["title"], "href": f"sco_{k}/index.html"})
         graded, passing, lang = ir.get("graded", False), ir.get("passingScore", 80), ir.get("locale", "en")
+        _st = ir.get("_stats", {})
+        agg_blocks += _st.get("blocks") or 0
+        agg_assets += _st.get("assets") or 0
+        agg_warnings += [f"unit {k}: {w}" for w in (_st.get("warnings") or [])]
     fmt = getattr(a, "format", "scorm")
     if fmt == "cmi5":
         cmi5.package_multi(course_dir, a.out, cid, title, scos, lang=lang, graded=graded, passing=passing,
@@ -124,8 +169,15 @@ def cmd_from_md_course(a):
     print(f"  {fmt.upper()} (multi) → {a.out} ({os.path.getsize(a.out)//1024} KB)")
     if not a.keep_dir:
         shutil.rmtree(course_dir, ignore_errors=True)
+    conf_errors, conf_warnings = ([], [])
     if getattr(a, "validate", False):
-        _run_lint(a.out)
+        conf_errors, conf_warnings = _run_lint(a.out)
+    agg_ir = {"title": title, "_stats": {"blocks": agg_blocks, "assets": agg_assets,
+                                         "warnings": agg_warnings}}
+    _write_report(agg_ir, a.out, lint_md=a.md,
+                  conformance_errors=conf_errors, conformance_warnings=conf_warnings)
+    if getattr(a, "validate", False) and conf_errors:
+        raise SystemExit(f"✗ conformance lint failed for {a.out}")
 
 
 def cmd_gen_prompts(a):
@@ -222,6 +274,8 @@ def cmd_to_pptx(a):
     print(f"  slides={stats['slides']} dropped={stats['dropped']}"
           + (f" transition={stats['transition']}" if stats.get('transition') else ""))
     print(f"  PPTX → {a.out} ({os.path.getsize(a.out)//1024} KB)")
+    # build report (C1): the flatten's dropped-block set + lint + import warnings
+    _write_report(ir, a.out, lint_md=a.md, dropped=stats.get("dropped"))
 
 
 def cmd_slide(a):
@@ -236,7 +290,10 @@ def cmd_slide(a):
         a.content, a.out, brand=b, layout=a.layout,
         transition=getattr(a, "transition", None),
         transition_dir=getattr(a, "transition_dir", None),
-        transition_speed=getattr(a, "transition_speed", "med"))
+        transition_speed=getattr(a, "transition_speed", "med"),
+        images_dir=getattr(a, "images", None),
+        animate=getattr(a, "animate", None),
+        animate_speed=getattr(a, "animate_speed", "med"))
     print(f"✓ slide ({stats['layout']}) → {a.out} ({os.path.getsize(a.out)//1024} KB)")
     extra = " ".join(f"{k}={v}" for k, v in stats.items() if k != "layout")
     if extra:
@@ -248,13 +305,19 @@ def cmd_deck(a):
 
     The deck file is {"slides": [{"layout": <name>, "content": {...}}, ...]};
     each slide uses any slide_layouts layout. One transition applies deck-wide."""
-    import slide_layouts
+    import slide_layouts, authoring
     b = brand.load_brand(getattr(a, "brand", "_default"))
+    # default the image source to the brand's built-in library (on-brand template
+    # imagery) when no folder is given, so `image:` slots resolve out of the box.
+    images_dir = getattr(a, "images", None) or authoring.brand_image_dir(getattr(a, "brand", "_default"))
     stats = slide_layouts.export_deck_file(
         a.content, a.out, brand=b,
         transition=getattr(a, "transition", None),
         transition_dir=getattr(a, "transition_dir", None),
-        transition_speed=getattr(a, "transition_speed", "med"))
+        transition_speed=getattr(a, "transition_speed", "med"),
+        images_dir=images_dir,
+        animate=getattr(a, "animate", None),
+        animate_speed=getattr(a, "animate_speed", "med"))
     print(f"✓ deck ({stats['slides']} slides) → {a.out} ({os.path.getsize(a.out)//1024} KB)")
     print(f"  layouts: {', '.join(stats['layouts'])}")
 
@@ -360,18 +423,24 @@ def main():
     sl = sub.add_parser("slide"); sl.add_argument("--content", required=True)
     sl.add_argument("--layout", default="infographic"); sl.add_argument("--out", required=True)
     sl.add_argument("--brand", default="_default")
+    sl.add_argument("--images", default=None, help="folder that holds image files referenced by `image:`")
     sl.add_argument("--transition", default=None,
         help="slide transition: none|fade|cut|push|wipe|split|cover")
     sl.add_argument("--transition-dir", default=None, help="direction for push/wipe/cover: l|r|u|d")
     sl.add_argument("--transition-speed", default="med", help="slow|med|fast")
+    sl.add_argument("--animate", default=None, help="entrance animation: none|fade|rise|flyleft|flyright")
+    sl.add_argument("--animate-speed", default="med", help="slow|med|fast")
     sl.set_defaults(fn=cmd_slide)
 
     dk = sub.add_parser("deck"); dk.add_argument("--content", required=True)
     dk.add_argument("--out", required=True); dk.add_argument("--brand", default="_default")
+    dk.add_argument("--images", default=None, help="folder that holds image files referenced by `image:`")
     dk.add_argument("--transition", default=None,
         help="transition applied to every slide: none|fade|cut|push|wipe|split|cover")
     dk.add_argument("--transition-dir", default=None, help="direction for push/wipe/cover: l|r|u|d")
     dk.add_argument("--transition-speed", default="med", help="slow|med|fast")
+    dk.add_argument("--animate", default=None, help="entrance animation per slide: none|fade|rise|flyleft|flyright")
+    dk.add_argument("--animate-speed", default="med", help="slow|med|fast")
     dk.set_defaults(fn=cmd_deck)
 
     cv = sub.add_parser("cover")

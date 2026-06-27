@@ -1,0 +1,13 @@
+{
+  "title": "A Repeating / Cyclical Process",
+  "subtitle": "One line on the loop this cycle represents.",
+  "intro": "Optional single sentence framing the cycle below.",
+  "center": "Optional hub label",
+  "steps": [
+    {"title": "Plan", "body": "What happens in this step, briefly.", "accent": "primary"},
+    {"title": "Do", "body": "What happens in this step, briefly.", "accent": "secondary"},
+    {"title": "Check", "body": "What happens in this step, briefly.", "accent": "tertiary"},
+    {"title": "Act", "body": "What happens in this step, briefly.", "accent": "dark"}
+  ],
+  "footer": "One line on why the cycle repeats. (3–6 steps; a cycle is never split — use process/timeline for a longer sequence.)"
+}

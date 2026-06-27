@@ -37,7 +37,7 @@
         "type": {
           "enum": ["heading", "paragraph", "headingParagraph", "image", "imageText",
                    "video", "audio", "embed",
-                   "note", "statement", "list", "table", "divider", "continue", "knowledgeCheck",
+                   "note", "statement", "list", "table", "divider", "continue", "objectives", "knowledgeCheck",
                    "button", "cardGrid",
                    "quote", "accordion", "process", "flashcard", "categorize", "scenario",
                    "timeline", "comparison", "chart", "infographic",
@@ -63,6 +63,7 @@
         "requireComplete": { "type": "boolean", "description": "video(file)/audio only: gate course completion on the media 'ended' event. Ignored for embed (cross-origin, unobservable)." },
         "ordered": { "type": "boolean" },
         "items": { "type": "array", "items": { "type": "string" } },
+        "intro": { "type": "string", "description": "objectives: optional lead-in line (default 'After this lesson, you will be able to:')" },
         "text": { "type": "string", "description": "Continue button label" },
         "prompt": { "type": "string" },
         "id": { "type": "string", "description": "knowledgeCheck: stable id, reported as the cmi.interactions id in graded courses" },

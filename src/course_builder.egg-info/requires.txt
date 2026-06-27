@@ -4,7 +4,7 @@ pytest>=7
 jsonschema>=4
 
 [export]
-python-pptx
-python-docx
-pypdf
-Pillow
+python-pptx>=0.6.21
+python-docx>=0.8.11
+pypdf>=3.9
+Pillow>=9.0

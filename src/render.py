@@ -217,16 +217,30 @@ def render_block(b, ctx=None):
     if t == "continue":
         txt = _esc(b.get("text") or "CONTINUE")
         return f'<div class="nv-continue" data-passed="0"><button class="nv-btn">{txt}</button></div>'
+    if t == "objectives":
+        intro = b.get("intro") or "After this lesson, you will be able to:"
+        lis = "".join(f"<li>{x}</li>" for x in b.get("items", []))
+        return ('<section class="nv-block nv-objectives" aria-label="Learning objectives">'
+                f'<p class="nv-obj-intro">{intro}</p>'
+                f'<ul class="nv-obj-list">{lis}</ul></section>')
     if t == "knowledgeCheck":
+        # multi-select ('choose all that apply'): options become toggles (aria-pressed)
+        # the learner commits with a Submit button; the player scores all-correct/none-wrong.
+        # Single-select output is unchanged (byte-identical) so the golden snapshots hold.
+        multi = bool(b.get("multi"))
+        aria = ' aria-pressed="false"' if multi else ''
         opts = "".join(
-            f'<button class="nv-kc-opt" data-correct="{1 if o.get("correct") else 0}">{_unwrap_p(o.get("html"))}</button>'
+            f'<button class="nv-kc-opt" data-correct="{1 if o.get("correct") else 0}"{aria}>{_unwrap_p(o.get("html"))}</button>'
             for o in b.get("options", []))
         # both feedback paths ride as data-* attrs; the player shows the one matching the choice
         fb_ok = b.get("feedback", "")
         fb_no = b.get("feedbackIncorrect", "") or fb_ok
         kcid = f' data-kc-id="{_esc(b.get("id"))}"' if b.get("id") else ""
-        return (f'<div class="nv-block nv-kc"{kcid}><div class="nv-kc-prompt">{_unwrap_p(b.get("prompt"))}</div>'
-                f'{opts}'
+        cls = "nv-block nv-kc nv-kc--multi" if multi else "nv-block nv-kc"
+        hint = '<p class="nv-kc-hint">Select all that apply.</p>' if multi else ''
+        submit = '<button type="button" class="nv-kc-submit nv-btn">Submit</button>' if multi else ''
+        return (f'<div class="{cls}"{kcid}><div class="nv-kc-prompt">{_unwrap_p(b.get("prompt"))}</div>'
+                f'{hint}{opts}{submit}'
                 f'<div class="nv-kc-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div>'
                 f'</div>')
     if t == "quote":

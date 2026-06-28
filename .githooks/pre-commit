@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run player JS tests before every commit. Skips gracefully when node is absent.
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found — skipping player tests"
+  exit 0
+fi
+node --test 'tests/test_*.js'

@@ -17,10 +17,18 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run tests
+      - name: Run Python tests
         run: python -m pytest tests/ -v
+
+      - name: Run player tests
+        run: node --test 'tests/test_*.js'

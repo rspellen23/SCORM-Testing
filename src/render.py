@@ -2,6 +2,7 @@
 import os, re, shutil, html
 import brand as brandlib
 import chart_svg
+import gameshow
 import layouts
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -18,10 +19,29 @@ def _esc(s):
     return html.escape(s or "", quote=True)
 
 
+def _scenario_ids(scenes):
+    """Stable per-scene ids for branching navigation: the authored `id:` when present,
+    else `scene-<n>` (1-based). A `goto:` target resolves against these."""
+    ids = []
+    for n, sc in enumerate(scenes, 1):
+        ids.append(sc.get("id") or f"scene-{n}")
+    return ids
+
+
 def _aspect(s):
     """'16:9' | '16/9' -> a CSS aspect-ratio value; default 16/9."""
     s = (s or "16:9").replace(":", "/").replace(" ", "")
     return s if "/" in s else "16/9"
+
+
+def _caption_track(b):
+    """M3: a `<track kind="captions">` for a media block that carries a caption
+    file (`captions`, `captionsLang`), else "". Emitted inside both <video> and
+    <audio> — the caption sidecar is produced by captions.py from local Whisper."""
+    if not b.get("captions"):
+        return ""
+    return (f'<track kind="captions" src="{_esc(b["captions"])}" '
+            f'srclang="{_esc(b.get("captionsLang") or "en")}" label="Captions" default>')
 
 
 def _modal_media(m):
@@ -167,11 +187,8 @@ def render_block(b, ctx=None):
         # self-hosted file — bundled in the SCORM zip; 'ended' is observable
         poster = f' poster="{_esc(b["poster"])}"' if b.get("poster") else ""
         req = ' data-require="1"' if b.get("requireComplete") else ""
-        track = (f'<track kind="captions" src="{_esc(b["captions"])}" '
-                 f'srclang="{_esc(b.get("captionsLang") or "en")}" label="Captions" default>') \
-                if b.get("captions") else ""
         return (f'<figure class="nv-block nv-video"><video controls preload="metadata"{poster}{req}>'
-                f'<source src="{_esc(b["src"])}">{track}</video>{cap}</figure>')
+                f'<source src="{_esc(b["src"])}">{_caption_track(b)}</video>{cap}</figure>')
     if t == "audio":
         if not b.get("src"):
             return ""
@@ -180,7 +197,7 @@ def render_block(b, ctx=None):
         tr = (f'<details class="nv-transcript"><summary>Transcript</summary>'
               f'<div class="nv-p">{_esc(b.get("transcript"))}</div></details>') if b.get("transcript") else ""
         return (f'<figure class="nv-block nv-audio">'
-                f'<audio controls preload="metadata"{req} src="{_esc(b["src"])}"></audio>'
+                f'<audio controls preload="metadata"{req} src="{_esc(b["src"])}">{_caption_track(b)}</audio>'
                 f'{cap}{tr}</figure>')
     if t == "embed":
         if not b.get("src"):
@@ -236,13 +253,22 @@ def render_block(b, ctx=None):
         fb_ok = b.get("feedback", "")
         fb_no = b.get("feedbackIncorrect", "") or fb_ok
         kcid = f' data-kc-id="{_esc(b.get("id"))}"' if b.get("id") else ""
+        kcobj = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # M13 section subscore
         cls = "nv-block nv-kc nv-kc--multi" if multi else "nv-block nv-kc"
         hint = '<p class="nv-kc-hint">Select all that apply.</p>' if multi else ''
         submit = '<button type="button" class="nv-kc-submit nv-btn">Submit</button>' if multi else ''
-        return (f'<div class="{cls}"{kcid}><div class="nv-kc-prompt">{_unwrap_p(b.get("prompt"))}</div>'
+        return (f'<div class="{cls}"{kcid}{kcobj}><div class="nv-kc-prompt">{_unwrap_p(b.get("prompt"))}</div>'
                 f'{hint}{opts}{submit}'
                 f'<div class="nv-kc-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div>'
                 f'</div>')
+    if t == "questionBank":
+        # C5 — ship the WHOLE pool inside a data-bank wrapper; the player draws `draw` of
+        # the children at runtime (removing the rest before its collectors run) and shuffles
+        # KC options. Each child renders byte-identically to an inline question (incl. its
+        # data-obj when the bank inherited a graded section objective) via render_block.
+        draw = int(b.get("draw") or len(b.get("questions", [])))
+        inner = "".join(render_block(q, ctx) for q in b.get("questions", []))
+        return f'<div class="nv-block nv-bank" data-bank data-draw="{draw}">{inner}</div>'
     if t == "quote":
         attr = f'<figcaption class="nv-quote-by">{_unwrap_p(b.get("attribution"))}</figcaption>' if b.get("attribution") else ""
         cls, style = "nv-block nv-quote", ""
@@ -302,19 +328,411 @@ def render_block(b, ctx=None):
                 f'{prompt}<ul class="nv-sort-items">{"".join(rows)}</ul>'
                 f'<button class="nv-btn nv-sort-check" type="button">Check</button>'
                 f'<div class="nv-sort-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "dragDrop":
+        # Drag each label onto its correct target. The <select> "Place in…" per label is the
+        # accessible, keyboard+touch source of truth; native pointer drag (player.js) just sets
+        # it. PARTIAL credit (each label in its correct zone = 1), mirroring matching/sequence.
+        zones = b.get("zones", [])
+        src = b.get("src")
+        zopts = "".join(f'<option value="{_esc(z.get("id"))}">{_unwrap_p(z.get("title"))}</option>' for z in zones)
+        # Drop targets. With a diagram, zones are positioned (x/y percent) over the image;
+        # otherwise they render as a labeled row. Each is a native drop container (data-zone).
+        zone_html = []
+        for z in zones:
+            pos = ""
+            if src is not None and z.get("x") is not None and z.get("y") is not None:
+                pos = f' style="left:{float(z.get("x"))}%;top:{float(z.get("y"))}%"'
+            zone_html.append(
+                f'<div class="nv-drag-zone" data-zone="{_esc(z.get("id"))}"{pos}>'
+                f'<span class="nv-drag-zone-title">{_unwrap_p(z.get("title"))}</span>'
+                f'<span class="nv-drag-slot"></span></div>')
+        if src is not None:
+            stage = (f'<div class="nv-drag-diagram">'
+                     f'<img class="nv-drag-img" src="{_esc(src)}" alt="">{"".join(zone_html)}</div>')
+        else:
+            stage = f'<div class="nv-drag-zones">{"".join(zone_html)}</div>'
+        chips = []
+        for it in b.get("pool", []):
+            chips.append(
+                f'<li class="nv-drag-item" draggable="true" data-target="{_esc(it.get("target"))}">'
+                f'<span class="nv-drag-label">{_unwrap_p(it.get("html"))}</span>'
+                f'<select class="nv-drag-pick" aria-label="Place this label">'
+                f'<option value="">Place in…</option>{zopts}</select></li>')
+        prompt = f'<div class="nv-drag-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # graded subscore
+        return (f'<div class="nv-block nv-drag" data-drag{objattr}><div class="nv-drag-instr">Drag each label onto its target, or use the menus.</div>'
+                f'{prompt}{stage}<ul class="nv-drag-pool">{"".join(chips)}</ul>'
+                f'<button class="nv-btn nv-drag-check" type="button">Check</button>'
+                f'<div class="nv-drag-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "wordSearch":
+        # Find hidden words in a letter grid, generated at build time from the term list.
+        # Cells are <button>s (data-r/data-c) so the interaction is keyboard-operable (click
+        # the first + last letter) as well as pointer-draggable; the player reads the letters
+        # along the selected line and matches them (forward OR reversed) to a target word.
+        # PARTIAL credit — words found / total — mirroring matching/dragDrop.
+        grid = b.get("grid", [])
+        size = b.get("size") or (len(grid[0]) if grid and grid[0] else 0)
+        cells = []
+        for r, row in enumerate(grid):
+            for c, ch in enumerate(row):
+                cells.append(f'<button type="button" class="nv-ws-cell" data-r="{r}" data-c="{c}">{_esc(ch)}</button>')
+        witems = []
+        for w in b.get("words", []):
+            # data-word is the CLEANED, letters-only form the player matches against the grid;
+            # the visible term shows the original text when it differs (e.g. a multi-word entry).
+            data_word = _esc(w.get("text", ""))
+            shown = _unwrap_p(w.get("display")) if w.get("display") else data_word
+            clue = w.get("clue")
+            clue_html = f' <span class="nv-ws-clue">— {_unwrap_p(clue)}</span>' if clue else ""
+            witems.append(f'<li class="nv-ws-word" data-word="{data_word}"><span class="nv-ws-term">{shown}</span>{clue_html}</li>')
+        prompt = f'<div class="nv-ws-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # graded subscore
+        return (f'<div class="nv-block nv-wordsearch" data-wordsearch{objattr}>'
+                f'<div class="nv-ws-instr">Find each word from the list in the grid — drag across the letters, or click the first and last letter.</div>'
+                f'{prompt}'
+                f'<div class="nv-ws-grid" role="grid" aria-label="Word search letter grid" style="--ws-cols:{size}">{"".join(cells)}</div>'
+                f'<ul class="nv-ws-words">{"".join(witems)}</ul>'
+                f'<button class="nv-btn nv-ws-check" type="button">Check</button>'
+                f'<div class="nv-ws-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "crossword":
+        # An interlocking crossword generated at build time from clue/answer pairs.
+        # White cells are single-letter <input>s (native keyboard/touch entry); blocked
+        # cells are inert. Each clue carries its answer + the list of cells it spans so the
+        # player can read a word's typed letters and score it. PARTIAL credit — words solved
+        # / total — mirroring wordSearch/matching. The answer text lives in the DOM (data-
+        # answer) exactly as wordSearch exposes its target words: these are practice games.
+        grid = b.get("grid", [])
+        cols = b.get("cols") or (len(grid[0]) if grid and grid[0] else 0)
+        words = b.get("words", [])
+        num_at = {(w.get("r"), w.get("c")): w.get("num") for w in words}
+        cells = []
+        for r, row in enumerate(grid):
+            for c, ch in enumerate(row):
+                if ch is None:
+                    cells.append('<div class="nv-cw-cell nv-cw-block" aria-hidden="true"></div>')
+                    continue
+                num = num_at.get((r, c))
+                badge = f'<span class="nv-cw-num">{num}</span>' if num else ""
+                cells.append(f'<div class="nv-cw-cell">{badge}'
+                             f'<input class="nv-cw-input" type="text" maxlength="1" inputmode="text" autocomplete="off" '
+                             f'spellcheck="false" data-r="{r}" data-c="{c}" aria-label="Row {r + 1} column {c + 1}"></div>')
+        def _clue_items(direction):
+            out = []
+            for w in sorted((w for w in words if w.get("dir") == direction), key=lambda w: w.get("num") or 0):
+                answer = _esc(w.get("text", ""))
+                n = len(w.get("text", ""))
+                dr, dc = (1, 0) if direction == "down" else (0, 1)
+                r0, c0 = w.get("r"), w.get("c")
+                coords = " ".join(f'{r0 + dr * k},{c0 + dc * k}' for k in range(n))
+                clue = w.get("clue")
+                clue_html = _unwrap_p(clue) if clue else "(no clue)"
+                out.append(f'<li class="nv-cw-clue" data-answer="{answer}" data-cells="{coords}" '
+                           f'data-num="{w.get("num") or 0}" data-dir="{direction}">'
+                           f'<span class="nv-cw-cnum">{w.get("num") or 0}.</span> {clue_html} '
+                           f'<span class="nv-cw-len">({n})</span></li>')
+            return "".join(out)
+        across, down = _clue_items("across"), _clue_items("down")
+        prompt = f'<div class="nv-cw-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # graded subscore
+        return (f'<div class="nv-block nv-crossword" data-crossword{objattr}>'
+                f'<div class="nv-cw-instr">Type each answer into the grid using the numbered clues.</div>'
+                f'{prompt}'
+                f'<div class="nv-cw-layout">'
+                f'<div class="nv-cw-grid" role="grid" aria-label="Crossword grid" style="--cw-cols:{cols}">{"".join(cells)}</div>'
+                f'<div class="nv-cw-clues">'
+                f'<div class="nv-cw-cluelist"><h4 class="nv-cw-cluehead">Across</h4><ol class="nv-cw-acrosslist">{across}</ol></div>'
+                f'<div class="nv-cw-cluelist"><h4 class="nv-cw-cluehead">Down</h4><ol class="nv-cw-downlist">{down}</ol></div>'
+                f'</div></div>'
+                f'<button class="nv-btn nv-cw-check" type="button">Check</button>'
+                f'<div class="nv-cw-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "gameShow":
+        # Spin-the-wheel review: one MCQ per slice. The wheel is a build-time SVG whose
+        # wedge geometry comes from gameshow.wheel_segments() (pure, no trig here); the
+        # player spins it (animated, plus a keyboard/reduced-motion-safe Spin button) to
+        # reveal one question at a time, scores each answer, then spins again. PARTIAL
+        # credit — answered N of M correctly. Option order (and so the correct-answer
+        # index on each panel) is fixed in the IR, so resume is stable.
+        slices = b.get("slices", [])
+        n = len(slices)
+        if not slices:   # every authored question dropped → don't emit an unanswerable block
+            return '<div class="nv-block nv-gameshow nv-gs-empty"><div class="nv-gs-instr">(No game-show questions available.)</div></div>'
+        wedges = []
+        for si, sg in enumerate(gameshow.wheel_segments(n)):
+            wedges.append(f'<path class="nv-gs-seg" data-idx="{si}" d="{sg["d"]}"></path>')
+            wedges.append(f'<text class="nv-gs-segnum" x="{sg["lx"]}" y="{sg["ly"]}" '
+                          f'text-anchor="middle" dominant-baseline="central" aria-hidden="true">{si + 1}</text>')
+        panels = []
+        for si, sl in enumerate(slices):
+            opts = "".join(
+                f'<label class="nv-gs-opt"><input type="radio" value="{oi}"> '
+                f'<span class="nv-gs-optlabel">{_unwrap_p(o)}</span></label>'
+                for oi, o in enumerate(sl.get("options", [])))
+            panels.append(
+                f'<fieldset class="nv-gs-panel" data-idx="{si}" data-answer="{int(sl.get("answer", 0))}" hidden>'
+                f'<legend class="nv-gs-q"><span class="nv-gs-qnum">Question {si + 1}.</span> {_unwrap_p(sl.get("q"))}</legend>'
+                f'<div class="nv-gs-opts" role="radiogroup">{opts}</div>'
+                f'<button class="nv-btn nv-gs-submit" type="button">Submit answer</button></fieldset>')
+        prompt = f'<div class="nv-gs-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # graded subscore
+        return (f'<div class="nv-block nv-gameshow" data-gameshow{objattr}>'
+                f'<div class="nv-gs-instr">Spin the wheel, then answer the question it lands on — answer all {n} to finish.</div>'
+                f'{prompt}'
+                f'<div class="nv-gs-stage">'
+                f'<div class="nv-gs-wheelwrap">'
+                f'<svg class="nv-gs-wheel" viewBox="0 0 200 200" role="img" aria-label="Question wheel with {n} slices">'
+                f'<g class="nv-gs-rotor">{"".join(wedges)}</g>'
+                f'<circle class="nv-gs-hub" cx="100" cy="100" r="13"></circle>'
+                f'</svg>'
+                f'<div class="nv-gs-pointer" aria-hidden="true"></div>'
+                f'</div>'
+                f'<button class="nv-btn nv-gs-spin" type="button">Spin</button>'
+                f'</div>'
+                f'<div class="nv-gs-panels">{"".join(panels)}</div>'
+                f'<div class="nv-gs-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "quizBoard":
+        # Jeopardy-style category board: one column per category, tiles worth escalating
+        # points down each column. The learner picks any tile, answers its MCQ (a native
+        # radio group — keyboard/touch), and the tile flips correct/incorrect; scored with
+        # WEIGHTED partial credit (points earned / points possible). Option order (and so the
+        # correct-answer index per tile) is fixed in the IR at build time → resume-stable.
+        board = b.get("board", [])
+        cols = int(b.get("cols", len(board)) or 0)
+        rows = int(b.get("rows", 0) or 0)
+        flat = []                       # (flatIdx, category name, tile) in category-major order
+        pos = {}                        # (col, row) -> flatIdx, so the grid can find each tile
+        for ci, cat in enumerate(board):
+            for ri, tile in enumerate(cat.get("tiles", [])):
+                pos[(ci, ri)] = len(flat)
+                flat.append((len(flat), cat.get("name", ""), tile))
+        if not flat:                    # every authored question dropped → don't emit an unanswerable block
+            return '<div class="nv-block nv-quizboard nv-qb-empty"><div class="nv-qb-instr">(No quiz-board questions available.)</div></div>'
+        heads = "".join(f'<div class="nv-qb-head" role="columnheader">{_unwrap_p(c.get("name"))}</div>' for c in board)
+        cells = []
+        for ri in range(rows):
+            for ci in range(cols):
+                fi = pos.get((ci, ri))
+                if fi is None:
+                    cells.append('<div class="nv-qb-blank" aria-hidden="true"></div>')
+                    continue
+                _, cname, tile = flat[fi]
+                val = int(tile.get("value", 0))
+                cells.append(
+                    f'<button class="nv-qb-tile" type="button" data-idx="{fi}" data-value="{val}" '
+                    f'aria-label="{_esc(cname)}, {val} points">{val}</button>')
+        panels = []
+        for fi, cname, tile in flat:
+            val = int(tile.get("value", 0))
+            opts = "".join(
+                f'<label class="nv-qb-opt"><input type="radio" value="{oi}"> '
+                f'<span class="nv-qb-optlabel">{_unwrap_p(o)}</span></label>'
+                for oi, o in enumerate(tile.get("options", [])))
+            panels.append(
+                f'<fieldset class="nv-qb-panel" data-idx="{fi}" data-answer="{int(tile.get("answer", 0))}" data-value="{val}" hidden>'
+                f'<legend class="nv-qb-q"><span class="nv-qb-qcat">{_unwrap_p(cname)}</span>'
+                f'<span class="nv-qb-qval">{val} pts</span> {_unwrap_p(tile.get("q"))}</legend>'
+                f'<div class="nv-qb-opts" role="radiogroup">{opts}</div>'
+                f'<button class="nv-btn nv-qb-submit" type="button">Submit answer</button></fieldset>')
+        prompt = f'<div class="nv-qb-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # graded subscore
+        return (f'<div class="nv-block nv-quizboard" data-quizboard{objattr}>'
+                f'<div class="nv-qb-instr">Pick a tile, then answer the question — answer all {len(flat)} to finish.</div>'
+                f'{prompt}'
+                f'<div class="nv-qb-board" role="grid" style="--qb-cols:{cols}">{heads}{"".join(cells)}</div>'
+                f'<div class="nv-qb-panels">{"".join(panels)}</div>'
+                f'<div class="nv-qb-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "speedStreak":
+        # Fast one-at-a-time MCQ run. The learner answers questions in sequence, building a
+        # consecutive-correct STREAK; an optional per-question countdown (`timer`) drives a
+        # COSMETIC speed bonus only — correctness and the graded {got,max} have no time limit
+        # (so it stays accessible + deterministic). Option order (and so the correct-answer
+        # index per panel) is fixed in the IR at build time → resume-stable. PARTIAL credit —
+        # answered N of M correctly, mirroring gameShow.
+        rounds = b.get("rounds", [])
+        n = len(rounds)
+        if not rounds:   # every authored question dropped → don't emit an unanswerable block
+            return '<div class="nv-block nv-speedstreak nv-ss-empty"><div class="nv-ss-instr">(No speed-round questions available.)</div></div>'
+        timer = int(b.get("timer", 0) or 0)
+        panels = []
+        for si, sl in enumerate(rounds):
+            opts = "".join(
+                f'<label class="nv-ss-opt"><input type="radio" value="{oi}"> '
+                f'<span class="nv-ss-optlabel">{_unwrap_p(o)}</span></label>'
+                for oi, o in enumerate(sl.get("options", [])))
+            panels.append(
+                f'<fieldset class="nv-ss-panel" data-idx="{si}" data-answer="{int(sl.get("answer", 0))}" hidden>'
+                f'<legend class="nv-ss-q"><span class="nv-ss-qnum">Question {si + 1} of {n}.</span> {_unwrap_p(sl.get("q"))}</legend>'
+                f'<div class="nv-ss-opts" role="radiogroup">{opts}</div>'
+                f'<button class="nv-btn nv-ss-submit" type="button">Submit answer</button></fieldset>')
+        prompt = f'<div class="nv-ss-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # graded subscore
+        # Timer bits are emitted only when timed; the scoreboard is cosmetic (aria-hidden) —
+        # the aria-live feedback region carries the real correctness + final tally for SR.
+        timer_chip = (f'<span class="nv-ss-timer">&#9201; <b>{timer}</b>s</span>' if timer else "")
+        timer_bar = ('<div class="nv-ss-timerbar"><span></span></div>' if timer else "")
+        instr = ("Answer each question — keep your streak alive!" if not timer
+                 else f"Answer each question before the {timer}s clock — keep your streak alive!")
+        return (f'<div class="nv-block nv-speedstreak" data-speedstreak data-timer="{timer}"{objattr}>'
+                f'<div class="nv-ss-instr">{instr}</div>'
+                f'{prompt}'
+                f'<div class="nv-ss-scoreboard" aria-hidden="true">'
+                f'<span class="nv-ss-progress">0 / {n}</span>'
+                f'<span class="nv-ss-streak">&#128293; <b>0</b></span>'
+                f'<span class="nv-ss-score"><b>0</b> pts</span>'
+                f'{timer_chip}'
+                f'</div>'
+                f'{timer_bar}'
+                f'<div class="nv-ss-panels">{"".join(panels)}</div>'
+                f'<button class="nv-btn nv-ss-start" type="button">Start</button>'
+                f'<button class="nv-btn nv-ss-next" type="button" hidden>Next question</button>'
+                f'<div class="nv-ss-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "reflection":
+        # C7 — free-text / open-response REFLECTION. The learner types a response, submits,
+        # then a model answer + rubric criteria REVEAL for self-assessment. NON-GRADED,
+        # completion-only: it never contributes to the graded score, pass gate, or XP (no
+        # data-obj). A published SCORM package runs offline, so there is no runtime AI
+        # scorer — the model answer + criteria are authored at build time (the LLM writes
+        # them from the course content) to give the learner a concrete thing to compare
+        # their own answer against.
+        prompt = f'<div class="nv-rf-prompt">{b.get("prompt","")}</div>' if b.get("prompt") else ""
+        model = f'<div class="nv-rf-model"><div class="nv-rf-label">Model response</div>{b.get("model","")}</div>' if b.get("model") else ""
+        criteria = ""
+        if b.get("criteria"):
+            crits = "".join(f'<li>{c}</li>' for c in b.get("criteria", []))
+            criteria = f'<div class="nv-rf-rubric"><div class="nv-rf-label">A strong answer…</div><ul>{crits}</ul></div>'
+        # The reveal region ships hidden; the player unhides it on submit (and on resume if
+        # the learner had already revealed it). If the author supplied neither a model nor
+        # criteria, submitting simply marks completion with nothing to reveal.
+        reveal = (f'<div class="nv-rf-answer" hidden>{model}{criteria}</div>' if (model or criteria) else "")
+        return (f'<div class="nv-block nv-reflection" data-reflection>'
+                f'<div class="nv-rf-instr">Reflect</div>'
+                f'{prompt}'
+                f'<textarea class="nv-rf-input" rows="6" aria-label="Your reflection" '
+                f'placeholder="Write your response…"></textarea>'
+                f'<button class="nv-btn nv-rf-submit" type="button">Submit</button>'
+                f'{reveal}'
+                f'<div class="nv-rf-done" role="status" aria-live="polite" hidden>'
+                f'Thanks for reflecting. Compare your answer with the guidance above.</div></div>')
+    if t == "matching":
+        # M12 — the learner matches each LEFT to its correct RIGHT partner. Options = every
+        # right, in REVERSED authored order so the option order doesn't hand over the answer.
+        pairs = b.get("pairs", [])
+        opts = "".join(f'<option value="{_esc(p.get("id"))}">{_unwrap_p(p.get("right"))}</option>'
+                       for p in reversed(pairs))
+        rows = []
+        for p in pairs:
+            rows.append(
+                f'<li class="nv-match-item" data-answer="{_esc(p.get("id"))}">'
+                f'<span class="nv-match-label">{_unwrap_p(p.get("left"))}</span>'
+                f'<select class="nv-match-pick" aria-label="Choose a match">'
+                f'<option value="">Choose…</option>{opts}</select></li>')
+        prompt = f'<div class="nv-match-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # M12→M13 subscore
+        return (f'<div class="nv-block nv-match" data-match{objattr}><div class="nv-match-instr">Match each item to its partner.</div>'
+                f'{prompt}<ul class="nv-match-items">{"".join(rows)}</ul>'
+                f'<button class="nv-btn nv-match-check" type="button">Check</button>'
+                f'<div class="nv-match-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "sequence":
+        # M12 — the learner assigns each step its position (1..N). Steps are shown in REVERSED
+        # authored order so the display isn't already the answer; data-pos = correct position.
+        steps = b.get("steps", [])
+        n = len(steps)
+        pos_opts = "".join(f'<option value="{j}">{j}</option>' for j in range(1, n + 1))
+        rows = []
+        for disp_i, st in enumerate(reversed(steps)):
+            correct_pos = n - disp_i          # reversed: first shown is the last step
+            rows.append(
+                f'<li class="nv-seq-item" data-pos="{correct_pos}">'
+                f'<span class="nv-seq-label">{_unwrap_p(st.get("html"))}</span>'
+                f'<select class="nv-seq-pick" aria-label="Choose a position">'
+                f'<option value="">#</option>{pos_opts}</select></li>')
+        prompt = f'<div class="nv-seq-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # M12→M13 subscore
+        return (f'<div class="nv-block nv-seq" data-seq{objattr}><div class="nv-seq-instr">Put the steps in the correct order.</div>'
+                f'{prompt}<ul class="nv-seq-items">{"".join(rows)}</ul>'
+                f'<button class="nv-btn nv-seq-check" type="button">Check</button>'
+                f'<div class="nv-seq-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
+    if t == "fillBlank":
+        # M12 — each blank is a text input between before/after; the accept-list rides in
+        # data-answers (JSON). The player matches leniently (trim/collapse-space/lowercase).
+        import json as _json
+        rows = []
+        for bl in b.get("blanks", []):
+            ans = _esc(_json.dumps(bl.get("answers", []), ensure_ascii=False))
+            before = _unwrap_p(bl.get("before"))
+            after = _unwrap_p(bl.get("after"))
+            rows.append(
+                f'<li class="nv-fill-item" data-answers="{ans}"><span class="nv-fill-text">{before} '
+                f'<input type="text" class="nv-fill-input" autocomplete="off" aria-label="Fill in the blank"> '
+                f'{after}</span></li>')
+        prompt = f'<div class="nv-fill-prompt">{_unwrap_p(b.get("prompt"))}</div>' if b.get("prompt") else ""
+        fb_ok = b.get("feedback", "")
+        fb_no = b.get("feedbackIncorrect", "") or fb_ok
+        objattr = f' data-obj="{_esc(b.get("objective"))}"' if b.get("objective") else ""  # M12→M13 subscore
+        return (f'<div class="nv-block nv-fill" data-fill{objattr}><div class="nv-fill-instr">Fill in each blank.</div>'
+                f'{prompt}<ul class="nv-fill-items">{"".join(rows)}</ul>'
+                f'<button class="nv-btn nv-fill-check" type="button">Check</button>'
+                f'<div class="nv-fill-fb" role="status" aria-live="polite" data-fb-correct="{_esc(fb_ok)}" data-fb-incorrect="{_esc(fb_no)}"></div></div>')
     if t == "scenario":
+        raw_scenes = b.get("scenes", [])
+        # M14: branch ONLY when a choice actually carries a `goto` target. With none,
+        # this stays the byte-identical linear walk-through (static, all scenes shown).
+        branching = any(r.get("goto") for sc in raw_scenes for r in sc.get("responses", []))
+        if not branching:
+            scenes = []
+            for sc in raw_scenes:
+                head = f'<h3 class="nv-h3">{_unwrap_p(sc.get("title"))}</h3>' if sc.get("title") else ""
+                narr = f'<div class="nv-p">{sc.get("html","")}</div>' if sc.get("html") else ""
+                resp = []
+                for r in sc.get("responses", []):
+                    pref = " is-preferred" if r.get("preferred") else ""
+                    fb = f'<div class="nv-scn-fb">{r.get("feedback","")}</div>' if r.get("feedback") else ""
+                    resp.append(f'<li class="nv-scn-resp{pref}"><div class="nv-scn-choice">{r.get("html","")}</div>{fb}</li>')
+                rlist = f'<ul class="nv-scn-responses">{"".join(resp)}</ul>' if resp else ""
+                scenes.append(f'<div class="nv-scn-scene">{head}{narr}{rlist}</div>')
+            return f'<section class="nv-block nv-scenario">{"".join(scenes)}</section>'
+        # --- branching render: one scene at a time; the player (nv-scenario[data-branching])
+        # activates the first scene and routes each choice to its `data-goto` target. ---
+        ids = _scenario_ids(raw_scenes)
         scenes = []
-        for sc in b.get("scenes", []):
+        for si, sc in enumerate(raw_scenes):
+            sid = ids[si]
             head = f'<h3 class="nv-h3">{_unwrap_p(sc.get("title"))}</h3>' if sc.get("title") else ""
             narr = f'<div class="nv-p">{sc.get("html","")}</div>' if sc.get("html") else ""
             resp = []
             for r in sc.get("responses", []):
                 pref = " is-preferred" if r.get("preferred") else ""
-                fb = f'<div class="nv-scn-fb">{r.get("feedback","")}</div>' if r.get("feedback") else ""
-                resp.append(f'<li class="nv-scn-resp{pref}"><div class="nv-scn-choice">{r.get("html","")}</div>{fb}</li>')
+                goto = r.get("goto") or ""
+                fb = f'<div class="nv-scn-fb" hidden>{r.get("feedback","")}</div>' if r.get("feedback") else ""
+                resp.append(
+                    f'<li class="nv-scn-resp{pref}">'
+                    f'<button type="button" class="nv-scn-choice" data-goto="{_esc(goto)}">{r.get("html","")}</button>'
+                    f'{fb}</li>')
             rlist = f'<ul class="nv-scn-responses">{"".join(resp)}</ul>' if resp else ""
-            scenes.append(f'<div class="nv-scn-scene">{head}{narr}{rlist}</div>')
-        return f'<section class="nv-block nv-scenario">{"".join(scenes)}</section>'
+            # a scene whose choices name no target is terminal (an ending).
+            terminal = " data-terminal" if not any(r.get("goto") for r in sc.get("responses", [])) else ""
+            scenes.append(
+                f'<div class="nv-scn-scene" data-scene-id="{_esc(sid)}"{terminal} tabindex="-1" hidden>'
+                f'{head}{narr}{rlist}'
+                f'<div class="nv-scn-nav" hidden><button type="button" class="nv-btn nv-scn-continue">Continue</button></div>'
+                f'</div>')
+        restart = '<div class="nv-scn-foot"><button type="button" class="nv-btn nv-scn-restart" hidden>Start over</button></div>'
+        return f'<section class="nv-block nv-scenario" data-branching>{"".join(scenes)}{restart}</section>'
     if t == "timeline":
         # vertical roadmap: a brand axis with milestone cards (HTML parity with the timeline slide layout)
         tl = layouts.normalize_timeline(b)     # accept slide `body` as well as course `html`
@@ -487,7 +905,7 @@ PAGE = """<!doctype html>
   <img src="{ab}brand/{logo}" alt="{logo_alt}">
   <span class="nv-title">{title}</span>
   <div class="nv-progress" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
-</header>
+{xp_hud}</header>
 <main class="nv-main" id="nv-main" tabindex="-1">
 {hero}
 {body}
@@ -526,7 +944,7 @@ def copy_shared(dest_dir, brand=None):
 
 
 def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_player=True,
-                  lesson_index=1, lesson_count=1, brand=None, animate=True):
+                  lesson_index=1, lesson_count=1, brand=None, animate=True, gate=None):
     """Write a complete course dir: index.html + (brand/ + player/) + assets/.
 
     asset_blobs: dict {out_rel_path: bytes} for course media (from a Rise zip or
@@ -559,15 +977,50 @@ def render_course(ir, out_dir, asset_blobs=None, asset_base="", bundle_brand_pla
     attrs = f' data-lesson="{int(lesson_index)}" data-lessons="{int(lesson_count)}"'
     if ir.get("graded"):
         attrs += f' data-graded="1" data-pass="{int(ir.get("passingScore", 80))}"'
+        # M13 — completion gate: default from the course (`*Gate:*`, default on); a build
+        # may force it off (gate=False). Only emit data-gate="0" when OFF (byte-identical on).
+        eff_gate = ir.get("gateCompletion", True) if gate is None else bool(gate)
+        if not eff_gate:
+            attrs += ' data-gate="0"'
+        # M13 — per-section subscore objectives for the player + LMS reporting
+        objs = ir.get("objectives") or []
+        if objs:
+            import json as _json
+            payload = [{"id": o["id"], "name": o.get("name", o["id"]), "pass": o.get("pass")} for o in objs]
+            attrs += f' data-objectives="{_esc(_json.dumps(payload, ensure_ascii=False))}"'
     if ir.get("retry"):
         attrs += f' data-retry="{int(ir["retry"])}"'
+    # points/XP overlay (gamification #3) — opt-in via `*Points:* on`. A purely motivational
+    # HUD; emits data-xp config + a hidden .nv-xp element the player reveals + paints. Absent
+    # → byte-identical (no attr, no HUD element).
+    xp_hud = ""
+    xp_cfg = ir.get("xp")
+    if xp_cfg:
+        import json as _json
+        payload = {"w": xp_cfg.get("weights") or {}, "t": xp_cfg.get("tiers") or []}
+        attrs += f' data-xp="{_esc(_json.dumps(payload, ensure_ascii=False))}"'
+        xp_hud = ('  <div class="nv-xp" role="status" aria-live="polite" aria-label="Experience points" hidden>'
+                  '<span class="nv-xp-star" aria-hidden="true">★</span> '
+                  '<span class="nv-xp-pts">0</span> XP '
+                  '<span class="nv-xp-sep" aria-hidden="true">·</span> '
+                  '<span class="nv-xp-tier"></span></div>\n')
+    # confetti celebration overlay (gamification #6) — opt-in via `*Celebrate:* on`. Purely
+    # cosmetic: emits data-celebrate config the player reads to fire a zero-dep canvas burst on
+    # the enabled moments (quiz pass / XP level-up / course complete), honoring reduced-motion.
+    # Absent → byte-identical (no attr). No persistent DOM — the player creates the canvas ad hoc.
+    cel_cfg = ir.get("celebrate")
+    if cel_cfg:
+        import json as _json
+        payload = {"pass": bool(cel_cfg.get("pass")), "level": bool(cel_cfg.get("level")),
+                   "complete": bool(cel_cfg.get("complete"))}
+        attrs += f' data-celebrate="{_esc(_json.dumps(payload, ensure_ascii=False))}"'
     if not animate:                          # default on; player.js gates on data-anim="0"
         attrs += ' data-anim="0"'
     exit_label = "Next lesson →" if (lesson_count > 1 and lesson_index < lesson_count) else "Finish course"
     page = PAGE.format(lang=ir.get("locale", "en"), title=_esc(ir.get("title")),
                        accent=ir.get("accent") or b.accent, hero=hero_html,
                        body=body_html, modals=modals_html, ab=asset_base,
-                       body_attrs=attrs, exit_label=exit_label,
+                       body_attrs=attrs, exit_label=exit_label, xp_hud=xp_hud,
                        favicon=_esc(os.path.basename(b.get("favicon") or "favicon.svg")),
                        logo=_esc(os.path.basename(b.get("logo") or "logo.svg")),
                        logo_alt=_esc(b.get("logoAlt") or ""))

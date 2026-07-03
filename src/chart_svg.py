@@ -189,7 +189,7 @@ def _bar(block, stacked=False):
             + _axis_titles(block, x0, x1, y0, y1) + "</svg>")
 
 
-def _line(block):
+def _line(block, area=False):
     cats = block.get("categories") or []
     series = _series(block)
     vals = _all_values(block)
@@ -197,23 +197,100 @@ def _line(block):
     vmax = max(vals) if vals else 1
     axfrag, x0, y0, x1, y1, sy, by = _axes(cats, vmin, vmax)
     catfrag, centers, band = _cat_labels(cats, x0, x1)
-    body = []
+    fills, body = [], []
     for si, s in enumerate(series):
         data = s.get("data") or []
         pts = [(centers[ci], sy(data[ci])) for ci in range(min(len(cats), len(data)))
                if isinstance(data[ci], (int, float))]
         if not pts:
             continue
-        d = "M" + " L".join(f"{px:.1f} {py:.1f}" for px, py in pts)
-        body.append(f'<path d="{d}" fill="none" stroke="{_color(si)}" stroke-width="2.5" '
+        line = " L".join(f"{px:.1f} {py:.1f}" for px, py in pts)
+        if area:                              # translucent region under the line, down to baseline
+            fills.append(f'<path d="M{pts[0][0]:.1f} {by:.1f} L{line} '
+                         f'L{pts[-1][0]:.1f} {by:.1f} Z" fill="{_color(si)}" '
+                         f'fill-opacity="0.16" stroke="none"/>')
+        body.append(f'<path d="M{line}" fill="none" stroke="{_color(si)}" stroke-width="2.5" '
                     f'stroke-linejoin="round" stroke-linecap="round"/>')
         for px, py in pts:
             body.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3.5" fill="{_color(si)}"/>')
-    return (_svg_open(_aria_summary(block)) + axfrag + "".join(body) + catfrag
+    return (_svg_open(_aria_summary(block)) + axfrag + "".join(fills) + "".join(body) + catfrag
             + _axis_titles(block, x0, x1, y0, y1) + "</svg>")
 
 
-def _pie(block):
+# -- horizontal bar: value axis runs along X, categories stack down the Y axis --
+_MLH = 118.0                                   # wider left margin: category labels sit here
+
+
+def _barh(block, stacked=False):
+    cats = block.get("categories") or []
+    series = _series(block)
+    if stacked:
+        vmax = max([sum(v for v in (s.get("data") or []) if isinstance(v, (int, float)))
+                    for s in series] or [1])
+        vmin = 0
+    else:
+        vals = _all_values(block)
+        vmin = min(0, min(vals)) if vals else 0
+        vmax = max(vals) if vals else 1
+    x0, x1 = _MLH, _W - _MR
+    y0, y1 = _MT, _H - 52.0
+    ticks = _ticks(vmin, vmax)
+    tmin, tmax = ticks[0], ticks[-1]
+    span = (tmax - tmin) or 1
+
+    def sx(v):
+        return x0 + (v - tmin) / span * (x1 - x0)
+
+    frag = []
+    for t in ticks:                            # vertical gridlines + value labels at the bottom
+        gx = sx(t)
+        frag.append(f'<line x1="{gx:.1f}" y1="{y0:.1f}" x2="{gx:.1f}" y2="{y1:.1f}" '
+                    f'stroke="var(--brand-line)" stroke-width="1"/>')
+        frag.append(f'<text x="{gx:.1f}" y="{y1 + 18:.1f}" text-anchor="middle" '
+                    f'font-size="12" fill="var(--brand-ink-soft)">{_esc(_fmt(t))}</text>')
+    bx = sx(max(tmin, min(0, tmax)) if tmin <= 0 <= tmax else tmin)
+    frag.append(f'<line x1="{bx:.1f}" y1="{y0:.1f}" x2="{bx:.1f}" y2="{y1:.1f}" '
+                f'stroke="var(--brand-ink-soft)" stroke-width="1.5"/>')
+    n = max(1, len(cats))
+    band = (y1 - y0) / n
+    ns = max(1, len(series))
+    bars = []
+    for ci in range(len(cats)):
+        cyt = y0 + band * ci
+        bars.append(f'<text x="{x0 - 8:.1f}" y="{cyt + band / 2 + 4:.1f}" text-anchor="end" '
+                    f'font-size="12" fill="var(--brand-ink)">{_esc(cats[ci])}</text>')
+        if stacked:
+            acc = 0.0
+            for si, s in enumerate(series):
+                data = s.get("data") or []
+                v = data[ci] if ci < len(data) else None
+                if not isinstance(v, (int, float)):
+                    continue
+                left, right = sx(acc), sx(acc + v)
+                bars.append(f'<rect x="{min(left, right):.1f}" y="{cyt + band * 0.18:.1f}" '
+                            f'width="{abs(right - left):.1f}" height="{band * 0.64:.1f}" '
+                            f'fill="{_color(si)}"><title>{_esc(s.get("name"))}: {_esc(_fmt(v))}</title></rect>')
+                acc += v
+        else:
+            bh = band * 0.7 / ns
+            for si, s in enumerate(series):
+                data = s.get("data") or []
+                v = data[ci] if ci < len(data) else None
+                if not isinstance(v, (int, float)):
+                    continue
+                yt = cyt + band * 0.15 + bh * si
+                xv = sx(v)
+                bars.append(f'<rect x="{min(bx, xv):.1f}" y="{yt:.1f}" width="{abs(xv - bx):.1f}" '
+                            f'height="{bh * 0.86:.1f}" fill="{_color(si)}" rx="2">'
+                            f'<title>{_esc(s.get("name"))}: {_esc(_fmt(v))}</title></rect>')
+                if ns == 1:
+                    bars.append(f'<text x="{xv + 5:.1f}" y="{yt + bh * 0.43 + 4:.1f}" '
+                                f'font-size="11.5" fill="var(--brand-ink)">{_esc(_fmt(v))}</text>')
+    return (_svg_open(_aria_summary(block)) + "".join(frag) + "".join(bars)
+            + _axis_titles(block, x0, x1, y0, y1) + "</svg>")
+
+
+def _pie(block, donut=False):
     cats = block.get("categories") or []
     series = _series(block)
     data = (series[0].get("data") if series else []) or []
@@ -244,14 +321,24 @@ def _pie(block):
         leg.append(f'<text x="{lx + 22:.1f}" y="{yy + 12:.1f}" font-size="12.5" '
                    f'fill="var(--brand-ink)">{_esc(label)} — {_esc(_fmt(v))} '
                    f'({v / total * 100:.0f}%)</text>')
-    return _svg_open(_aria_summary(block)) + "".join(body) + "".join(leg) + "</svg>"
+    # donut = the same wedges with a punched-out center (fills with the frame bg) + a total
+    hole = ""
+    if donut:
+        ri = r * 0.58
+        hole = (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{ri:.1f}" fill="var(--brand-light)"/>'
+                f'<text x="{cx:.1f}" y="{cy - 4:.1f}" text-anchor="middle" font-size="26" '
+                f'font-weight="700" fill="var(--brand-ink)">{_esc(_fmt(total))}</text>'
+                f'<text x="{cx:.1f}" y="{cy + 18:.1f}" text-anchor="middle" font-size="12.5" '
+                f'fill="var(--brand-ink-soft)">Total</text>')
+    return _svg_open(_aria_summary(block)) + "".join(body) + hole + "".join(leg) + "</svg>"
 
 
 # ------------------------------------------------------------- accessibility text
 
 def _aria_summary(block):
     kind = {"bar": "Bar", "groupedBar": "Grouped bar", "stackedBar": "Stacked bar",
-            "line": "Line", "pie": "Pie"}.get(block.get("chart"), "")
+            "horizontalBar": "Horizontal bar", "horizontalStackedBar": "Horizontal stacked bar",
+            "line": "Line", "area": "Area", "pie": "Pie", "donut": "Donut"}.get(block.get("chart"), "")
     bits = [f"{kind} chart"]
     if block.get("title"):
         bits.append(_strip(block["title"]))
@@ -303,13 +390,93 @@ def render_chart(block):
         svg = _bar(block, stacked=True)
     elif ctype == "groupedBar":
         svg = _bar(block, stacked=False)
+    elif ctype == "horizontalBar":
+        svg = _barh(block, stacked=False)
+    elif ctype == "horizontalStackedBar":
+        svg = _barh(block, stacked=True)
+    elif ctype == "area":
+        svg = _line(block, area=True)
+    elif ctype == "donut":
+        svg = _pie(block, donut=True)
     else:
         svg = _BODY.get(ctype, _bar)(block)
     title = (f'<figcaption class="nv-chart-title">{block["title"]}</figcaption>'
              if block.get("title") else "")
-    legend = "" if ctype == "pie" else _legend(block)
+    legend = "" if ctype in ("pie", "donut") else _legend(block)
+    takeaway = (f'<p class="nv-chart-takeaway">{block["takeaway"]}</p>'
+                if block.get("takeaway") else "")
     source = (f'<p class="nv-chart-source"><span class="nv-chart-src-label">Source:</span> '
               f'{block["source"]}</p>' if block.get("source") else "")
     return (f'<figure class="nv-block nv-chart" role="group" aria-label="{_esc(_aria_summary(block))}">'
             f'{title}{legend}<div class="nv-chart-frame" aria-hidden="true">{svg}</div>'
-            f'{_data_table(block)}{source}</figure>')
+            f'{takeaway}{_data_table(block)}{source}</figure>')
+
+
+# --------------------------------------------------------- CSV / paste -> data
+
+def _csv_num(cell):
+    """A pasted cell -> number, or None when blank/non-numeric. Tolerates thousands
+    commas, a leading $, and a trailing % (so `1,200`, `$45`, `12%` all parse)."""
+    s = str(cell or "").strip().replace(",", "").replace("$", "").rstrip("%").strip()
+    if not s:
+        return None
+    try:
+        f = float(s)
+    except ValueError:
+        return None
+    return int(f) if f.is_integer() else f
+
+
+def parse_chart_csv(text, *, max_series=8):
+    """Turn pasted CSV/TSV into a chart block's `{categories, series}` — so an operator
+    can paste a spreadsheet table straight into the chart editor.
+
+    Convention: first column = category labels, remaining columns = series (their header
+    cell = the series name). A first row whose value cells are ALL numeric is treated as
+    header-less (unnamed `Series N`). A single column of numbers becomes one series with
+    1-based category labels. Blank/non-numeric value cells become `null`. Unknown extra
+    columns past `max_series` are dropped. NEVER raises — bad input yields empty data.
+    """
+    import csv as _csv
+    import io as _io
+    text = (text or "").lstrip("﻿").strip("\n")
+    if not text.strip():
+        return {"categories": [], "series": []}
+    head = text.split("\n", 1)[0]
+    delim = "\t" if "\t" in head else (";" if (";" in head and "," not in head) else ",")
+    try:
+        rows = [r for r in _csv.reader(_io.StringIO(text), delimiter=delim)
+                if any(str(c or "").strip() for c in r)]
+    except Exception:
+        return {"categories": [], "series": []}
+    if not rows:
+        return {"categories": [], "series": []}
+    ncols = max(len(r) for r in rows)
+
+    if ncols == 1:                             # a single pasted column of values
+        nums = [_csv_num(r[0]) for r in rows]
+        name = "Series 1"
+        if nums and nums[0] is None:           # first cell is a header label, not a value
+            name = str(rows[0][0]).strip() or "Series 1"
+            nums = nums[1:]
+        return {"categories": [str(k + 1) for k in range(len(nums))],
+                "series": [{"name": name, "data": nums}]}
+
+    first = rows[0]
+    value_cells = first[1:]
+    headerless = bool(value_cells) and all(_csv_num(c) is not None for c in value_cells)
+    if headerless:
+        names = [f"Series {i + 1}" for i in range(ncols - 1)] or ["Series 1"]
+        data_rows = rows
+    else:
+        names = [str(c or "").strip() or f"Series {i + 1}" for i, c in enumerate(first[1:])]
+        names = names or ["Series 1"]
+        data_rows = rows[1:]
+    names = names[:max_series]
+    cats, cols = [], [[] for _ in names]
+    for r in data_rows:
+        cats.append(str(r[0] if r else "").strip())
+        for si in range(len(names)):
+            cols[si].append(_csv_num(r[si + 1]) if si + 1 < len(r) else None)
+    return {"categories": cats,
+            "series": [{"name": names[si], "data": cols[si]} for si in range(len(names))]}

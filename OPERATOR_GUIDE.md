@@ -99,7 +99,7 @@ For a script you already have, the CLI builds straight to a package. This path i
 fully reproducible and needs no AI provider.
 
 ```bash
-./build from-md-course <script.md> --images <dir> --out <out.zip> [--format cmi5] [--brand teletracking]
+./build from-md-course <script.md> --images <dir> --out <out.zip> [--format scorm|scorm2004|cmi5] [--brand teletracking]
 ./build from-md        <script.md> --which N --images <dir> --out <out.zip> [--brand teletracking]
 ./build from-docx      <doc.docx>  --images <dir> --out <out.zip> [--brand teletracking]
 ./build from-rise      <raw.zip>   --out <out.zip> [--brand teletracking]
@@ -131,11 +131,13 @@ up-next; Back / Continue at the bottom).
 4. **Generate scripts** — draft the course script **and** an SME-review `.docx` into the
    project folder. Choose a **Purpose** preset (standard / compliance / onboarding /
    product-skill / refresher) to shape voice, depth, and assessment posture.
-5. **Apply SME review** — feed the reviewed `.docx` back to layer the SME's edits into the script.
-6. **Output format** — pick SCORM 1.2 / SCORM 2004 / cmi5.
-7. **Generate preview** — build each course into a **preview area** and review it.
-   **Nothing reaches the output folder yet.** Read the build report panel here.
-8. **Publish** — publish the courses you approve to the output folder as packages.
+5. **Apply SME review** — feed the reviewed `.docx` (or a whole folder of per-module
+   reviewed docs) back to layer the SME's edits into the script.
+6. **Generate preview** — render each course as learner-facing **HTML only** (no SCORM
+   package is built here) and review it. **Nothing reaches the output folder yet.**
+   Read the build report panel here. View / regenerate a module back on the script step.
+7. **Output & publish** — pick the format(s) (SCORM 1.2 / SCORM 2004 / cmi5 / PowerPoint),
+   then publish the courses you approve to the output folder as packages.
 
 ### 4.2 Slide-deck track (3 steps)
 

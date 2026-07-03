@@ -1,0 +1,10 @@
+{
+  "name": "workshop-objectives",
+  "title": "Workshop: learning objectives",
+  "description": "Learning objectives: a title over a 'by the end you will be able to...' subtitle and a vertical bulleted list of objectives. Brand supplies all color/type; the `items` bind is a list (renders as bullets) or a single line.",
+  "regions": [
+    {"role": "title",    "rect": [0.06, 0.11, 0.84, 0.13], "bind": "title"},
+    {"role": "subtitle", "rect": [0.06, 0.25, 0.84, 0.08], "bind": "subtitle"},
+    {"role": "body",     "rect": [0.08, 0.37, 0.84, 0.50], "bind": "items", "size": 18}
+  ]
+}

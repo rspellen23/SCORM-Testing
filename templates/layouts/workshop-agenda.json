@@ -1,0 +1,10 @@
+{
+  "name": "workshop-agenda",
+  "title": "Workshop: agenda",
+  "description": "A session agenda: a small kicker label over a title and a vertical bulleted list of the session's segments. Brand supplies all color/type; the `items` bind is a list (renders as bullets) or a single line.",
+  "regions": [
+    {"role": "kicker", "rect": [0.06, 0.11, 0.84, 0.06], "bind": "kicker"},
+    {"role": "title",  "rect": [0.06, 0.18, 0.84, 0.13], "bind": "title"},
+    {"role": "body",   "rect": [0.08, 0.36, 0.84, 0.52], "bind": "items", "size": 18}
+  ]
+}

@@ -58,6 +58,15 @@ def assert_golden(name, actual_text):
     )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_config_home(tmp_path, monkeypatch):
+    """Point the shared config dir (translation memory store, etc.) at a per-test temp
+    dir so no test ever reads or writes the operator's real ~/.course-builder. C17's
+    translate path persists to this store on every run; without isolation the suite
+    would leak into (and depend on) the real store."""
+    monkeypatch.setenv("COURSE_BUILDER_HOME", str(tmp_path / "cb-home"))
+
+
 @pytest.fixture
 def showcase_md():
     return os.path.join(FIXTURES, "showcase.md")

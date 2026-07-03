@@ -141,6 +141,7 @@
     },
     {
       "alt": "A simple left-to-right flow of three soft rounded shapes feeding into one polished output card, conveying an automated content-to-course pipeline",
+      "decorative": true,
       "gated": false,
       "src": "assets/how-it-works.png",
       "type": "image",
@@ -331,6 +332,7 @@
     },
     {
       "alt": "The Course Builder workspace in VS Code",
+      "decorative": true,
       "gated": false,
       "src": "assets/screenshot-vscode.png",
       "type": "image",
@@ -437,6 +439,7 @@
     },
     {
       "alt": "A winding road with milestone markers, representing the capability roadmap ahead",
+      "decorative": true,
       "gated": false,
       "src": "assets/roadmap.png",
       "type": "image",
@@ -510,6 +513,7 @@
     },
     {
       "alt": "This very course, built and rendered by the Course Builder",
+      "decorative": true,
       "gated": false,
       "src": "assets/screenshot-player.png",
       "type": "image",
@@ -576,10 +580,12 @@
       "type": "note"
     }
   ],
+  "gateCompletion": true,
   "graded": false,
   "hero": null,
   "id": "meet-the-teletracking-course-builder",
   "locale": "en",
+  "objectives": [],
   "passingScore": 80,
   "retry": 0,
   "schema": "course-ir/v1",

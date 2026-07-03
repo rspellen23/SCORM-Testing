@@ -1,0 +1,11 @@
+{
+  "name": "bizplan-solution",
+  "title": "Business plan: the solution",
+  "description": "The solution as three pillars: a title and framing subtitle over a row of three cards (pillar title + supporting line each). Cards repeat over the content's `cards` array; brand supplies card/ink colors.",
+  "regions": [
+    {"role": "title",    "rect": [0.06, 0.09, 0.84, 0.12], "bind": "title"},
+    {"role": "subtitle", "rect": [0.06, 0.22, 0.84, 0.07], "bind": "subtitle"},
+    {"role": "cards",    "rect": [0.06, 0.34, 0.88, 0.50], "bind": "cards", "columns": 3,
+     "item": {"title": "title", "body": "body"}}
+  ]
+}

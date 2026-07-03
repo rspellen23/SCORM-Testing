@@ -1,0 +1,11 @@
+{
+  "name": "workshop-activity",
+  "title": "Workshop: hands-on activity",
+  "description": "A hands-on exercise: title + a subtitle prompt over a bulleted step list on the left, with an optional image slot on the right for a screenshot. Brand supplies all color/type; the `steps` bind is a list (renders as bullets); the `image` slot stays empty until the operator drops in a client image.",
+  "regions": [
+    {"role": "title",    "rect": [0.06, 0.11, 0.58, 0.13], "bind": "title"},
+    {"role": "subtitle", "rect": [0.06, 0.25, 0.58, 0.09], "bind": "subtitle"},
+    {"role": "body",     "rect": [0.08, 0.37, 0.56, 0.50], "bind": "steps", "size": 16},
+    {"role": "image",    "rect": [0.68, 0.20, 0.26, 0.55], "bind": "image", "fit": "contain"}
+  ]
+}

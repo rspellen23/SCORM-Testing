@@ -1,0 +1,11 @@
+{
+  "name": "bizplan-ask",
+  "title": "Business plan: the ask",
+  "description": "The closing ask: a centered kicker ('The ask'), a large headline figure (the raise/target), a one-line statement, and a supporting line. Structure only; brand supplies all color/type.",
+  "regions": [
+    {"role": "kicker",   "rect": [0.10, 0.18, 0.80, 0.07], "bind": "kicker",   "align": "center"},
+    {"role": "value",    "rect": [0.10, 0.27, 0.80, 0.26], "bind": "value",    "align": "center"},
+    {"role": "title",    "rect": [0.10, 0.56, 0.80, 0.13], "bind": "title",    "align": "center"},
+    {"role": "subtitle", "rect": [0.10, 0.71, 0.80, 0.10], "bind": "subtitle", "align": "center"}
+  ]
+}

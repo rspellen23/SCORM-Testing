@@ -21,6 +21,11 @@ authoring surface — edit the .md, re-run, done.
 """
 import re, html
 from common import slugify
+import wordsearch
+import crossword
+import gameshow
+import quizboard
+import speedstreak
 
 SLIDE_RE = re.compile(r'^\*\*Slide\s+\d+\s*[—–-]\s*(.+?)\*\*\s*$', re.M)
 META_CUT = re.compile(r'^\*\*(Articulate Build Notes|Sources?(\s|&|$)).*', re.M | re.I)
@@ -64,12 +69,28 @@ ACCORDION_RE = re.compile(r'^\*Accordion:\*\s*(.*)$', re.I)
 PROCESS_RE = re.compile(r'^\*Process:\*\s*(.*)$', re.I)
 FLASHCARD_RE = re.compile(r'^\*Flashcard:\*\s*(.*)$', re.I)
 CATEGORIZE_RE = re.compile(r'^\*(?:Categorize|Sort):\*\s*(.*)$', re.I)
+DRAGDROP_RE = re.compile(r'^\*(?:DragDrop|Drag[-\s]?and[-\s]?Drop|Drag):\*\s*(.*)$', re.I)
+WORDSEARCH_RE = re.compile(r'^\*(?:WordSearch|Word[-\s]?Search|Word[-\s]?Find|WordFind):\*\s*(.*)$', re.I)
+CROSSWORD_RE = re.compile(r'^\*(?:Crossword|Cross[-\s]?Word):\*\s*(.*)$', re.I)
+GAMESHOW_RE = re.compile(r'^\*(?:GameShow|Game[-\s]?Show|Wheel|SpinWheel|Spin[-\s]?the[-\s]?Wheel):\*\s*(.*)$', re.I)
+QUIZBOARD_RE = re.compile(r'^\*(?:QuizBoard|Quiz[-\s]?Board|Jeopardy|Game[-\s]?Board|Board):\*\s*(.*)$', re.I)
+SPEEDSTREAK_RE = re.compile(r'^\*(?:SpeedStreak|Speed[-\s]?Streak|Speed[-\s]?Round|Speed[-\s]?Quiz|Rapid[-\s]?Fire|RapidFire|Streak):\*\s*(.*)$', re.I)
+MATCHING_RE = re.compile(r'^\*(?:Matching|Match):\*\s*(.*)$', re.I)
+SEQUENCE_RE = re.compile(r'^\*(?:Sequence|Order|Ordering):\*\s*(.*)$', re.I)
+FILLBLANK_RE = re.compile(r'^\*(?:FillBlank|Fill-?in(?:-the-blank)?|Fill|Blank|Cloze):\*\s*(.*)$', re.I)
+# C5 — a question BANK: `*Bank:* draw N` opens a pool of question children (KC + the
+# M12 matching/sequence/fill types); the player draws N at runtime. Closed by
+# `*Bank:* end`, a lone `:::`, or a slide/section boundary. END is checked first so a
+# closer isn't mistaken for an opener (the opener's `.*` also matches "end").
+QUESTIONBANK_END_RE = re.compile(r'^\*(?:Bank|QuestionBank):\*\s*end\s*$', re.I)
+QUESTIONBANK_RE = re.compile(r'^\*(?:Bank|QuestionBank):\*\s*(.*)$', re.I)
 TIMELINE_RE = re.compile(r'^\*Timeline:\*\s*(.*)$', re.I)
 COMPARISON_RE = re.compile(r'^\*Comparison:\*\s*(.*)$', re.I)
 CHART_RE = re.compile(r'^\*Chart:\*\s*(.*)$', re.I)
 INFOGRAPHIC_RE = re.compile(r'^\*Infographic:\*\s*(.*)$', re.I)
 CONTINUE_RE = re.compile(r'^\*Continue:\*\s*(.*)$', re.I)
 SCENARIO_RE = re.compile(r'^\*Scenario:\*\s*(.*)$', re.I)
+REFLECTION_RE = re.compile(r'^\*(?:Reflection|Reflect|Open[-\s]?Response|Free[-\s]?Text):\*\s*(.*)$', re.I)
 OBJECTIVES_RE = re.compile(r'^\*(?:Objectives|Learning Objectives):\*\s*(.*)$', re.I)
 
 # A fenced/keyed block must never run past the next slide / unit / meta marker:
@@ -81,10 +102,16 @@ FENCE_BOUNDARY_RE = re.compile(r'^(\*\*Slide\b|\*\*Articulate|\*\*Sources?\b|##\
 _CHART_ALIASES = {                       # author-friendly spellings -> canonical enum
     "bar": "bar", "column": "bar", "col": "bar",
     "line": "line", "trend": "line",
-    "pie": "pie", "donut": "pie", "doughnut": "pie",
+    "area": "area", "areachart": "area", "filled-line": "area",
+    "pie": "pie",
+    "donut": "donut", "doughnut": "donut",
     "stacked": "stackedBar", "stackedbar": "stackedBar", "stacked-bar": "stackedBar",
     "grouped": "groupedBar", "groupedbar": "groupedBar", "grouped-bar": "groupedBar",
     "clustered": "groupedBar",
+    "horizontal": "horizontalBar", "horizontalbar": "horizontalBar", "hbar": "horizontalBar",
+    "barh": "horizontalBar", "bar-h": "horizontalBar",
+    "horizontalstacked": "horizontalStackedBar", "horizontal-stacked": "horizontalStackedBar",
+    "hstacked": "horizontalStackedBar", "stackedh": "horizontalStackedBar",
 }
 
 
@@ -116,6 +143,7 @@ def _video_block(spec):
             b["poster"] = poster
         if require:
             b["requireComplete"] = True
+    _apply_captions(b, segs)
     return b
 
 
@@ -131,7 +159,21 @@ def _audio_block(spec):
         b["transcript"] = tr
     if require:
         b["requireComplete"] = True
+    _apply_captions(b, segs)
     return b
+
+
+def _apply_captions(b, segs):
+    """M3: bind a caption track (`· captions: file.vtt [· lang: xx]`) onto a
+    media block. `captions:` may be an auto-generated sidecar (see captions.py)
+    or an author-supplied .vtt/.srt. Absent when not authored, so the IR stays
+    byte-identical for un-captioned media."""
+    caps = _kv_opt(segs, "captions")
+    if caps:
+        b["captions"] = caps
+        lang = _kv_opt(segs, "lang") or _kv_opt(segs, "captionsLang")
+        if lang:
+            b["captionsLang"] = lang
 
 
 def _embed_block(spec):
@@ -158,13 +200,45 @@ def _section_block(spec):
 
     A colored section renders a solid brand-color band (white text) auto-bracketed by matching
     ribbon waves (lead-in above, lead-out below) — the renderer adds the waves. color defaults green.
+
+    M13 — a section wrapping a knowledge check may also declare a GRADED OBJECTIVE:
+    `*Section:* blue · Medication Safety · pass 70` — the `· <name>` labels a scored
+    objective and the optional `· pass <N>` sets its section threshold (0..100). KCs that
+    share a section name roll up into ONE objective (a per-section subscore). A bare token
+    `quiz`/`graded`/`scored` marks the section graded without a threshold. A plain
+    `*Section:* <color>` stays a purely VISUAL band — byte-identical IR (no name/graded/pass).
     """
-    s = spec.strip().lower()
-    if s.startswith("end") or s == "/":
+    raw = spec.strip()
+    if raw.lower().startswith("end") or raw == "/":
         return {"type": "sectionEnd"}
     colors = {"green", "gold", "dark", "blue", "teal"}
-    color = next((t for t in re.split(r'[\s·|]+', s) if t in colors), "green")
-    return {"type": "sectionStart", "color": color}
+    color = next((t for t in re.split(r'[\s·|]+', raw.lower()) if t in colors), "green")
+    block = {"type": "sectionStart", "color": color}
+    passv = None
+    graded = False
+    names = []
+    for seg in re.split(r'[·|]', raw):
+        seg = seg.strip()
+        if not seg:
+            continue
+        low = seg.lower()
+        m = re.match(r'pass(?:ing)?\s*(\d{1,3})\s*%?$', low)
+        if m:
+            passv = max(0, min(100, int(m.group(1)))); graded = True; continue
+        if low in ("quiz", "graded", "scored"):
+            graded = True; continue
+        # a name segment: drop any bare color token, keep the rest as the objective label
+        toks = [t for t in re.split(r'\s+', seg) if t and t.lower() not in colors]
+        if toks:
+            names.append(" ".join(toks))
+    name = " ".join(names).strip()
+    if name:
+        block["name"] = name; graded = True
+    if graded:
+        block["graded"] = True
+    if passv is not None:
+        block["pass"] = passv
+    return block
 
 
 def _transition_block(spec):
@@ -198,18 +272,31 @@ def _visual_block(spec):
     desc = segs[1] if len(segs) > 1 else (segs[0] if segs else "")
     fname = slot.group(1).strip() if slot else ""
     src = ("assets/" + fname) if fname else ""
+    is_dec = vtype in ("decorative", "decoration")
     if side:
         # 2-column image-beside-text; text column filled by the merge pass
-        return {"type": "imageText", "src": src, "alt": desc, "_slot": fname,
-                "side": side.group(1).lower(), "html": "", "_mergeText": True}
+        b = {"type": "imageText", "src": src, "alt": desc, "_slot": fname,
+             "side": side.group(1).lower(), "html": "", "_mergeText": True}
+        if is_dec:
+            b["decorative"] = True          # a11y (M2): an empty alt here is intentional, not an omission
+        return b
     block = {"type": "image", "variant": "full", "src": src, "alt": desc, "_slot": fname}
-    if vtype not in ("decorative", "decoration"):
+    if is_dec:
+        block["decorative"] = True          # a11y (M2): decorative ⇒ empty alt is valid; skip alt check
+    else:
         block["caption"] = desc
     return block
 
 
 def _segs(s):
     return [x.strip() for x in re.split(r'[·|]', s) if x.strip()]
+
+
+def _scene_slug(s):
+    """Normalize a scenario scene id / `goto:` target so authors can write it loosely.
+    `Escalate Now` and `escalate-now` both slug to `escalate-now`; a `goto:` and the
+    `id:` it points at match after slugging."""
+    return re.sub(r'[^a-z0-9]+', '-', (s or "").strip().lower()).strip('-')
 
 
 def _apply_modal_kv(modal, line):
@@ -439,6 +526,488 @@ def _parse_categorize(lines, i):
     return block, i
 
 
+def _parse_dragDrop(lines, i):
+    """`*DragDrop:* [prompt: ...]` then optional `image: <src>`, `zone: <title> [@ x,y]`
+    and `item: <label> -> <zone title>` lines, lone `:::` closes. Mirrors _parse_categorize:
+    the learner drags each label onto its correct zone (partial credit). `@ x,y` (percent)
+    positions a zone over the background diagram; `image:` sets that diagram."""
+    header = DRAGDROP_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "dragDrop", "zones": [], "pool": []}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    name2id = {}
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mimg = re.match(r'image:\s*(.+)$', s, re.I)
+        mz = re.match(r'zone:\s*(.+)$', s, re.I)
+        mi = re.match(r'item:\s*(.+?)\s*(?:->|=>|»)\s*(.+)$', s, re.I)
+        if mimg:
+            block["src"] = mimg.group(1).strip()
+        elif mz:
+            zid = "z" + str(len(block["zones"]) + 1)
+            title = mz.group(1).strip()
+            zone = {"id": zid}
+            mpos = re.search(r'\s*@\s*([\d.]+)\s*,\s*([\d.]+)\s*$', title)
+            if mpos:
+                title = title[:mpos.start()].strip()
+                zone["x"] = float(mpos.group(1))
+                zone["y"] = float(mpos.group(2))
+            zone["title"] = _inline(title)
+            name2id[title.lower()] = zid
+            block["zones"].append(zone)
+        elif mi:
+            block["pool"].append({"html": _inline(mi.group(1).strip()),
+                                  "_target_name": mi.group(2).strip().lower()})
+        i += 1
+    for p in block["pool"]:
+        p["target"] = name2id.get(p.pop("_target_name", ""), "")
+    # a diagram with no positioned zones falls back to the labeled-row layout at render
+    return block, i
+
+
+def _parse_wordSearch(lines, i):
+    """`*WordSearch:* [prompt: ...]` then `term: <WORD> [| <clue>]` lines, lone `:::` closes.
+
+    The author supplies only the terms (and optional clues); the letter grid is GENERATED
+    here at build time via wordsearch.generate() so the IR — and therefore the build — is
+    deterministic and self-contained. Non-letter characters in a term are stripped for the
+    grid but the ORIGINAL text is shown in the word list. Scored with partial credit
+    (words found / total), mirroring matching/dragDrop."""
+    header = WORDSEARCH_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "wordSearch"}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    terms = []          # (display_text, cleaned, clue|None) in authored order
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mt = re.match(r'(?:term|word):\s*(.+)$', s, re.I)
+        if mt:
+            body = mt.group(1).strip()
+            clue = None
+            if "|" in body:
+                body, clue = body.split("|", 1)
+                body, clue = body.strip(), clue.strip()
+            cleaned = wordsearch.clean_word(body)
+            if len(cleaned) >= 2:
+                terms.append((body, cleaned, clue or None))
+        i += 1
+    puzzle = wordsearch.generate([c for (_d, c, _cl) in terms])
+    clue_by_word = {c: cl for (_d, c, cl) in terms}
+    disp_by_word = {c: d for (d, c, _cl) in terms}
+    for w in puzzle.get("words", []):
+        cl = clue_by_word.get(w["text"])
+        if cl:
+            w["clue"] = _inline(cl)
+        disp = disp_by_word.get(w["text"])
+        if disp and disp.upper() != w["text"]:   # multi-word / punctuated term → show the original in the list
+            w["display"] = _inline(disp)
+    block["grid"] = puzzle.get("grid", [])
+    block["words"] = puzzle.get("words", [])
+    block["size"] = puzzle.get("size", 0)
+    return block, i
+
+
+def _parse_crossword(lines, i):
+    """`*Crossword:* [prompt: ...]` then `word: <ANSWER> | <clue>` lines, lone `:::` closes.
+
+    The author supplies the answers and their clues; the interlocking numbered grid is
+    GENERATED here at build time via crossword.generate() so the IR — and therefore the
+    build — is deterministic and self-contained. Non-letter characters in an answer are
+    stripped for the grid; the ORIGINAL text is shown in the clue list heading. A word that
+    can't be interlocked with the others is dropped (its clue then doesn't appear). Scored
+    with partial credit (words solved / total), mirroring wordSearch/matching."""
+    header = CROSSWORD_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "crossword"}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    entries = []        # (display_text, cleaned, clue|None) in authored order
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mw = re.match(r'(?:word|clue|answer):\s*(.+)$', s, re.I)
+        if mw:
+            body = mw.group(1).strip()
+            clue = None
+            if "|" in body:
+                body, clue = body.split("|", 1)
+                body, clue = body.strip(), clue.strip()
+            cleaned = crossword.clean_word(body)
+            if len(cleaned) >= 2:
+                entries.append((body, cleaned, clue or None))
+        i += 1
+    puzzle = crossword.generate([c for (_d, c, _cl) in entries])
+    clue_by_word = {c: cl for (_d, c, cl) in entries}
+    disp_by_word = {c: d for (d, c, _cl) in entries}
+    for w in puzzle.get("words", []):
+        cl = clue_by_word.get(w["text"])
+        if cl:
+            w["clue"] = _inline(cl)
+        disp = disp_by_word.get(w["text"])
+        if disp and disp.upper() != w["text"]:   # multi-word / punctuated answer → show the original
+            w["display"] = _inline(disp)
+    block["grid"] = puzzle.get("grid", [])
+    block["words"] = puzzle.get("words", [])
+    block["rows"] = puzzle.get("rows", 0)
+    block["cols"] = puzzle.get("cols", 0)
+    return block, i
+
+
+def _parse_gameShow(lines, i):
+    """`*GameShow:* [prompt: ...]` then repeated `q:`/`a:`/`option:` lines, lone `:::` closes.
+
+    Each question is a group: a `q:` stem, an `a:` (correct answer), and one or more
+    `option:` (distractor) lines; a new `q:` starts the next question. The options are
+    shuffled DETERMINISTICALLY at build time via gameshow.build() so the correct-option
+    index is fixed in the IR (the player never re-shuffles → resume-stable). A question
+    missing its stem, its answer, or every distractor is dropped. Scored with partial
+    credit (answered N of M correctly), mirroring wordSearch/crossword."""
+    header = GAMESHOW_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "gameShow"}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    questions = []          # [{"q","correct","distractors":[...]}] in authored order
+    cur = None
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mq = re.match(r'(?:q|question):\s*(.+)$', s, re.I)
+        if mq:
+            cur = {"q": mq.group(1).strip(), "correct": "", "distractors": []}
+            questions.append(cur)
+            i += 1
+            continue
+        ma = re.match(r'(?:a|answer|correct):\s*(.+)$', s, re.I)
+        if ma and cur is not None:
+            cur["correct"] = ma.group(1).strip()
+            i += 1
+            continue
+        mo = re.match(r'(?:option|distractor|wrong):\s*(.+)$', s, re.I)
+        if mo and cur is not None:
+            cur["distractors"].append(mo.group(1).strip())
+        i += 1
+    built = gameshow.build(questions)
+    slices = []
+    for sl in built.get("slices", []):
+        slices.append({"q": _inline(sl["q"]), "options": [_inline(o) for o in sl["options"]],
+                       "answer": sl["answer"]})
+    block["slices"] = slices
+    return block, i
+
+
+def _parse_quizBoard(lines, i):
+    """`*QuizBoard:* [prompt: ...]` then repeated `category:` columns, each holding
+    `q:`/`a:`/`option:` question groups; lone `:::` closes the block.
+
+    A `category:` line starts a new column; under it, each question is a group of a
+    `q:` stem, an `a:` (correct answer) and one or more `option:` (distractor) lines,
+    a new `q:` starting the next question (= the next row/tile). Tiles are numbered
+    top-down and given an escalating point value by quizboard.build(), which also
+    shuffles each MCQ's options DETERMINISTICALLY (reusing gameshow.build) so the
+    correct-option index is fixed in the IR. A question missing its stem/answer/every
+    distractor is dropped; a column with no surviving tile is dropped. Scored with
+    weighted partial credit (points earned / points possible)."""
+    header = QUIZBOARD_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "quizBoard"}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    categories = []         # [{"name","questions":[{"q","correct","distractors":[...]}]}]
+    cat = None
+    cur = None
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mc = re.match(r'(?:category|column|col):\s*(.+)$', s, re.I)
+        if mc:
+            cat = {"name": mc.group(1).strip(), "questions": []}
+            categories.append(cat)
+            cur = None
+            i += 1
+            continue
+        mq = re.match(r'(?:q|question):\s*(.+)$', s, re.I)
+        if mq and cat is not None:            # a question before any category is ignored (category-first)
+            cur = {"q": mq.group(1).strip(), "correct": "", "distractors": []}
+            cat["questions"].append(cur)
+            i += 1
+            continue
+        ma = re.match(r'(?:a|answer|correct):\s*(.+)$', s, re.I)
+        if ma and cur is not None:
+            cur["correct"] = ma.group(1).strip()
+            i += 1
+            continue
+        mo = re.match(r'(?:option|distractor|wrong):\s*(.+)$', s, re.I)
+        if mo and cur is not None:
+            cur["distractors"].append(mo.group(1).strip())
+        i += 1
+    built = quizboard.build(categories)
+    cols = []
+    for c in built.get("board", []):
+        cols.append({"name": _inline(c["name"]), "tiles": [
+            {"q": _inline(t["q"]), "options": [_inline(o) for o in t["options"]],
+             "answer": t["answer"], "value": t["value"]} for t in c["tiles"]]})
+    block["board"] = cols
+    block["cols"] = built.get("cols", 0)
+    block["rows"] = built.get("rows", 0)
+    return block, i
+
+
+def _parse_speedStreak(lines, i):
+    """`*SpeedStreak:* [timer: N] [prompt: ...]` then repeated `q:`/`a:`/`option:`
+    lines, lone `:::` closes.
+
+    A fast one-at-a-time MCQ run built from the same `q:`/`a:`/`option:` groups
+    gameShow uses (a new `q:` starts the next question). Options are shuffled
+    DETERMINISTICALLY at build time via speedstreak.build() → gameshow.build() so the
+    correct-option index is fixed in the IR (the player never re-shuffles → resume-
+    stable). An optional `timer: N` (whole seconds) adds a per-question countdown that
+    drives only a COSMETIC speed bonus — correctness and the graded {got,max} have no
+    time limit. Scored with partial credit (answered N of M correctly), mirroring
+    gameShow. Put `prompt:` LAST on the header if you also set a timer."""
+    header = SPEEDSTREAK_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "speedStreak"}
+    mt = re.search(r'timer:\s*(\d+)', header, re.I)
+    timer = int(mt.group(1)) if mt else 0
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        # defensively drop a trailing `timer: N` if the author put the prompt first
+        ptxt = re.sub(r'\s*timer:\s*\d+\s*$', '', mp.group(1).strip(), flags=re.I)
+        if ptxt.strip():
+            block["prompt"] = _inline(ptxt.strip())
+    questions = []          # [{"q","correct","distractors":[...]}] in authored order
+    cur = None
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker, don't consume it
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mq = re.match(r'(?:q|question):\s*(.+)$', s, re.I)
+        if mq:
+            cur = {"q": mq.group(1).strip(), "correct": "", "distractors": []}
+            questions.append(cur)
+            i += 1
+            continue
+        ma = re.match(r'(?:a|answer|correct):\s*(.+)$', s, re.I)
+        if ma and cur is not None:
+            cur["correct"] = ma.group(1).strip()
+            i += 1
+            continue
+        mo = re.match(r'(?:option|distractor|wrong):\s*(.+)$', s, re.I)
+        if mo and cur is not None:
+            cur["distractors"].append(mo.group(1).strip())
+        i += 1
+    built = speedstreak.build(questions, timer=timer)
+    rounds = []
+    for sl in built.get("rounds", []):
+        rounds.append({"q": _inline(sl["q"]), "options": [_inline(o) for o in sl["options"]],
+                       "answer": sl["answer"]})
+    block["rounds"] = rounds
+    if built.get("timer"):          # only emit when set → an untimed block stays byte-identical
+        block["timer"] = built["timer"]
+    return block, i
+
+
+def _parse_matching(lines, i):
+    """`*Matching:* [prompt: ...]` then `pair: <left> -> <right>` lines, lone `:::` closes.
+
+    M12 — the learner matches each LEFT item to its correct RIGHT partner (a select of
+    all rights). Scored with PARTIAL credit (per-pair). Mirrors _parse_categorize."""
+    header = MATCHING_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "matching", "pairs": []}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):       # unclosed fence: stop at the next marker
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mpr = re.match(r'pair:\s*(.+?)\s*(?:->|=>|»)\s*(.+)$', s, re.I)
+        if mpr:
+            pid = "p" + str(len(block["pairs"]) + 1)
+            block["pairs"].append({"id": pid, "left": _inline(mpr.group(1).strip()),
+                                   "right": _inline(mpr.group(2).strip())})
+        i += 1
+    return block, i
+
+
+def _parse_sequence(lines, i):
+    """`*Sequence:* [prompt: ...]` then `step: <text>` lines IN CORRECT ORDER, lone `:::` closes.
+
+    M12 — the authoring order IS the correct order. The learner assigns each step its
+    position (1..N); scored with PARTIAL credit (per step). Mirrors _parse_matching."""
+    header = SEQUENCE_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "sequence", "steps": []}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mst = re.match(r'step:\s*(.+)$', s, re.I)
+        if mst:
+            sid = "s" + str(len(block["steps"]) + 1)
+            block["steps"].append({"id": sid, "html": _inline(mst.group(1).strip())})
+        i += 1
+    return block, i
+
+
+def _parse_fillblank(lines, i):
+    """`*FillBlank:* [prompt: ...]` then `blank: <text with ___> -> <answer> | <alt>` lines.
+
+    M12 — `___` marks where the text input goes (if absent, the input follows the text).
+    Answers after `->` are an accept-list (pipe-separated); matching is lenient (trim /
+    collapse whitespace / case-insensitive), applied in the player. Mirrors _parse_matching."""
+    header = FILLBLANK_RE.match(lines[i].strip()).group(1)
+    i += 1
+    block = {"type": "fillBlank", "blanks": []}
+    mp = re.search(r'prompt:\s*(.+)$', header, re.I)
+    if mp:
+        block["prompt"] = _inline(mp.group(1).strip())
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):
+            break
+        if FENCE_RE.match(s):
+            i += 1
+            break
+        if not s:
+            i += 1
+            continue
+        mbl = re.match(r'blank:\s*(.+?)\s*(?:->|=>|»)\s*(.+)$', s, re.I)
+        if mbl:
+            text = mbl.group(1).strip()
+            answers = [a.strip() for a in mbl.group(2).split("|") if a.strip()]
+            bid = "f" + str(len(block["blanks"]) + 1)
+            if "___" in text:
+                before, _sep, after = text.partition("___")
+                blank = {"id": bid, "before": _inline(before.strip()),
+                         "after": _inline(after.strip()), "answers": answers}
+            else:
+                blank = {"id": bid, "before": _inline(text), "after": "", "answers": answers}
+            block["blanks"].append(blank)
+        i += 1
+    return block, i
+
+
+def _parse_bank(lines, i):
+    """`*Bank:* [draw N]` opens a question POOL; children are ordinary question blocks
+    parsed by the EXISTING parsers (KC via `_knowledge_check`; matching/sequence/fill via
+    their `_parse_*`, each self-closing on its own `:::`). A KC child runs to the next
+    child marker/boundary. The bank ends at `*Bank:* end`, a lone `:::`, or a slide/section
+    boundary. `draw` absent → draw the whole pool (no randomization). The player draws N at
+    runtime (C5); this parser just collects the pool."""
+    header = QUESTIONBANK_RE.match(lines[i].strip()).group(1)
+    i += 1
+    md = re.search(r'draw\s+(\d+)', header, re.I)
+    draw = int(md.group(1)) if md else None
+    questions = []
+    n = len(lines)
+
+    def _is_child_start(s):
+        return bool(MATCHING_RE.match(s) or SEQUENCE_RE.match(s)
+                    or FILLBLANK_RE.match(s) or re.match(r'\*Question:\*', s, re.I))
+
+    while i < n:
+        s = lines[i].strip()
+        if not s:
+            i += 1
+            continue
+        if FENCE_BOUNDARY_RE.match(s):
+            break                                  # slide/section boundary: don't consume
+        if QUESTIONBANK_END_RE.match(s) or FENCE_RE.match(s):
+            i += 1                                 # `*Bank:* end` / lone `:::` closes the bank
+            break
+        if MATCHING_RE.match(s):
+            block, i = _parse_matching(lines, i); questions.append(block); continue
+        if SEQUENCE_RE.match(s):
+            block, i = _parse_sequence(lines, i); questions.append(block); continue
+        if FILLBLANK_RE.match(s):
+            block, i = _parse_fillblank(lines, i); questions.append(block); continue
+        if re.match(r'\*Question:\*', s, re.I):
+            j = i + 1
+            while j < n:
+                sj = lines[j].strip()
+                if (FENCE_BOUNDARY_RE.match(sj) or QUESTIONBANK_END_RE.match(sj)
+                        or FENCE_RE.match(sj) or _is_child_start(sj)):
+                    break
+                j += 1
+            kc = _knowledge_check("\n".join(lines[i:j]))
+            if kc.get("options"):
+                questions.append(kc)
+            i = j
+            continue
+        i += 1                                     # skip stray prose inside the bank
+    if draw is None:
+        draw = len(questions)
+    return {"type": "questionBank", "draw": draw, "questions": questions}, i
+
+
 def _parse_timeline(lines, i):
     """`*Timeline:*` then `::: milestone` (phase:/title:/body:/accent:) groups, lone `:::` closes.
 
@@ -509,12 +1078,18 @@ def _parse_comparison(lines, i):
 
 def _parse_scenario(lines, i):
     """`*Scenario:*` then `::: scene` groups. Inside each scene:
+        id: <scene id>                  (optional; the target name a `· goto:` points at)
         title: <scene title>            (optional)
         <prose lines>                   the scene narrative (the decision prompt)
-        - <response> [· preferred] [· feedback: <text>]   (one per choice)
-    A lone `:::` closes the block. Renders as a LINEAR decision walk-through: every
-    scene is shown and the `preferred` choice is marked (the linear-fallback
-    renderer). For practice, mark exactly ONE preferred response per scene.
+        - <response> [· preferred] [· goto: <scene-id>] [· feedback: <text>]   (one per choice)
+    A lone `:::` closes the block.
+
+    TWO modes, decided purely by whether any choice carries a `· goto:` target:
+      * NO targets → a LINEAR decision walk-through: every scene shown at once and
+        the `preferred` choice marked (the original linear-fallback renderer,
+        byte-identical). For practice, mark exactly ONE preferred response per scene.
+      * ANY target → TRUE branching (M14): the player shows one scene at a time and a
+        choice routes to its `goto` scene. `id:` names a scene so a `goto` can reach it.
     """
     i += 1
     scenes, narr = [], []
@@ -557,9 +1132,18 @@ def _parse_scenario(lines, i):
             for seg in segs[1:]:
                 if re.match(r'(?:preferred|correct|best)$', seg, re.I):
                     resp["preferred"] = True
+                else:
+                    # `goto: <scene-id>` routes this choice to a named scene (M14
+                    # branching). Slugged so `Escalate Now` and `escalate-now` match.
+                    mg = re.match(r'(?:goto|target|to)\s*:\s*(.+)$', seg, re.I)
+                    if mg:
+                        resp["goto"] = _scene_slug(mg.group(1))
             if mfb:
                 resp["feedback"] = "<p>" + _inline(mfb.group(1).strip()) + "</p>"
             cur["responses"].append(resp)
+        elif re.match(r'^id\s*:', s, re.I):
+            _flush()
+            cur["id"] = _scene_slug(s.split(':', 1)[1])
         elif re.match(r'^title\s*:', s, re.I):
             _flush()
             cur["title"] = _inline(s.split(':', 1)[1].strip())
@@ -570,6 +1154,8 @@ def _parse_scenario(lines, i):
     out = []
     for sc in scenes:
         scene = {}
+        if sc.get("id"):
+            scene["id"] = sc["id"]
         if sc.get("title"):
             scene["title"] = sc["title"]
         if sc.get("html"):
@@ -578,6 +1164,69 @@ def _parse_scenario(lines, i):
             scene["responses"] = sc["responses"]
         out.append(scene)
     return {"type": "scenario", "scenes": out}, i
+
+
+def _parse_reflection(lines, i):
+    """`*Reflection:* <prompt>` then optional `model:` / `criteria:` lines; a lone `:::`
+    (or the next marker) closes the block.
+
+        *Reflection:* <the reflective question / prompt>
+        <more prompt prose>            (optional; appended to the prompt)
+        model: <a strong example answer the learner self-checks against>
+        criteria: <one rubric point a good answer includes>
+        criteria: <another rubric point>
+        :::
+
+    A free-text / open-response block: at runtime the learner types into a textarea,
+    submits, then the model answer + criteria REVEAL for self-assessment. It is
+    NON-GRADED — completion-only. There is no runtime AI scorer (a published SCORM
+    package runs offline); the `model:` answer and `criteria:` are authored at build
+    time (the LLM writes them from the course content), so the learner has something
+    concrete to compare their own response against.
+
+    The prompt may be given on the header line and/or as plain prose lines before the
+    first `model:`/`criteria:`. `model:` accumulates multi-line prose; `criteria:`
+    lines each become one rubric bullet.
+    """
+    prompt = [(REFLECTION_RE.match(lines[i].strip()).group(1) or "").strip()]
+    i += 1
+    model, criteria = [], []
+    while i < len(lines):
+        s = lines[i].strip()
+        if FENCE_BOUNDARY_RE.match(s):           # unclosed fence: stop at the next marker
+            break
+        fm = FENCE_RE.match(s)
+        if fm:
+            i += 1
+            if fm.group(1) is None:              # a lone ::: closes the block
+                break
+            continue                             # ignore a stray "::: name" opener
+        mm = re.match(r'^model\s*:\s*(.*)$', s, re.I)
+        if mm:
+            model.append(mm.group(1).strip())
+            i += 1
+            continue
+        mc = re.match(r'^(?:criteri(?:on|a)|rubric)\s*:\s*(.*)$', s, re.I)
+        if mc:
+            if mc.group(1).strip():
+                criteria.append(mc.group(1).strip())
+            i += 1
+            continue
+        if s and model:                          # prose after model: continues the answer
+            model.append(s)
+        elif s:                                  # prose before any key extends the prompt
+            prompt.append(s)
+        i += 1
+    block = {"type": "reflection"}
+    ptxt = " ".join(p for p in prompt if p).strip()
+    if ptxt:
+        block["prompt"] = "<p>" + _inline(ptxt) + "</p>"
+    mtxt = " ".join(m for m in model if m).strip()
+    if mtxt:
+        block["model"] = "<p>" + _inline(mtxt) + "</p>"
+    if criteria:
+        block["criteria"] = [_inline(c) for c in criteria]
+    return block, i
 
 
 def _parse_objectives(lines, i):
@@ -731,12 +1380,13 @@ def _chart_num(x):
 
 
 def _parse_chart(lines, i):
-    """`*Chart:* <bar|line|pie|stackedBar|groupedBar>` then `key: value` lines until a
+    """`*Chart:* <bar|line|area|pie|donut|stackedBar|groupedBar|horizontalBar|horizontalStackedBar>` then `key: value` lines until a
     blank line. Keys: `categories:` (comma-separated labels), `series:` (repeatable —
     `Name = v1, v2, ...` or just `v1, v2, ...` for one unnamed series), `title:`,
-    `xLabel:`, `yLabel:`, `source:`.
+    `xLabel:`, `yLabel:`, `source:`, `takeaway:`.
 
-    `source:` is the no-invented-metrics guardrail — the renderer shows it and the
+    `takeaway:` is an OPTIONAL one-line plain-language insight (the "so what")
+    rendered with the chart. `source:` is the no-invented-metrics guardrail — the renderer shows it and the
     AI-generation lint rejects a chart that lacks one. Values use NO thousands
     separators (comma is the delimiter); use `null` for a missing data point.
     """
@@ -772,6 +1422,8 @@ def _parse_chart(lines, i):
             block["title"] = _inline(v)
         elif k == "source":
             block["source"] = _inline(v)
+        elif k == "takeaway":
+            block["takeaway"] = _inline(v)
         i += 1
     return block, i
 
@@ -837,6 +1489,36 @@ def _body_blocks(text):
         if CATEGORIZE_RE.match(s):
             flush_para(); flush_lst()
             block, i = _parse_categorize(lines, i); blocks.append(block); continue
+        if DRAGDROP_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_dragDrop(lines, i); blocks.append(block); continue
+        if WORDSEARCH_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_wordSearch(lines, i); blocks.append(block); continue
+        if CROSSWORD_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_crossword(lines, i); blocks.append(block); continue
+        if GAMESHOW_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_gameShow(lines, i); blocks.append(block); continue
+        if QUIZBOARD_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_quizBoard(lines, i); blocks.append(block); continue
+        if SPEEDSTREAK_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_speedStreak(lines, i); blocks.append(block); continue
+        if QUESTIONBANK_RE.match(s) and not QUESTIONBANK_END_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_bank(lines, i); blocks.append(block); continue
+        if MATCHING_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_matching(lines, i); blocks.append(block); continue
+        if SEQUENCE_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_sequence(lines, i); blocks.append(block); continue
+        if FILLBLANK_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_fillblank(lines, i); blocks.append(block); continue
         if TIMELINE_RE.match(s):
             flush_para(); flush_lst()
             block, i = _parse_timeline(lines, i); blocks.append(block); continue
@@ -855,6 +1537,9 @@ def _body_blocks(text):
         if SCENARIO_RE.match(s):
             flush_para(); flush_lst()
             block, i = _parse_scenario(lines, i); blocks.append(block); continue
+        if REFLECTION_RE.match(s):
+            flush_para(); flush_lst()
+            block, i = _parse_reflection(lines, i); blocks.append(block); continue
         mcont = CONTINUE_RE.match(s)
         if mcont:
             flush_para(); flush_lst()
@@ -1057,6 +1742,45 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
     # `*Retry:* N` → up to N attempts per KC before it locks + reveals (0/absent = one-shot)
     rm = re.search(r'\*Retry:\*\s*(\d+)', text, re.I)
     retry = int(rm.group(1)) if rm else 0
+    # `*Gate:* on|off` (M13) → does a FAILING score block completion? Default: graded
+    # courses gate (byte-identical to prior behavior — a failing learner is offered a
+    # retry, not marked complete); an author can turn it off so an informational course
+    # completes regardless of quiz score. A build can also force it off (--no-gate).
+    gm2 = re.search(r'\*Gate:\*\s*(on|off|yes|no|true|false)', text, re.I)
+    gate = (gm2.group(1).lower() in ("on", "yes", "true")) if gm2 else True
+    # `*Preset:* <key>` (C19) — the course PURPOSE preset (compliance/onboarding/
+    # product-skill/refresher/standard). Sets the audience READING-LEVEL band the build
+    # report flags against; also the natural home for the generation-time voice profile.
+    pm = re.search(r'\*Preset:\*\s*([a-z][a-z\-]*)', text, re.I)
+    preset = pm.group(1).lower() if pm else None
+    # `*Points:* on` (gamification #3) — opt-in points/XP MOTIVATIONAL overlay. Purely
+    # cosmetic (never affects the graded score, the completion gate, or the LMS score):
+    # each scorable block auto-earns points weighted by category (check/question/game),
+    # partial-credit blocks pro-rata, and a running total drives a level TIER in the HUD.
+    # Optional weight overrides ride the same line: `*Points:* on check=10 question=15 game=25`.
+    # Absent (or `off`) → no overlay, byte-identical output.
+    xp = None
+    xm = re.search(r'\*Points:\*\s*(on|off|yes|no|true|false)([^\n]*)', text, re.I)
+    if xm and xm.group(1).lower() in ("on", "yes", "true"):
+        weights = {"check": 10, "question": 15, "game": 20}
+        for cat, val in re.findall(r'(check|question|game)\s*=\s*(\d+)', xm.group(2), re.I):
+            weights[cat.lower()] = int(val)
+        xp = {"weights": weights,
+              "tiers": [["Novice", 0.0], ["Proficient", 0.5], ["Skilled", 0.8], ["Expert", 1.0]]}
+    # `*Celebrate:* on` (gamification #6) — opt-in CONFETTI celebration overlay. Purely
+    # cosmetic (never affects the score, the gate, or the LMS record): a zero-dependency
+    # canvas burst fires on the enabled moments — a graded-quiz PASS, an XP LEVEL-UP, and/or
+    # COURSE COMPLETION. Like *Points:* it's a COURSE-LEVEL directive, NOT a block type.
+    # `*Celebrate:* on` turns on all three; tune per-trigger with `pass=/level=/complete=`
+    # (e.g. `*Celebrate:* on level=off`). Honors prefers-reduced-motion at play time. Absent
+    # (or `off`) → no overlay, byte-identical output. Alias: `*Confetti:*`.
+    celebrate = None
+    cm = re.search(r'\*(?:Celebrate|Confetti):\*\s*(on|off|yes|no|true|false)([^\n]*)', text, re.I)
+    if cm and cm.group(1).lower() in ("on", "yes", "true"):
+        trig = {"pass": True, "level": True, "complete": True}
+        for k, val in re.findall(r'(pass|level|complete)\s*=\s*(on|off|yes|no|true|false)', cm.group(2), re.I):
+            trig[k.lower()] = val.lower() in ("on", "yes", "true")
+        celebrate = trig
     secs = re.split(r'^##\s+Microlearning\s+', text, flags=re.M)
     # secs[0] = preamble; module k lives at secs[k] starting "k: Title\n..."
     if which < 1 or which >= len(secs):
@@ -1071,30 +1795,78 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
     parts = SLIDE_RE.split(rest)  # [pre, title1, body1, title2, body2, ...]
     blocks = []
     kc_n = 0
+    objectives = []      # M13 — ordered, unique graded sections (subscore objectives)
+    obj_index = {}       # objective id → the objectives[] entry (dedupe by section name)
+
+    def _register_objective(sb):
+        # M13/M12 — a graded section names a scored OBJECTIVE; blocks sharing a name (KCs +
+        # M12 matching/sequencing/fill) roll up into ONE subscore, deduped by slug. Returns
+        # the objective id so the caller can tag the block's "objective". Only call when the
+        # course is graded AND the section is graded.
+        oname = sb.get("name") or sb.get("color", "green").title()
+        oid = slugify(oname)
+        existing = obj_index.get(oid)
+        if existing is None:
+            obj_index[oid] = {"id": oid, "name": oname, "pass": sb.get("pass")}
+            objectives.append(obj_index[oid])
+        elif sb.get("pass") is not None and existing.get("pass") is None:
+            existing["pass"] = sb.get("pass")
+        return oid
     for i in range(1, len(parts), 2):
         s_title = parts[i].strip()
         s_body = META_CUT.split(parts[i + 1])[0].strip() if i + 1 < len(parts) else ""
-        if "knowledge check" in s_title.lower() or re.search(r'\*Question:\*', s_body):
+        # C5 — a `*Bank:*` body carries its own `*Question:*` children; it must NOT trip the
+        # single-KC slide path (which would consume the whole slide as one KC and drop the
+        # bank). Route bank slides to _body_blocks, where _parse_bank handles them.
+        has_bank = bool(re.search(r'^\*(?:Bank|QuestionBank):\*', s_body, re.I | re.M))
+        if not has_bank and ("knowledge check" in s_title.lower() or re.search(r'\*Question:\*', s_body)):
             kc = _knowledge_check(s_body)
             if kc["options"]:
                 kc_n += 1
                 kc["id"] = f"kc{kc_n}"
                 # honor a `*Section:* <color>` wrapping the KC (the KC path skips _body_blocks)
                 msec = SECTION_RE.search(s_body)
-                sec_color = None
+                sec_start = None
                 if msec:
                     sb = _section_block(msec.group(1))
                     if sb.get("type") == "sectionStart":
-                        sec_color = sb.get("color")
-                if sec_color:
-                    blocks.append({"type": "sectionStart", "color": sec_color})
+                        sec_start = sb
+                        # M13 — a graded section names a scored OBJECTIVE; KCs that share a
+                        # name roll up into one subscore. Tag this KC + register the objective.
+                        # Only in a graded course — in an ungraded one a named section is inert
+                        # (and lint flags a `pass` threshold as needing `*Graded:*`).
+                        if graded and sb.get("graded"):
+                            kc["objective"] = _register_objective(sb)
+                if sec_start:
+                    blocks.append(sec_start)
                 blocks.append({"type": "heading", "level": 2, "html": "<p>Check Your Understanding</p>"})
                 blocks.append(kc)
-                if sec_color:
+                if sec_start:
                     blocks.append({"type": "sectionEnd"})
             continue
         blocks.append({"type": "heading", "level": 2, "html": f"<p>{_inline(s_title)}</p>"})
-        blocks.extend(_body_blocks(s_body))
+        body = _body_blocks(s_body)
+        # M12→M13 — a matching/sequencing/fill block inside a GRADED *Section:* rolls up into
+        # that section's subscore (SECTION-TAGGED ONLY: an inline block stays formative). Walk
+        # the section spans this slide produced; only tag inside a graded band, mirroring the KC
+        # path's `graded and sb.get("graded")` guard (a named section in an ungraded course is inert).
+        if graded:
+            cur_obj = None
+            for bb in body:
+                bt = bb.get("type")
+                if bt == "sectionStart":
+                    cur_obj = _register_objective(bb) if bb.get("graded") else None
+                elif bt == "sectionEnd":
+                    cur_obj = None
+                elif cur_obj and bt in ("matching", "sequence", "fillBlank", "dragDrop", "wordSearch", "crossword", "gameShow", "quizBoard", "speedStreak"):
+                    bb["objective"] = cur_obj
+                elif cur_obj and bt == "questionBank":
+                    # C5 — a bank in a graded section is summative; every drawn child rolls
+                    # into the section subscore, so tag the bank AND each pooled question.
+                    bb["objective"] = cur_obj
+                    for q in bb.get("questions", []):
+                        q["objective"] = cur_obj
+        blocks.extend(body)
 
     # Gated reveals: a `*Continue:*` gate hides everything AFTER it until the learner
     # clicks it (progressive reveal). Mirror the docx importer (docx_import.py): walk
@@ -1182,7 +1954,14 @@ def import_md(md_path, which=1, hero=None, image_dir=None):
 
     ir = {"schema": "course-ir/v1", "id": slugify(title), "title": title,
           "locale": "en", "accent": None, "hero": hero_block, "blocks": blocks,
-          "graded": graded, "passingScore": passing, "retry": retry}
+          "graded": graded, "passingScore": passing, "retry": retry,
+          "gateCompletion": gate, "objectives": objectives}
+    if preset:
+        ir["preset"] = preset          # C19 — audience band for the readability report (absent → byte-identical)
+    if xp:
+        ir["xp"] = xp                  # gamification #3 — points/XP overlay config (absent → byte-identical)
+    if celebrate:
+        ir["celebrate"] = celebrate    # gamification #6 — confetti overlay config (absent → byte-identical)
     ir["_stats"] = {"blocks": len(blocks), "assets": len(used), "warnings": warnings}
     from ir_validate import validate_ir
     validate_ir(ir, label=ir.get("id", "course"))

@@ -70,6 +70,16 @@
     border:1px solid var(--line-2); border-radius:var(--r-sm); }
   .projchip .pc-k { font-size:11px; color:var(--faint); font-weight:600; }
   .projchip #hdr_project { font-size:12.5px; font-weight:700; color:var(--ink); }
+  /* app-wide AI account + model — set once in the top bar, used by every tab */
+  .aisel { display:flex; align-items:center; gap:7px; padding:5px 9px; background:var(--surface);
+    border:1px solid var(--line-2); border-radius:var(--r-sm); }
+  .aisel-label { font-size:11px; color:var(--faint); font-weight:700; letter-spacing:.3px; }
+  .aisel select { padding:6px 8px; font-size:12px; font-weight:600; color:var(--ink); }
+  .aisel .pill { padding:4px 9px; }
+  .aibanner { display:none; max-width:1240px; margin:0 auto; padding:8px 22px; font-size:12px; line-height:1.5;
+    color:var(--body); background:var(--ok-bg); border-bottom:1px solid var(--line-2); }
+  .aibanner.show { display:block; }
+  .aibanner.warn { background:#FBF1E4; }
 
   /* ============ BODY: rail + main ============ */
   .body { display:flex; align-items:flex-start; gap:0; max-width:1240px; margin:0 auto; }
@@ -156,6 +166,7 @@
     font-size:13px; margin:9px 0; flex-wrap:wrap; }
   .result.ok { background:var(--ok-bg); border:1px solid var(--ok-line); color:var(--ok-ink); }
   .result.err { background:var(--err-bg); border:1px solid var(--err-line); color:var(--err); }
+  .result.warn { background:#FBF3DC; border:1px solid #E8D08A; color:#7A5E12; }
   .result .name { font-weight:700; } .result .file { color:var(--muted); font-family:var(--font-mono); font-size:11.5px; }
   .result .sp { margin-left:auto; }
   .result button.ghost { padding:7px 13px; font-size:12.5px; }
@@ -208,13 +219,6 @@
   /* ============ SLIDE ROW (the §7.1 regenerate console) ============ */
   .slide-row { display:flex; gap:14px; padding:13px; background:var(--surface); border:1px solid var(--line);
     border-radius:13px; box-shadow:0 1px 2px rgba(60,50,40,.04); margin:0 0 11px; }
-  .slide-thumb { flex:0 0 168px; width:168px; height:95px; padding:0; border:1px solid #DDD6C8;
-    border-radius:var(--r-sm); background:var(--sunken); overflow:hidden; cursor:pointer; align-self:flex-start;
-    display:block; position:relative; box-shadow:0 1px 3px rgba(0,0,0,.08); transition:box-shadow .15s, border-color .15s; }
-  .slide-thumb:hover { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-ring); }
-  .slide-thumb svg { display:block; width:100%; height:100%; }
-  .slide-thumb .thumb-ph { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--faint-2); font-size:11px; }
-  .slide-row-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:9px; }
   .srow1, .srow2, .srow3 { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
   .slide-row .slide-n { width:23px; height:23px; border-radius:7px; background:#0B2C37; color:#fff;
     font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:none; }
@@ -235,9 +239,76 @@
   .iconbtn:disabled { opacity:.4; cursor:default; }
   .iconbtn.danger { border-color:var(--err-line); color:var(--err); }
   .iconbtn.danger:hover { background:var(--err-bg); }
-  .slide-row .guide-arrow { color:var(--line-4); font-size:13px; }
-  .slide-row .sl-guide { flex:1; min-width:160px; font-size:12px; padding:6px 11px; border:1px solid var(--line-2); border-radius:var(--r-sm); }
+  .slide-row .guide-arrow, .modrow .guide-arrow { color:var(--line-4); font-size:13px; }
+  .slide-row .sl-guide, .modrow .sl-guide { flex:1; min-width:160px; font-size:12px; padding:6px 11px; border:1px solid var(--line-2); border-radius:var(--r-sm); }
+  .modrow .srow3 { margin:3px 0 9px 22px; }
+  .slide-row .sl-notes { resize:vertical; font-family:inherit; line-height:1.4; }
+  .slide-row .sl-notes.has { border-color:var(--line-4); }
   .slide-row .row-flash { font-size:11.5px; font-weight:700; white-space:nowrap; }
+
+  /* ---- PowerPoint-style edit surface: thumbnail rail + big selected slide ---- */
+  .deck-edit { display:flex; gap:16px; align-items:flex-start; }
+  .deck-rail { flex:0 0 178px; display:flex; flex-direction:column; gap:8px;
+    max-height:74vh; overflow-y:auto; padding:4px 6px 4px 2px; }
+  .rail-item { display:flex; align-items:center; gap:8px; width:100%; padding:5px 7px 5px 5px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm);
+    cursor:pointer; text-align:left; transition:border-color .12s, box-shadow .12s; }
+  .rail-item:hover { border-color:var(--accent); }
+  .rail-item.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-ring); }
+  .rail-item.bad { border-color:var(--err-line); }
+  .rail-item .rail-n { flex:0 0 auto; width:20px; height:20px; border-radius:6px;
+    background:#0B2C37; color:#fff; font-size:11px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; }
+  .rail-item.sel .rail-n { background:var(--accent); }
+  .rail-thumb { flex:1; aspect-ratio:16/9; min-width:0; position:relative;
+    border:1px solid #DDD6C8; border-radius:4px; overflow:hidden; background:#fff; }
+  .rail-thumb svg { display:block; width:100%; height:100%; }
+  .rail-thumb .thumb-ph { position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; color:var(--faint-2); font-size:10px; }
+  .rail-add { width:100%; padding:7px; border:1px dashed var(--line-3); border-radius:var(--r-sm);
+    background:transparent; color:var(--muted); cursor:pointer; font-size:12px; font-weight:600; }
+  .rail-add:hover { border-color:var(--accent); color:var(--accent); }
+  .deck-pane { flex:1; min-width:0; }
+  /* controls bar above the canvas: reuse the .slide-row descendant rules, drop the card look */
+  .slide-row.panectl { display:block; padding:0 0 10px; background:none; border:none; }
+  .slide-row.panectl .srow1, .slide-row.panectl .srow2, .slide-row.panectl .srow3 { margin-bottom:8px; }
+  .big-canvas { display:block; width:100%; max-width:760px; aspect-ratio:16/9; padding:0;
+    border:1px solid #DDD6C8; border-radius:var(--r-sm); overflow:hidden; background:#fff;
+    cursor:pointer; position:relative; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .big-canvas:hover { border-color:var(--accent); }
+  .big-canvas svg { display:block; width:100%; height:100%; }
+  .big-canvas .thumb-ph { position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; color:var(--faint-2); font-size:13px; }
+
+  /* ---- direct slide editor (inline structured fields) ---- */
+  .sl-edit { width:100%; margin-top:2px; padding:12px 13px; background:var(--sunken);
+    border:1px solid var(--line-2); border-radius:var(--r-sm); }
+  .sl-edit .ef { display:flex; flex-direction:column; gap:3px; margin:0 0 9px; }
+  .sl-edit .ef > label { font-size:10.5px; font-weight:700; color:var(--faint-2);
+    text-transform:uppercase; letter-spacing:.4px; }
+  .sl-edit .ef input, .sl-edit .ef textarea { width:100%; font-size:12.5px; font-family:inherit;
+    padding:6px 9px; border:1px solid var(--line-2); border-radius:var(--r-sm); background:#fff; }
+  .sl-edit .ef textarea { resize:vertical; line-height:1.45; min-height:38px; }
+  .sl-edit .egroup { border-left:2px solid var(--line-3); padding-left:11px; margin:0 0 10px; }
+  .sl-edit .egroup > .eglabel { font-size:11px; font-weight:700; color:var(--ink-2); margin:0 0 7px; }
+  .sl-edit .ecard { background:#fff; border:1px solid var(--line-2); border-radius:var(--r-sm);
+    padding:9px 10px; margin:0 0 8px; position:relative; }
+  .sl-edit .ecard .ecard-x { position:absolute; top:7px; right:7px; }
+  .sl-edit .eitem { display:flex; align-items:flex-start; gap:6px; margin:0 0 6px; }
+  .sl-edit .eitem input { flex:1; }
+  .sl-edit .eb { width:26px; height:28px; flex:none; border:1px solid var(--line-3); border-radius:var(--r-sm);
+    background:#fff; cursor:pointer; font-weight:800; font-size:12px; color:var(--muted); }
+  .sl-edit .eb.on { background:#0B2C37; color:#fff; border-color:#0B2C37; }
+  .sl-edit .eadd { font-size:11.5px; }
+  .sl-edit .epair { flex:1; display:flex; gap:6px; }
+  .sl-edit .epair input.lead { flex:0 0 38%; font-weight:700; }
+  .sl-edit .ef select { width:100%; font-size:12.5px; font-family:inherit; padding:5px 7px;
+    border:1px solid var(--line-3); border-radius:var(--r-sm); background:#fff; }
+  .sl-edit .chart-csv > summary { cursor:pointer; }
+  .sl-edit .chart-csv-ta { width:100%; min-height:64px; font-family:ui-monospace,Menlo,monospace;
+    font-size:12px; line-height:1.5; resize:vertical; margin:7px 0; padding:7px 8px;
+    border:1px solid var(--line-3); border-radius:var(--r-sm); }
+  .sl-edit .chart-csv-row { display:flex; align-items:center; gap:9px; }
 
   /* deck toolbar (add slide / open json) */
   .deck-tools { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
@@ -257,6 +328,51 @@
   /* ============ PICKER MODAL ============ */
   .modal-bg { position:fixed; inset:0; background:rgba(20,16,12,.42); display:none; align-items:center; justify-content:center; z-index:70; }
   .modal-bg.show { display:flex; }
+  .asset-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px;
+    max-height:56vh; overflow-y:auto; padding:2px; }
+  .asset-cell { display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 6px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); cursor:pointer;
+    transition:border-color .12s, box-shadow .12s; }
+  .asset-cell:hover { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-ring); }
+  .asset-cell svg { width:34px; height:34px; display:block; }
+  .asset-cell span { font-size:10px; color:var(--muted); text-align:center; line-height:1.2;
+    overflow:hidden; text-overflow:ellipsis; max-width:100%; white-space:nowrap; }
+  .cand-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;
+    max-height:60vh; overflow-y:auto; padding:2px; }
+  .cand-cell { display:flex; flex-direction:column; gap:6px; padding:10px; background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--r-sm); }
+  .cand-prev { aspect-ratio:16/9; background:var(--bg); border:1px solid var(--hair); border-radius:6px;
+    overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .cand-prev svg { width:100%; height:100%; display:block; }
+  .cand-meta { display:flex; flex-direction:column; gap:1px; }
+  .cand-meta b { font-size:11.5px; color:var(--ink); }
+  .cand-tag { font-size:10.5px; color:var(--muted); font-family:var(--font-mono); }
+  /* X1: diff + accept/reject on regenerate */
+  .diff-list { flex:1; overflow-y:auto; padding:4px 0; max-height:62vh; }
+  .diff-row { padding:10px 20px; border-bottom:1px solid var(--hair); }
+  .diff-row.same { opacity:.62; }
+  .diff-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .diff-head b { font-size:12px; color:var(--ink); font-family:var(--font-mono); }
+  .diff-kind { font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:4px; padding:0 5px; }
+  .diff-kind.added { color:var(--brand-green); border-color:var(--brand-green); }
+  .diff-kind.removed { color:#b3402f; border-color:#b3402f; }
+  .diff-take { margin-left:auto; font-size:11.5px; color:var(--ink-2); display:flex; align-items:center; gap:5px; cursor:pointer; }
+  .diff-panes { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .diff-pane { border:1px solid var(--hair); border-radius:6px; padding:7px 9px; background:var(--bg);
+    font-family:var(--font-mono); font-size:11px; white-space:pre-wrap; word-break:break-word; max-height:150px; overflow-y:auto; }
+  .diff-pane .plab { display:block; font-family:var(--font-sans,inherit); font-size:9.5px; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--muted); margin-bottom:3px; }
+  .diff-pane.old { color:var(--ink-2); }
+  .diff-pane.old.dropped { text-decoration:line-through; opacity:.5; }
+  .diff-pane.new.dropped { text-decoration:line-through; opacity:.5; }
+  .hist-row { display:flex; align-items:center; gap:10px; padding:9px 20px; border-bottom:1px solid var(--hair); }
+  .hist-meta { flex:1; min-width:0; }
+  .hist-meta b { font-size:12px; color:var(--ink); }
+  .hist-kind { font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:4px; padding:0 5px; margin-left:6px; }
+  .hist-when { font-size:11px; color:var(--muted); font-family:var(--font-mono); margin-left:6px; }
+  .hist-sec { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; padding:10px 20px 3px; }
+  .hist-row.is-version { background:rgba(30,177,106,.05); }
+  .hist-row.is-version .hist-meta b::before { content:"★ "; color:var(--brand-green); }
   .modal { background:var(--surface); width:560px; max-width:92vw; max-height:80vh; border-radius:16px;
     overflow:hidden; display:flex; flex-direction:column; box-shadow:0 30px 80px rgba(0,0,0,.35); }
   .modal h3 { margin:0; padding:16px 20px; border-bottom:1px solid var(--hair); color:var(--ink); font-size:14px; font-weight:700; }
@@ -290,6 +406,11 @@
   @keyframes nv-rise { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
   #show_slide svg .nv-a { animation:nv-rise .5s ease both; transform-box:fill-box; }
   @media (prefers-reduced-motion:reduce){ #show_slide svg .nv-a { animation:none; } }
+  .show-notes { max-height:30vh; overflow:auto; margin:0 auto 12px; max-width:900px; width:90%;
+    padding:14px 18px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.14);
+    border-radius:10px; color:#E8E2D6; font-size:15px; line-height:1.5; white-space:pre-wrap; }
+  .show-notes .muted { color:rgba(232,226,214,.45); font-style:italic; }
+  #show_notes_btn.on { background:rgba(255,255,255,.16); }
   .show-nav { display:flex; justify-content:center; gap:14px; padding:0 0 26px; }
   .show-btn { border-radius:10px; padding:11px 24px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; }
   #show_prev.show-btn { background:rgba(255,255,255,.06); color:#E8E2D6; border:1px solid rgba(255,255,255,.18); font-weight:600; }
@@ -321,6 +442,17 @@
     <button class="mode-btn" id="mode_slide" onclick="setMode('slide')">Slide presentation</button>
   </div>
   <div class="topbar-right">
+    <div class="aisel" id="aisel" title="Generation runs on your subscription (no API cost). This account and model apply to every tab.">
+      <span class="aisel-label">AI</span>
+      <span class="pill wait" id="ai_pill">—</span>
+      <select id="ai_provider" onchange="onAiChange()" title="Subscription account used for all generation"></select>
+      <span id="ai_model_wrap"><select id="ai_model" onchange="onAiChange()" title="Model for Claude generation">
+        <option value="haiku">Fastest: Haiku</option>
+        <option value="sonnet" selected>Balanced: Sonnet</option>
+        <option value="opus">Best: Opus</option>
+        <option value="">CLI default</option></select></span>
+      <button class="ghost xs" onclick="refreshAI()">Re-check</button>
+    </div>
     <div class="brandsel" title="The output brand drives every preview, thumbnail and exported file. The tool chrome stays neutral; only the content it produces is branded.">
       <span class="brandsel-label">Output brand</span>
       <span class="brandsel-wrap"><span class="brand-dot"></span><select id="brand"></select></span>
@@ -328,6 +460,7 @@
     <div class="projchip" id="projchip"><span class="pc-k">Project</span><span id="hdr_project">No project open</span></div>
   </div>
 </header>
+<div id="ai_status" class="aibanner"></div>
 
 <div class="body">
   <aside class="rail" id="rail"></aside>
@@ -338,7 +471,7 @@
   <!-- STEP 1 — PROJECT -->
   <div class="stage" id="s1">
     <div class="stage-head"><div class="num">1</div>
-      <div><h2>Project</h2><div class="desc">Every project keeps all its files in its own folder, so you can reopen and continue it any time.</div></div></div>
+      <div><h2>Project</h2><div class="desc">Open or create a project, then define the course you want to build. Everything is saved in the project's folder, so you can reopen and continue it any time.</div></div></div>
     <div class="stage-body">
       <label class="fld" style="margin-top:0">Projects location (parent folder that holds all projects)</label>
       <div class="pathrow"><input id="ws" placeholder="Choose a folder…" readonly>
@@ -353,48 +486,15 @@
             <button class="ghost" onclick="openProject()">Open</button></div></div>
       </div>
       <div id="proj_current"></div>
-    </div>
-  </div>
 
-  <!-- STEP 2 — AI ACCOUNT -->
-  <div class="stage" id="s2">
-    <div class="stage-head"><div class="num">2</div>
-      <div><h2>AI account</h2><div class="desc">Generation runs on your subscription (no API cost). Connect by logging into its CLI once.</div></div>
-      <span class="pill wait" id="ai_pill">—</span></div>
-    <div class="stage-body">
-      <div id="ai_status" class="hint"></div>
-      <label class="fld">Account to use</label>
-      <div class="pathrow" style="max-width:420px"><select id="gen_provider" onchange="syncModelCtl('gen_provider','gen_model_row')"></select>
-        <button class="ghost" onclick="refreshAI()">Re-check</button></div>
-    </div>
-  </div>
-
-  <!-- STEP 3 — SOURCE MATERIALS -->
-  <div class="stage" id="s3">
-    <div class="stage-head"><div class="num">3</div>
-      <div><h2>Source materials</h2><div class="desc">The documents and images the course is built from. Filled in from your project; change if needed.</div></div></div>
-    <div class="stage-body">
-      <label class="fld" style="margin-top:0">Source documents — folder or a single file (.md · .txt · .csv · .doc / .docx · .rtf · .odt · .html · .pdf · images via OCR)</label>
-      <div class="pathrow"><input id="src" placeholder="Choose a folder…" readonly>
-        <button class="ghost" onclick="pick('both','src',null,['md','txt','markdown','csv','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'])">Browse…</button>
-        <button class="ghost" onclick="refreshSrc()">Refresh</button></div>
-      <div id="src_files" class="filelist"></div>
-      <label class="fld">Images folder</label>
-      <div class="pathrow"><input id="img" placeholder="Choose a folder…" readonly>
-        <button class="ghost" onclick="pick('dir','img')">Browse…</button></div>
-    </div>
-  </div>
-
-  <!-- STEP 4 — GENERATE SCRIPTS -->
-  <div class="stage" id="s4">
-    <div class="stage-head"><div class="num">4</div>
-      <div><h2>Generate microlearning scripts</h2><div class="desc">Draft the script + an SME review document into the project folder.</div></div></div>
-    <div class="stage-body">
+      <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+        <strong style="font-size:13px;color:var(--navy)">Course definition</strong>
+        <div class="desc" style="margin:2px 0 6px">What to build. Saved with the project, and used when you generate the scripts.</div></div>
       <label class="fld" style="margin-top:0">Course title</label>
-      <input id="gen_title" class="full" placeholder="e.g. Performance Management — Giving Feedback">
+      <input id="gen_title" class="full" placeholder="e.g. Performance Management: Giving Feedback">
       <label class="fld">Learning objective(s) <span class="req">(required)</span></label>
       <textarea id="gen_obj" class="full" rows="2" placeholder="What should the learner be able to do afterward?"></textarea>
-      <p class="hint" style="margin:4px 0 0">The learning intent / lens — <b>not</b> a table of contents. Listing more objectives does <b>not</b> add modules; coverage of your source material drives the module count.</p>
+      <p class="hint" style="margin:4px 0 0">The learning intent / lens: <b>not</b> a table of contents. Listing more objectives does <b>not</b> add modules; coverage of your source material drives the module count.</p>
       <label class="fld">Audience <span class="req">(required)</span></label>
       <textarea id="gen_aud" class="full" rows="1" placeholder="Who is this for? e.g. front-line nurse managers"></textarea>
       <div class="row">
@@ -410,66 +510,104 @@
         <div><label class="fld" style="margin-top:0"># of microlearnings</label>
           <input id="gen_units" placeholder="auto" style="width:90px"></div>
       </div>
-      <p class="hint" style="margin:4px 0 0"><b>Purpose</b> tunes voice, depth, and assessment posture (orthogonal to the teaching pattern) — it never changes the brand or block set.</p>
-      <p class="hint" style="margin:4px 0 0">Leave # blank (<b>auto</b>) to segment <b>all</b> the source into 10–15-min units — as many as full coverage needs. Set a number only to force an exact count.</p>
+      <p class="hint" style="margin:4px 0 0"><b>Purpose</b> tunes voice, depth, and assessment posture (orthogonal to the teaching pattern). It never changes the brand or block set.</p>
+      <p class="hint" style="margin:4px 0 0">Leave # blank (<b>auto</b>) to segment <b>all</b> the source into 10-15-min units, as many as full coverage needs. Set a number only to force an exact count.</p>
       <details class="capnote"><summary>What the generator can build</summary>
-        <div>The draft is segmented into 10–15-min units, each grounded in adult-learning design. The AI chooses from the full block range as the content calls for it — <b>knowledge checks</b>, <b>drag-to-sort / categorize</b>, <b>flashcards</b>, <b>accordions</b>, <b>process &amp; timeline</b>, <b>comparison panels</b>, <b>infographics</b>, <b>charts</b> (from real sourced numbers only), images, and callouts — with optional entrance <b>animations</b>. You review and edit everything via the SME document before building.</div></details>
-      <div class="row" id="gen_model_row" style="margin:10px 0 0"><strong>Model:</strong>
-        <select id="gen_model_sel">
-          <option value="haiku">Fastest — Haiku</option>
-          <option value="sonnet" selected>Balanced — Sonnet</option>
-          <option value="opus">Best — Opus</option>
-          <option value="">CLI default</option></select>
-        <span class="hint" data-default="drafts on Sonnet (fast); the final pass from your SME review uses Opus">drafts on Sonnet (fast); the final pass from your SME review uses Opus</span></div>
-      <div class="row" style="margin:8px 0 0"><strong>Mode:</strong>
-        <label><input type="radio" name="gen_mode" value="staged" checked> 🧩 Parallel — all modules at once (fastest for multi-unit)</label>
-        <label><input type="radio" name="gen_mode" value="stream"> ⚡ Streaming — one pass, watch it write live</label></div>
-      <p style="margin:14px 0 0"><button class="btn" id="gen_go" onclick="generate()">Generate scripts</button>
-        <span class="hint" style="margin-left:10px">Runs on your subscription — may take a minute.</span></p>
-      <div id="gen_results"></div>
-      <div id="script_modules"></div>
+        <div>The draft is segmented into 10-15-min units, each grounded in adult-learning design. The AI chooses from the full block range as the content calls for it, picking each by learning objective:
+          <ul style="margin:6px 0 0 18px;padding:0">
+            <li><b>Teach &amp; present</b> — flashcards, accordions, process &amp; timeline, comparison panels, infographics, <b>charts</b> (from real sourced numbers only), images, and callouts, with optional entrance <b>animations</b>.</li>
+            <li><b>Check understanding</b> — <b>knowledge checks</b> (single- and multi-select), and graded, completion-tracked interactions matched to the objective: <b>sort into groups</b> (categorize), <b>put in order</b> (sequence), <b>matching pairs</b>, <b>fill in the blank</b>, and <b>label a diagram</b> (drag-and-drop). Assessments can draw from a <b>randomized question bank</b> (a fresh subset of items each attempt), and learners can work through a <b>decision scenario</b> — a realistic situation with choices and feedback.</li>
+            <li><b>Reflect</b> — an open-response <b>reflection</b> prompt the learner answers in their own words, then self-checks against an author-written model answer and rubric (completion-tracked, not scored).</li>
+            <li><b>Review as a game</b> — <b>word search</b>, <b>crossword</b>, a spin-the-wheel quiz (<b>game show</b>), a Jeopardy-style category board (<b>quiz board</b>), and a fast <b>speed-streak</b> quiz drill.</li>
+          </ul>
+          You review and edit everything via the SME document before building.</div></details>
     </div>
   </div>
 
-  <!-- STEP 5 — APPLY REVIEW -->
+  <!-- STEP 2 — SOURCE MATERIALS -->
+  <div class="stage" id="s3">
+    <div class="stage-head"><div class="num">3</div>
+      <div><h2>Source materials</h2><div class="desc">The documents and images the course is built from. Filled in from your project; change if needed.</div></div></div>
+    <div class="stage-body">
+      <label class="fld" style="margin-top:0">Source documents: folder or a single file (.md · .txt · .csv · .doc / .docx · .rtf · .odt · .html · .pdf · images via OCR)</label>
+      <div class="pathrow"><input id="src" placeholder="Choose a folder…" readonly>
+        <button class="ghost" onclick="pick('both','src',null,['md','txt','markdown','csv','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'])">Browse…</button>
+        <button class="ghost" onclick="refreshSrc()">Refresh</button></div>
+      <div id="src_files" class="filelist"></div>
+      <label class="fld">Source links (optional): one URL per line — each page is fetched and added as a source</label>
+      <textarea id="src_urls" class="full" rows="2" oninput="refreshSrc()" placeholder="https://example.com/policy-page&#10;https://intranet/release-notes"></textarea>
+      <label class="fld">Images folder</label>
+      <div class="pathrow"><input id="img" placeholder="Choose a folder…" readonly>
+        <button class="ghost" onclick="pick('dir','img')">Browse…</button></div>
+
+      <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+        <strong style="font-size:13px;color:var(--navy)">Generate the scripts</strong>
+        <div class="desc" style="margin:2px 0 8px">Draft the script + an SME review document into the project folder, from your course definition and these sources.</div>
+        <div class="row" style="margin:8px 0 0"><strong>Mode:</strong>
+          <label><input type="radio" name="gen_mode" value="staged" checked> 🧩 Parallel: all modules at once (fastest for multi-unit)</label>
+          <label><input type="radio" name="gen_mode" value="stream"> ⚡ Streaming: one pass, watch it write live</label></div>
+        <p style="margin:14px 0 0"><button class="btn" id="gen_go" onclick="generate()">Generate scripts</button>
+          <span class="hint" style="margin-left:10px">Runs on your subscription. May take a minute.</span></p>
+        <div id="gen_results"></div>
+        <div id="script_modules"></div>
+        <div id="translate_box" style="margin-top:14px;display:none">
+          <div class="hint" style="margin-bottom:4px">🌐 <b>Translate / localize</b> this course into another language or locale — the §8 block structure is preserved (e.g. <code>Spanish</code>, <code>fr</code>, or <code>en-GB</code> for UK localization). Writes a new tagged <code>.md</code>; the original is untouched.</div>
+          <div class="srow3"><span class="guide-arrow" title="Target language or locale">🌐</span>
+            <input type="text" id="tr_target" class="sl-guide" placeholder="target language or locale (e.g. Spanish, es, en-GB)">
+            <button class="ghost xs" style="margin-left:6px" onclick="translateCourse()">Translate</button></div>
+          <div id="tr_results"></div>
+        </div>
+        <div id="captions_box" style="margin-top:14px;display:none">
+          <div class="hint" style="margin-bottom:4px">🎬 <b>Generate captions</b> for this course's self-hosted video/audio — transcribed locally (offline, no metered API) with a local Whisper. Writes a <code>.vtt</code> next to each media file and adds a caption track. Streamed/embedded media is skipped. Requires <code>faster-whisper</code> or a whisper.cpp binary installed.</div>
+          <div class="srow3"><span class="guide-arrow" title="Caption language">🎬</span>
+            <input type="text" id="cap_lang" class="sl-guide" style="max-width:120px" placeholder="lang (en)" value="en">
+            <label style="margin-left:8px;font-size:12px"><input type="checkbox" id="cap_overwrite"> re-transcribe existing</label>
+            <button class="ghost xs" style="margin-left:6px" onclick="genCaptions()">Generate captions</button></div>
+          <div id="cap_results"></div>
+        </div>
+        <div id="consistency_box" style="margin-top:14px;display:none">
+          <div class="hint" style="margin-bottom:4px">🧭 <b>Check consistency</b> — when you add a unit to a multi-unit course, check it against the other units for <b>term/voice drift</b> (a product name written with different casing, a non-approved term the rest avoids, or a reading level far from the rest). Deterministic and offline — flags drift, changes nothing.</div>
+          <div class="srow3"><span class="guide-arrow" title="Unit to check">🧭</span>
+            <input type="number" id="cons_which" class="sl-guide" style="max-width:150px" min="1" placeholder="unit # (last)">
+            <button class="ghost xs" style="margin-left:6px" onclick="checkConsistency()">Check consistency</button></div>
+          <div id="cons_results"></div>
+        </div>
+        <div id="batch_box" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+          <div class="hint" style="margin-bottom:4px">📄 <b>Bulk generate from a manifest CSV</b> — one row per course. Required columns: <code>objective</code>, <code>audience</code>, <code>source</code>. Optional: <code>title</code>, <code>archetype</code>, <code>units</code>, <code>urls</code>, <code>preset</code>, <code>brand</code>. Each row is generated like an ordinary course; validate first to catch bad rows before a long run.</div>
+          <div class="pathrow"><input id="batch_csv" placeholder="Choose a manifest .csv…" readonly>
+            <button class="ghost" onclick="pick('file','batch_csv',null,['csv'])">Browse…</button></div>
+          <div class="pathrow" style="margin-top:6px"><input id="batch_out" placeholder="Output folder for the generated courses…" readonly>
+            <button class="ghost" onclick="pick('dir','batch_out')">Browse…</button></div>
+          <p style="margin:10px 0 0">
+            <button class="ghost" onclick="batchGenerate(true)">Validate manifest</button>
+            <button class="btn" style="margin-left:6px" onclick="batchGenerate(false)">Generate all</button>
+            <span class="hint" style="margin-left:8px">Runs on your subscription. One pass per row.</span></p>
+          <div id="batch_results"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 — APPLY REVIEW -->
   <div class="stage" id="s5">
     <div class="stage-head"><div class="num">5</div>
-      <div><h2>Apply the SME review</h2><div class="desc">Upload the reviewed document (edits + comments); the script is updated and re-saved.</div></div></div>
+      <div><h2>Apply the SME review</h2><div class="desc">Point at the reviewed document(s) (edits + comments); the script is updated and re-saved. Parallel generation writes one review doc per module, so you can hand back a whole folder.</div></div></div>
     <div class="stage-body">
       <div id="script_status" class="hint"></div>
-      <label class="fld" style="margin-top:0">Reviewed document (.docx)</label>
-      <div class="pathrow"><input id="rev_doc" placeholder="Choose the reviewed .docx…" readonly>
-        <button class="ghost" onclick="pick('file','rev_doc',null,['docx'])">Browse…</button></div>
+      <label class="fld" style="margin-top:0">Reviewed document(s): a folder of reviewed .docx files, or a single .docx</label>
+      <div class="pathrow"><input id="rev_doc" placeholder="Choose a folder of reviewed .docx, or one .docx…" readonly>
+        <button class="ghost" onclick="pick('both','rev_doc',null,['docx'])">Browse…</button></div>
+      <p class="hint" style="margin:4px 0 0">A folder applies every reviewed module at once; each doc is matched to its module by name.</p>
       <p style="margin:14px 0 0"><button class="btn" id="rev_go" onclick="applyReview()">Update script from review</button>
-        <span class="hint" style="margin-left:10px">Optional — skip if no changes were requested.</span></p>
+        <span class="hint" style="margin-left:10px">Optional. Skip if no changes were requested.</span></p>
       <div id="rev_results"></div>
     </div>
   </div>
 
-  <!-- STEP 6 — OUTPUT FORMAT -->
-  <div class="stage" id="s6">
-    <div class="stage-head"><div class="num">6</div>
-      <div><h2>Output format</h2><div class="desc">Choose the formats and scope to produce.</div></div></div>
-    <div class="stage-body">
-      <div class="row" style="margin-top:4px"><strong>Formats:</strong>
-        <label><input type="checkbox" class="b_fmt" value="scorm" checked> SCORM 1.2 (LMS)</label>
-        <label><input type="checkbox" class="b_fmt" value="cmi5"> cmi5 / xAPI</label>
-        <label><input type="checkbox" class="b_fmt" value="pptx"> PowerPoint</label>
-        <label style="margin-left:10px"><input type="checkbox" id="b_validate" checked> Run lint</label>
-        <label style="margin-left:10px"><input type="checkbox" id="b_animate" checked> Include animations</label></div>
-      <div class="desc" style="margin:2px 0 0 2px">Entrance animations (Float In, Slide In) as learners scroll. Honors reduced-motion. Applies to SCORM/cmi5 courses.</div>
-      <div class="row"><strong>Build:</strong>
-        <label><input type="radio" name="b_scope" value="single" checked onchange="syncScope()"> This unit</label>
-        <select id="b_which"></select>
-        <label><input type="radio" name="b_scope" value="course" onchange="syncScope()"> Every unit</label></div>
-      <div class="desc" style="margin:2px 0 0 2px">Each microlearning is built as its own independent <b>single-SCO</b> package — the LMS (Intellum) sequences them in a Path. <i>“Every unit”</i> produces one package per unit.</div>
-    </div>
-  </div>
-
-  <!-- STEP 7 — GENERATE PREVIEW -->
+  <!-- STEP 4 — GENERATE PREVIEW -->
   <div class="stage" id="s7">
-    <div class="stage-head"><div class="num">7</div>
-      <div><h2>Generate preview</h2><div class="desc">Build the courses to a preview area and review each before publishing — nothing reaches the output folder yet.</div></div></div>
+    <div class="stage-head"><div class="num">5</div>
+      <div><h2>Generate preview</h2><div class="desc">Render the course and review every unit before you package anything. This is the HTML the learner sees. Nothing reaches the output folder yet — you choose the format and publish in the next step.</div></div></div>
     <div class="stage-body">
       <p style="margin-top:0"><button class="btn" id="b_go" onclick="generateCourses()">Generate preview</button></p>
       <div id="b_results"></div>
@@ -480,12 +618,20 @@
     </div>
   </div>
 
-  <!-- STEP 8 — PUBLISH -->
-  <div class="stage" id="s8">
-    <div class="stage-head"><div class="num">8</div>
-      <div><h2>Publish final courses</h2><div class="desc">Publish the approved packages into the project's output folder — ready to upload to the LMS.</div></div></div>
+  <!-- STEP 5 — OUTPUT FORMAT & PUBLISH -->
+  <div class="stage" id="s6">
+    <div class="stage-head"><div class="num">6</div>
+      <div><h2>Output &amp; publish</h2><div class="desc">Choose the package format(s), then publish the units you approve into the project's output folder, ready to upload to the LMS. Each microlearning is built as its own independent single-SCO package; the LMS (Intellum) sequences them in a Path.</div></div></div>
     <div class="stage-body">
-      <div id="b_publish"><div class="hint">Generate a preview in step 7 first, then publish the courses you approve.</div></div>
+      <div class="row" style="margin-top:4px"><strong>Formats:</strong>
+        <label><input type="checkbox" class="b_fmt" value="scorm" checked> SCORM 1.2 (LMS)</label>
+        <label><input type="checkbox" class="b_fmt" value="cmi5"> cmi5 / xAPI</label>
+        <label><input type="checkbox" class="b_fmt" value="pptx"> PowerPoint</label>
+        <label style="margin-left:10px"><input type="checkbox" id="b_validate" checked> Run lint</label>
+        <label style="margin-left:10px"><input type="checkbox" id="b_animate" checked> Include animations</label>
+        <label style="margin-left:10px"><input type="checkbox" id="b_gate" checked title="Graded courses only: when on, a failing score blocks completion and offers a retry (respecting any *Gate:* directive and section pass thresholds). Uncheck so the course completes regardless of score."> Gate completion on a failing score</label></div>
+      <div class="desc" style="margin:2px 0 0 2px">Entrance animations (Float In, Slide In) as learners scroll. Honors reduced-motion. Applies to SCORM/cmi5 courses.</div>
+      <div id="b_publish" style="margin-top:14px"><div class="hint">Generate a preview first, then publish the courses you approve.</div></div>
     </div>
   </div>
   </div><!-- /#course_mode -->
@@ -493,28 +639,28 @@
   <!-- ================= SLIDE-PRESENTATION MODE ================= -->
   <div id="slide_mode" style="display:none">
 
-    <!-- P1 — SOURCE & GENERATE -->
-    <div class="stage" id="ps1">
+    <!-- P1 — PROJECT & DEFINE -->
+    <div class="stage" id="ps_proj">
       <div class="stage-head"><div class="num">1</div>
-        <div><h2>Source &amp; generate</h2><div class="desc">Point at your raw content (articles, docs); the AI converts it into slides using the shared layout templates. Same pipeline as a course — the output is a deck.</div></div></div>
+        <div><h2>Project &amp; define</h2><div class="desc">Open or create a project (it holds this presentation and remembers its settings), then describe the deck you want. The built PowerPoint is saved into the project folder.</div></div></div>
       <div class="stage-body">
-        <label class="fld" style="margin-top:0">Source materials — folder or a single file (.md · .txt · .csv · .doc / .docx · .rtf · .odt · .html · .pdf · images via OCR)</label>
-        <div class="pathrow"><input id="sl_src" placeholder="Choose a folder…" readonly>
-          <button class="ghost" onclick="pick('both','sl_src',null,['md','txt','markdown','csv','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'])">Browse…</button>
-          <button class="ghost" onclick="refreshSlSrc()">Refresh</button></div>
-        <div id="sl_src_files" class="filelist"></div>
+        <label class="fld" style="margin-top:0">Projects location (parent folder that holds all projects)</label>
+        <div class="pathrow"><input id="sl_ws" placeholder="Choose a folder…" readonly>
+          <button class="ghost" onclick="pick('dir','sl_ws')">Browse…</button>
+          <button class="btn" onclick="setWorkspace('sl_ws')">Use</button></div>
+        <div class="row">
+          <div class="grow"><label class="fld" style="margin-top:0">Start a new project</label>
+            <div class="pathrow"><input id="sl_newproj" placeholder="Project name…">
+              <button class="btn" onclick="newProject('sl_newproj','sl_ws')">Create</button></div></div>
+          <div class="grow"><label class="fld" style="margin-top:0">Open an existing project</label>
+            <div class="pathrow"><select id="sl_projlist"></select>
+              <button class="ghost" onclick="openProject('sl_projlist')">Open</button></div></div>
+        </div>
+        <div id="sl_proj_current"></div>
 
-        <label class="fld">Images folder (optional)</label>
-        <div class="pathrow"><input id="sl_images" placeholder="Choose a folder of images to use on slides…" readonly>
-          <button class="ghost" onclick="pick('dir','sl_images')">Browse…</button>
-          <button class="ghost" onclick="setv('sl_images','');renderDeck()">Clear</button></div>
-        <p class="hint" style="margin:4px 0 0">Pictures the deck can place on <b>image</b> / <b>image&nbsp;+&nbsp;text</b> slides. The AI only uses files that actually exist here; the preview and the built <code>.pptx</code> read from this folder. Leave blank for a text-only deck.</p>
-
-        <label class="fld">AI account</label>
-        <div class="pathrow" style="max-width:460px"><select id="sl_provider" onchange="syncModelCtl('sl_provider','sl_model_row')"></select>
-          <button class="ghost" onclick="refreshAI()">Re-check</button></div>
-        <div id="sl_ai_status" class="hint"></div>
-
+        <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+          <strong style="font-size:13px;color:var(--navy)">Presentation</strong>
+          <div class="desc" style="margin:2px 0 6px">What to build. Saved with the project, and used when you generate the slides.</div></div>
         <div class="row">
           <div class="grow"><label class="fld" style="margin-top:0">Presentation title</label>
             <input id="sl_title" class="full" placeholder="e.g. Q3 Rollout"></div>
@@ -522,10 +668,9 @@
             <input id="sl_n" placeholder="auto" style="width:90px"></div>
         </div>
         <label class="fld">Focus / what to emphasize</label>
-        <textarea id="sl_focus" class="full" rows="2" placeholder="Optional — what the deck should highlight from the source."></textarea>
+        <textarea id="sl_focus" class="full" rows="2" placeholder="Optional: what the deck should highlight from the source."></textarea>
         <label class="fld">Audience</label>
-        <textarea id="sl_aud" class="full" rows="1" placeholder="Optional — who it's for, e.g. leadership"></textarea>
-
+        <textarea id="sl_aud" class="full" rows="1" placeholder="Optional: who it's for, e.g. leadership"></textarea>
         <div class="row" style="margin:10px 0 0"><strong>Purpose:</strong>
           <select id="sl_preset">
             <option value="general" selected>General (default)</option>
@@ -534,71 +679,95 @@
             <option value="workshop">Live training workshop</option>
             <option value="client">Client-facing</option>
             <option value="pitch">Pitch deck</option></select>
-          <span class="hint">shapes structure, tone &amp; length — all on the same brand standard</span></div>
-
-        <div class="row" id="sl_model_row" style="margin:10px 0 0"><strong>Model:</strong>
-          <select id="sl_model_sel">
-            <option value="haiku">Fastest — Haiku</option>
-            <option value="sonnet" selected>Balanced — Sonnet</option>
-            <option value="opus">Best — Opus</option>
-            <option value="">CLI default</option></select>
-          <span class="hint" data-default="runs isolated on your subscription (no MCP/hooks)">runs isolated on your subscription (no MCP/hooks)</span></div>
-
-        <p style="margin:14px 0 0"><button class="btn" id="sl_gen" onclick="genDeck()">Generate presentation</button>
-          <span class="hint" style="margin-left:10px">Watch it write live — runs on your subscription.</span></p>
-        <div id="sl_gen_results"></div>
+          <span class="hint">shapes structure, tone &amp; length, all on the same brand standard</span></div>
       </div>
     </div>
 
-    <!-- P2 — REVIEW & EDIT -->
-    <div class="stage" id="ps2">
+    <!-- P2 — SOURCE & GENERATE -->
+    <div class="stage" id="ps1">
       <div class="stage-head"><div class="num">2</div>
-        <div><h2>Review &amp; edit slides</h2><div class="desc">The generated slides land here. Change a layout, flip its <strong>theme</strong> (Auto / Dark / Light), reorder, add or remove, or regenerate the checked aspects — same templates as the course blocks.</div></div></div>
+        <div><h2>Source materials</h2><div class="desc">Point at your raw content (articles, docs, images); the AI converts it into slides using the shared layout templates. Same pipeline as a course. The output is a deck.</div></div></div>
+      <div class="stage-body">
+        <label class="fld" style="margin-top:0">Source materials: folder or a single file (.md · .txt · .csv · .doc / .docx · .rtf · .odt · .html · .pdf · images via OCR)</label>
+        <div class="pathrow"><input id="sl_src" placeholder="Choose a folder…" readonly>
+          <button class="ghost" onclick="pick('both','sl_src',null,['md','txt','markdown','csv','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'])">Browse…</button>
+          <button class="ghost" onclick="refreshSlSrc()">Refresh</button></div>
+        <div id="sl_src_files" class="filelist"></div>
+        <label class="fld">Source links (optional): one URL per line — each page is fetched and added as a source</label>
+        <textarea id="sl_urls" class="full" rows="2" oninput="refreshSlSrc()" placeholder="https://example.com/release-notes"></textarea>
+
+        <label class="fld">Images folder (optional)</label>
+        <div class="pathrow"><input id="sl_images" placeholder="Choose a folder of images to use on slides…" readonly>
+          <button class="ghost" onclick="pick('dir','sl_images')">Browse…</button>
+          <button class="ghost" onclick="setv('sl_images','');renderDeck()">Clear</button></div>
+        <p class="hint" style="margin:4px 0 0">Pictures the deck can place on <b>image</b> / <b>image&nbsp;+&nbsp;text</b> slides. The AI only uses files that actually exist here; the preview and the built <code>.pptx</code> read from this folder. Leave blank for a text-only deck.</p>
+
+        <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+          <strong style="font-size:13px;color:var(--navy)">Generate the slides</strong>
+          <div class="desc" style="margin:2px 0 8px">Drafts a deck from your presentation definition and these sources. Watch it write live.</div>
+          <p style="margin:8px 0 0"><button class="btn" id="sl_gen" onclick="genDeck()">Generate presentation</button>
+            <button class="ghost" id="sl_plan" style="margin-left:8px" onclick="deckPlan()" title="Sketch an editable outline — a suggested layout, title, and one point per slide — that you approve and reorder before the full deck is generated. Cuts wasted regeneration.">📋 Plan outline first</button>
+            <span class="hint" style="margin-left:10px">Runs on your subscription.</span></p>
+          <div id="deck_outline" style="display:none;margin:10px 0 0"></div>
+          <div id="sl_gen_results"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P3 — REVIEW, EDIT & BUILD -->
+    <div class="stage" id="ps2">
+      <div class="stage-head"><div class="num">3</div>
+        <div><h2>Review, edit &amp; build</h2><div class="desc">The generated slides land here. Change a layout, flip its <strong>theme</strong> (Auto / Dark / Light), reorder, add or remove, or regenerate the checked aspects. When it looks right, set the motion and build the PowerPoint. Same templates as the course blocks.</div></div></div>
       <div class="stage-body">
         <p style="margin:0 0 12px">
           <button class="btn" id="sl_preview_btn" onclick="openShow()">▶ Preview slideshow</button>
-          <span class="hint" style="margin-left:10px">step through the slides one by one — the same on-brand layout you'll get in PowerPoint</span></p>
+          <button class="ghost" id="sl_notes_btn" style="margin-left:10px" onclick="genNotes()" title="Draft a speaker-notes paragraph for every slide, written into the PowerPoint notes pages">📝 Generate speaker notes</button>
+          <span class="hint" style="margin-left:10px">step through the slides, or auto-draft presenter notes for the whole deck</span></p>
+        <div id="sl_notes_flash" class="hint" style="margin:-6px 0 10px"></div>
         <div id="deck_list"></div>
         <input id="sl_jsonpath" type="hidden">
         <p style="margin:10px 0 0">
           <span class="hint" style="margin-right:6px">Add a slide:</span>
           <select id="deck_add_layout" style="margin-right:6px"></select>
           <button class="ghost" onclick="deckAdd(val('deck_add_layout'))">+ Add slide</button>
+          <span class="hint" style="margin-left:10px" title="Describe the slide in one sentence; a best-fit layout is picked deterministically (no AI) and set in the picker to the left.">or ✦ describe it:</span>
+          <input id="deck_intent" placeholder="e.g. compare the three deployment models" style="width:270px;margin-right:6px" onkeydown="if(event.key==='Enter'){event.preventDefault();suggestLayout();}">
+          <button class="ghost" onclick="suggestLayout()" title="Suggest a layout from your sentence — deterministic, no AI call">Suggest layout</button>
+          <span id="deck_intent_out" class="hint" style="margin-left:8px"></span>
+          <br>
+          <span class="hint" style="margin-left:10px" title="Insert a slide you saved as a template with ☆ Template">My saved slides:</span>
+          <select id="deck_add_saved" style="margin-right:6px"><option value="">— none saved yet —</option></select>
+          <button class="ghost" onclick="insertSavedSlide()">Insert saved</button>
           <button class="ghost" style="margin-left:10px" onclick="openDeckJSON()">Open JSON…</button>
           <span class="hint" style="margin-left:6px">load slide/deck <code>.json</code> into the editor</span></p>
-      </div>
-    </div>
 
-    <!-- P3 — BUILD -->
-    <div class="stage" id="ps3">
-      <div class="stage-head"><div class="num">3</div>
-        <div><h2>Build presentation</h2><div class="desc">Render the slides to an editable, on-brand PowerPoint deck.</div></div></div>
-      <div class="stage-body">
-        <div class="row" style="margin-top:0">
-          <div class="grow"><label class="fld" style="margin-top:0">File name</label>
-            <input id="sl_name" class="full" placeholder="e.g. Q3 Rollout"></div>
-          <div><label class="fld" style="margin-top:0">Transition (whole deck)</label>
-            <select id="sl_transition">
-              <option value="none">none</option><option value="fade">fade</option>
-              <option value="cut">cut</option><option value="push">push</option>
-              <option value="wipe">wipe</option><option value="split">split</option>
-              <option value="cover">cover</option></select></div>
-          <div><label class="fld" style="margin-top:0">Element animation</label>
-            <select id="sl_animate" title="Per-element entrance — baked into the built deck and shown in the preview">
-              <option value="rise" selected>Float in (rise)</option>
-              <option value="fade">Fade in</option>
-              <option value="flyleft">Fly in — from left</option>
-              <option value="flyright">Fly in — from right</option>
-              <option value="none">none</option></select></div>
+        <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+          <strong style="font-size:13px;color:var(--navy)">Build the presentation</strong>
+          <div class="desc" style="margin:2px 0 8px">Pick a format and set the motion, then render the slides — saved into the project folder, named from the presentation title.</div>
+          <div class="row" style="margin-top:0">
+            <div><label class="fld" style="margin-top:0">Format</label>
+              <select id="sl_format" title="PowerPoint = editable .pptx deck; HTML = standalone interactive slideshow that opens offline in any browser" onchange="syncDeckFormat()">
+                <option value="pptx" selected>PowerPoint (.pptx)</option>
+                <option value="html">Interactive HTML (.html)</option></select></div>
+            <div><label class="fld" style="margin-top:0">Transition (deck default)</label>
+              <select id="sl_transition" title="Applies to every slide unless a slide sets its own transition above">
+                <option value="none">none</option><option value="fade">fade</option>
+                <option value="cut">cut</option><option value="push">push</option>
+                <option value="wipe">wipe</option><option value="split">split</option>
+                <option value="cover">cover</option></select></div>
+            <div><label class="fld" style="margin-top:0">Element animation</label>
+              <select id="sl_animate" title="Per-element entrance: baked into the built deck and shown in the preview">
+                <option value="rise" selected>Float in (rise)</option>
+                <option value="fade">Fade in</option>
+                <option value="flyleft">Fly in from left</option>
+                <option value="flyright">Fly in from right</option>
+                <option value="none">none</option></select></div>
+          </div>
+          <p class="hint" style="margin:6px 0 0">Each slide's pieces float in on entry (~0.65s apart). The same feel as the courses. Applies to the built PowerPoint <i>and</i> the in-browser preview. Fine-tune individual slides in PowerPoint afterward if you like.</p>
+          <p style="margin:16px 0 0"><button class="btn" id="sl_go" onclick="buildDeck()">Build presentation</button>
+            <span class="hint" id="sl_go_hint" style="margin-left:10px">Saves an editable PowerPoint deck into the project folder.</span></p>
+          <div id="sl_results"></div>
         </div>
-        <p class="hint" style="margin:6px 0 0">Each slide's pieces float in on entry (~0.65s apart) — the same feel as the courses. Applies to the built PowerPoint <i>and</i> the in-browser preview. Fine-tune individual slides in PowerPoint afterward if you like.</p>
-        <label class="fld">Save to folder</label>
-        <div class="pathrow" style="max-width:560px"><input id="sl_out" placeholder="Choose a folder…" readonly>
-          <button class="ghost" onclick="pick('dir','sl_out')">Browse…</button></div>
-
-        <p style="margin:16px 0 0"><button class="btn" id="sl_go" onclick="buildDeck()">Build presentation</button>
-          <span class="hint" style="margin-left:10px">Saves an editable PowerPoint deck you can open and tweak.</span></p>
-        <div id="sl_results"></div>
       </div>
     </div>
   </div>
@@ -619,6 +788,90 @@
   </div>
 </div>
 
+<!-- visual-asset (icon) picker modal -->
+<div class="modal-bg" id="asset_picker">
+  <div class="modal" style="width:680px">
+    <h3>Insert an icon</h3>
+    <div class="desc" style="margin:-4px 0 10px">On-brand, recolored at render time. Shows on the <strong>image</strong> or <strong>imagetext</strong> layout. Tabler Icons (MIT).</div>
+    <div class="asset-grid" id="asset_grid"><span class="hint">Loading…</span></div>
+    <div class="modal-foot">
+      <button class="ghost" onclick="clearAsset()" title="Remove the icon from this slide">Clear icon</button>
+      <button class="ghost" onclick="closeAssetPicker()">Cancel</button></div>
+  </div>
+</div>
+
+<!-- multi-candidate slide picker -->
+<div class="modal-bg" id="cand_modal">
+  <div class="modal" style="width:820px">
+    <h3>Pick a treatment</h3>
+    <div class="desc" style="margin:-4px 0 10px">Several drafts of this slide — ranked best-first on brand fit and density. Previews are exact. Pick the one you want.</div>
+    <div class="cand-grid" id="cand_grid"></div>
+    <div class="modal-foot"><button class="ghost" onclick="closeCand()">Cancel</button></div>
+  </div>
+</div>
+
+<!-- X1: diff + accept/reject on regenerate — keep the new title, reject the new body -->
+<div class="modal-bg" id="diff_modal">
+  <div class="modal" style="width:780px">
+    <h3>Review the regenerated changes</h3>
+    <div class="desc" style="margin:-4px 20px 10px">The regenerate rewrote the fields below. Each one is <b>set to the new draft</b> by default — untick any field to keep your current text instead. Fields the AI left unchanged aren’t shown. Nothing is applied until you choose <b>Apply chosen</b>.</div>
+    <div class="diff-list" id="diff_list"></div>
+    <div class="modal-foot"><span class="sel" id="diff_note"></span>
+      <button class="ghost" onclick="diffSetAll(true)">Take all new</button>
+      <button class="ghost" onclick="diffSetAll(false)">Keep all mine</button>
+      <button class="ghost" onclick="closeDiff()">Cancel</button>
+      <button class="btn" onclick="applyDiff()">Apply chosen</button></div>
+  </div>
+</div>
+
+<!-- X1: diff + accept/reject on regenerate (course units) — per-block review -->
+<div class="modal-bg" id="udiff_modal">
+  <div class="modal" style="width:820px">
+    <h3>Review the regenerated module</h3>
+    <div class="desc" style="margin:-4px 20px 10px">The re-draft is broken into blocks below, aligned to your current module. Each block is <b>set to the new draft</b> by default — untick any block to keep your current version. Nothing is written until you choose <b>Apply chosen</b>.</div>
+    <div class="diff-list" id="udiff_list"></div>
+    <div class="modal-foot"><span class="sel" id="udiff_note"></span>
+      <button class="ghost" onclick="unitSetAll(true)">Take all new</button>
+      <button class="ghost" onclick="unitSetAll(false)">Keep all mine</button>
+      <button class="ghost" onclick="closeUnitDiff()">Cancel</button>
+      <button class="btn" onclick="applyUnitDiff()">Apply chosen</button></div>
+  </div>
+</div>
+
+<!-- M15: checkpoint / rewind history -->
+<div class="modal-bg" id="hist_modal">
+  <div class="modal" style="width:640px">
+    <h3>⟲ Version history &amp; checkpoints</h3>
+    <div class="desc" style="margin:-4px 20px 10px">A checkpoint is captured automatically before each AI edit (deck + course); old auto-checkpoints are trimmed. Save a <b>named version</b> for a milestone you want to keep — versions are never trimmed. Restore rolls the project back; your current state is snapshotted first, so a restore is undoable.</div>
+    <div class="listing" id="hist_list"></div>
+    <div class="modal-foot"><button class="ghost" onclick="saveVersion()">★ Save version…</button>
+      <button class="ghost" onclick="manualSnapshot()">Snapshot now</button>
+      <button class="ghost" onclick="closeHistory()">Close</button></div>
+  </div>
+</div>
+
+<!-- M17: saved project starters — "New from template" picker -->
+<div class="modal-bg" id="tpl_modal">
+  <div class="modal" style="width:600px">
+    <h3>＋ New from a saved template</h3>
+    <div class="desc" style="margin:-4px 20px 10px">A project starter carries the deck and (if present) the course script. Loading one drops it into the current session — a checkpoint is saved first, so it is undoable. Save the current project as a starter with <b>★ Save as template</b>.</div>
+    <div class="listing" id="tpl_list"></div>
+    <div class="modal-foot"><button class="ghost" onclick="closeTemplatePicker()">Close</button></div>
+  </div>
+</div>
+
+<!-- script viewer modal (read-only) -->
+<div class="modal-bg" id="scriptview">
+  <div class="modal" style="width:860px">
+    <h3 id="sv_title">Script</h3>
+    <div class="listing" style="padding:0">
+      <pre id="sv_body" style="margin:0;padding:16px 20px;white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono);font-size:12.5px;line-height:1.55;color:var(--ink)"></pre>
+    </div>
+    <div class="modal-foot"><span class="sel" id="sv_path"></span>
+      <button class="btn" onclick="closeScriptView()">Close</button></div>
+  </div>
+</div>
+
 <!-- Slideshow preview overlay -->
 <div id="sl_show" role="dialog" aria-modal="true" aria-label="Slide preview">
   <div class="show-top">
@@ -631,11 +884,13 @@
         <option value="wipe">Wipe</option>
         <option value="none">None</option>
       </select></label>
+    <button class="show-x" id="show_notes_btn" onclick="toggleShowNotes()" title="Presenter notes (N)" aria-label="Toggle presenter notes" style="margin-right:8px;width:auto;padding:0 12px">📝 Notes</button>
     <button class="show-x" onclick="closeShow()" title="Close (Esc)" aria-label="Close">✕</button>
   </div>
   <div class="show-stage" id="show_stage">
     <div class="show-slide" id="show_slide"></div>
   </div>
+  <div class="show-notes" id="show_notes" style="display:none"></div>
   <div class="show-nav">
     <button class="show-btn" id="show_prev" onclick="showNav(-1)" aria-label="Previous slide">‹ Back</button>
     <button class="show-btn" id="show_next" onclick="showNav(1)" aria-label="Next slide">Next ›</button>
@@ -658,19 +913,23 @@ window.fetch = function(url, opts){
 };
 let pk={mode:'dir', exts:['md'], path:'', target:null, cb:null};
 let CURRENT_PROJECT=null, FOLDERS={}, CURRENT_SCRIPT=null, STAGED=[];
-let SLIDE_EXAMPLES={}, LAYOUTS=[], DECK=[];
+let SLIDE_EXAMPLES={}, LAYOUTS=[], DECK=[], SEL=0;
+let TEMPLATES=[], TEMPLATE_MAP={};
+let MY_TEMPLATES=[];              // M17: saved project/slide starters (this operator's library)
 // ---- stepper: one stage visible at a time, driven by the rail + footer nav ----
 let MODE='course', COURSE_STEP=1, SLIDE_STEP=1;
-const COURSE_STEPS=['Project','AI account','Source materials','Generate scripts','Apply SME review','Output format','Generate preview','Publish'];
-const SLIDE_STEPS=['Source & generate','Review & edit slides','Build presentation'];
+const COURSE_STEPS=['Project','Source materials','Apply SME review','Generate preview','Output & publish'];
+const SLIDE_STEPS=['Project & define','Source & generate','Review, edit & build'];
 const SLIDE_GUIDES={
-  infographic:"Header + left challenge column (intro · bullet items · callout) + right numbered cards + a goals row + footer. Every section is optional — delete what you don't need.",
-  process:"A row of 3–6 numbered steps, left → right. Each step: title + body. Accents auto-cycle (or set \"accent\": primary/secondary/tertiary/dark).",
+  infographic:"Header + left challenge column (intro · bullet items · callout) + right numbered cards + a goals row + footer. Every section is optional. Delete what you don't need.",
+  process:"A row of 3-6 numbered steps, left → right. Each step: title + body. Accents auto-cycle (or set \"accent\": primary/secondary/tertiary/dark).",
   comparison:"2 or 3 side-by-side panels (old vs new, option A/B/C). Each panel: heading + bullet items + optional callout.",
-  timeline:"A roadmap of 3–6 milestones alternating above/below a line. Each milestone: phase chip + title + body.",
+  timeline:"A roadmap of 3-6 milestones alternating above/below a line. Each milestone: phase chip + title + body.",
   divider:"A full-bleed section/title screen: kicker + big title + subtitle. Set \"bg\" to dark/primary/secondary/tertiary.",
-  chart:"A native, editable PowerPoint chart (bar/line/pie/stackedBar/groupedBar) from your categories + series. Plot only real, sourced numbers."
+  chart:"A native, editable PowerPoint chart (bar/groupedBar/stackedBar/horizontalBar/horizontalStackedBar/line/area/pie/donut) from your categories + series. Pick the type, or paste a CSV/TSV table to fill the data. Plot only real, sourced numbers."
 };
+// M7: chart types the editor offers in the type dropdown (SVG + native PPTX both render these)
+const CHART_TYPES=['bar','groupedBar','stackedBar','horizontalBar','horizontalStackedBar','line','area','pie','donut'];
 
 function val(id){ return document.getElementById(id).value; }
 function setv(id,v){ const el=document.getElementById(id); if(el) el.value=(v==null?'':v); }
@@ -693,18 +952,18 @@ async function init(){
     r.brands.map(b=>`<option ${''}>${b}</option>`).join('');
   pk.path = r.home;
   document.getElementById('gen_arch').innerHTML =
-    (r.archetypes||[]).map(a=>`<option value="${a.key}">${a.key} — ${a.desc}</option>`).join('');
+    (r.archetypes||[]).map(a=>`<option value="${a.key}">${a.key}: ${a.desc}</option>`).join('');
   applyProviders(r.providers||{});
-  setv('ws', r.workspace||''); setProjects(r.projects||[]);
+  setv('ws', r.workspace||''); setv('sl_ws', r.workspace||''); setProjects(r.projects||[]);
   if(!r.workspace_set)
     document.getElementById('proj_current').innerHTML =
       `<div class="hint">Pick a projects location above and click <b>Use</b>, then create or open a project.</div>`;
   scriptStatus();
   // ---- slide-presentation mode ----
   SLIDE_EXAMPLES = r.slide_examples||{}; LAYOUTS = r.layouts||[];
-  document.getElementById('deck_add_layout').innerHTML =
-    LAYOUTS.map(l=>`<option value="${l}">${l}</option>`).join('');
-  setv('sl_out', r.slides_out||'');
+  TEMPLATES = r.templates||[]; TEMPLATE_MAP = {}; TEMPLATES.forEach(t=>{ TEMPLATE_MAP[t.name]=t; });
+  MY_TEMPLATES = r.my_templates||[]; renderSavedSlidePicker();       // M17
+  document.getElementById('deck_add_layout').innerHTML = layoutOptionsHtml('');
   if(!DECK.length) deckAdd(LAYOUTS.includes('divider')?'divider':LAYOUTS[0]);
   setMode('course');   // boots the stepper (rail, active stage, footer, project chip)
 }
@@ -717,14 +976,14 @@ function setMode(mode){
   document.getElementById('slide_mode').style.display = slide?'':'none';
   document.getElementById('mode_course').classList.toggle('active', !slide);
   document.getElementById('mode_slide').classList.toggle('active', slide);
-  document.getElementById('projchip').style.display = slide?'none':'';  // project context is course-only
+  document.getElementById('projchip').style.display = '';   // a project spans both tabs now
   showStep();
 }
 // Show only the active stage; repaint the rail + footer. All stage DOM stays in
 // the page (so every existing handler/id keeps working) — we just toggle display.
 function showStep(){
   const isC = MODE==='course';
-  const ids = isC ? ['s1','s2','s3','s4','s5','s6','s7','s8'] : ['ps1','ps2','ps3'];
+  const ids = isC ? ['s1','s3','s5','s7','s6'] : ['ps_proj','ps1','ps2'];
   const cur = isC ? COURSE_STEP : SLIDE_STEP, max = ids.length;
   ids.forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.style.display=(i+1===cur)?'block':'none'; });
   renderRail(isC, cur, max);
@@ -751,7 +1010,7 @@ function renderRail(isC, cur, max){
 }
 function goStep(n){ if(MODE==='course') COURSE_STEP=n; else SLIDE_STEP=n; showStep(); window.scrollTo({top:0,behavior:'smooth'}); }
 function stepBy(d){
-  const max = MODE==='course'?8:3;
+  const max = (MODE==='course'?COURSE_STEPS:SLIDE_STEPS).length;
   let c = (MODE==='course'?COURSE_STEP:SLIDE_STEP)+d;
   goStep(Math.min(max, Math.max(1, c)));
 }
@@ -759,22 +1018,108 @@ function stepBy(d){
 /* ---- slide-presentation deck builder ---- */
 function exampleStr(layout){ return JSON.stringify(SLIDE_EXAMPLES[layout]||{}, null, 2); }
 function isAnyExample(s){ const t=(s||'').trim();
-  return LAYOUTS.some(l=>exampleStr(l).trim()===t) || t===''; }
-function deckAdd(layout){
-  layout = layout || LAYOUTS[0] || 'infographic';
-  DECK.push({layout, content: exampleStr(layout)});
+  if(t==='') return true;
+  if(LAYOUTS.some(l=>exampleStr(l).trim()===t)) return true;
+  return TEMPLATES.some(tp=>JSON.stringify(tp.starter||{}, null, 2).trim()===t); }
+// --- data-driven template layouts (step 2d) -----------------------------------
+// A picker value is a bare layout name (e.g. "process") OR "template:<name>" for a
+// data-driven region-spec. Templates are grouped: generic ones under "Templates",
+// client-specific ones (a spec with a category) under "<Client> templates".
+function isTemplateVal(v){ return typeof v==='string' && v.indexOf('template:')===0; }
+function templateName(v){ return v.slice('template:'.length); }
+function slidePickerValue(d){               // the picker value that represents a slide
+  if(d.layout==='template'){
+    try{ const c=JSON.parse(d.content||'{}'); if(c && c.template) return 'template:'+c.template; }catch(e){}
+    return 'template';
+  }
+  return d.layout;
+}
+function layoutOptionsHtml(selected){
+  let h = LAYOUTS.map(l=>`<option value="${l}" ${l===selected?'selected':''}>${l}</option>`).join('');
+  const groups={}; TEMPLATES.forEach(t=>{ (groups[t.category||'default']=groups[t.category||'default']||[]).push(t); });
+  const cats=Object.keys(groups).sort((a,b)=> a==='default'?-1 : b==='default'?1 : a.localeCompare(b));
+  cats.forEach(cat=>{
+    const label = cat==='default' ? 'Templates' : esc(cat)+' templates';
+    h += `<optgroup label="${label}">` + groups[cat].map(t=>{
+      const v='template:'+t.name;
+      return `<option value="${v}" ${selected===v?'selected':''}>${esc(t.title||t.name)}</option>`;
+    }).join('') + '</optgroup>';
+  });
+  return h;
+}
+// Picking a client-specific template auto-DEFAULTS its brand (operator can still change it).
+function autoBrandForTemplate(t){
+  if(!t || !t.brand) return;
+  const b=document.getElementById('brand');
+  if(b && [...b.options].some(o=>o.value===t.brand) && b.value!==t.brand) b.value=t.brand;
+}
+// Ensure a slide's content carries {template:<name>}, keeping any user binds; seed from
+// the starter when the content is essentially empty.
+function toTemplateContent(t, existing){
+  let c={}; try{ c=JSON.parse(existing||'{}'); }catch(e){ c={}; }
+  if(typeof c!=='object' || Array.isArray(c) || c===null) c={};
+  c.template=t.name;
+  if(Object.keys(c).length<=1) c = t.starter || {template:t.name};
+  return JSON.stringify(c, null, 2);
+}
+function deckAdd(sel){
+  sel = sel || LAYOUTS[0] || 'infographic';
+  if(isTemplateVal(sel)){
+    const t = TEMPLATE_MAP[templateName(sel)] || {name:templateName(sel), starter:{template:templateName(sel)}};
+    DECK.push({layout:'template', content: JSON.stringify(t.starter||{template:t.name}, null, 2)});
+    autoBrandForTemplate(t);
+  } else {
+    DECK.push({layout:sel, content: exampleStr(sel)});
+  }
+  SEL=DECK.length-1;                       // jump to the new slide
   renderDeck();
 }
+// P4 "describe the slide" — deterministically suggest a deck layout from a one
+// sentence intent (no AI call). Sets the Add-slide picker to the recommendation
+// and reports the layout's purpose, confidence, and ranked alternatives.
+async function suggestLayout(){
+  const intent=(val('deck_intent')||'').trim();
+  const out=document.getElementById('deck_intent_out');
+  if(!intent){ out.textContent='Type a sentence describing the slide first.'; return; }
+  out.textContent='…';
+  let res; try{ res=await (await fetch('/api/match-layout',{method:'POST',body:JSON.stringify({intent})})).json(); }
+  catch(e){ out.textContent='Could not reach the layout matcher.'; return; }
+  if(!res || res.ok===false){ out.textContent=(res&&res.error)||'No suggestion.'; return; }
+  const sel=document.getElementById('deck_add_layout');
+  if(res.recommended && LAYOUTS.includes(res.recommended)) sel.value=res.recommended;
+  const alts=(res.ranked||[]).slice(1).map(r=>r.layout).join(', ');
+  let msg='→ '+res.recommended+(res.purpose?' — '+res.purpose:'');
+  if(!res.confident) msg+='  (low confidence — the sentence is vague; rephrase or just pick a layout)';
+  if(alts) msg+='  ·  also: '+alts;
+  out.textContent=msg;
+}
 function deckRemove(i){ if(DECK.length<=1){ alert('A presentation needs at least one slide.'); return; }
-  DECK.splice(i,1); renderDeck(); }
+  DECK.splice(i,1);
+  if(i<SEL) SEL--;                          // earlier slide gone -> track the same one
+  if(SEL>=DECK.length) SEL=DECK.length-1;
+  if(SEL<0) SEL=0;
+  renderDeck(); }
 function deckMove(i,dir){ const j=i+dir; if(j<0||j>=DECK.length) return;
-  [DECK[i],DECK[j]]=[DECK[j],DECK[i]]; renderDeck(); }
-function deckSetLayout(i,layout){
+  [DECK[i],DECK[j]]=[DECK[j],DECK[i]];
+  if(SEL===i) SEL=j; else if(SEL===j) SEL=i;   // follow the moved slide
+  renderDeck(); }
+function deckSetLayout(i,sel){
+  const t = isTemplateVal(sel)
+    ? (TEMPLATE_MAP[templateName(sel)] || {name:templateName(sel), starter:{template:templateName(sel)}})
+    : null;
+  const newLayout = t ? 'template' : sel;
+  const label = t ? (t.title||t.name) : sel;
   if(!isAnyExample(DECK[i].content) &&
-     !confirm(`Replace slide ${i+1}'s content with the ${layout} example? (Cancel keeps your text and just changes the layout.)`)){
-    DECK[i].layout=layout; renderDeck(); return;
+     !confirm(`Replace slide ${i+1}'s content with the ${label} example? (Cancel keeps your text and just changes the layout.)`)){
+    DECK[i].layout=newLayout;
+    if(t) DECK[i].content=toTemplateContent(t, DECK[i].content);   // keep text, ensure template key
+    if(t) autoBrandForTemplate(t);
+    renderDeck(); return;
   }
-  DECK[i]={layout, content: exampleStr(layout), theme:DECK[i].theme, colorOff:DECK[i].colorOff, scopes:DECK[i].scopes, guide:DECK[i].guide}; renderDeck();
+  const content = t ? JSON.stringify(t.starter||{template:t.name}, null, 2) : exampleStr(sel);
+  DECK[i]={layout:newLayout, content, theme:DECK[i].theme, colorOff:DECK[i].colorOff, scopes:DECK[i].scopes, guide:DECK[i].guide, notes:DECK[i].notes, transition:DECK[i].transition};
+  if(t) autoBrandForTemplate(t);
+  renderDeck();
 }
 // Cross-cutting per-slide theme override (dark|light). "" = Auto = drop the key so
 // the layout uses its blueprint-default theme. Repaints the thumb + flags the next
@@ -783,45 +1128,56 @@ function deckSetTheme(i,theme){
   if(theme==='dark'||theme==='light') DECK[i].theme=theme; else delete DECK[i].theme;
   renderDeck();
 }
+// Per-slide transition override. "" = use the deck-wide default (drop the key);
+// any value (including "none", an explicit opt-out) is stored on the DECK item and
+// rides into the built .pptx. No thumbnail repaint needed — transitions aren't
+// visible in the static poster — so just flip the stored value.
+function deckSetTransition(i,tx){
+  if(tx) DECK[i].transition=tx; else delete DECK[i].transition;
+  renderDeck();
+}
 function deckValidate(i){
   // content is no longer hand-edited; only flag if a regenerate/layout-swap left
   // it unreadable. Stay quiet when it's fine so the rows read clean.
   const el=document.getElementById('sl_valid_'+i); if(!el) return true;
   try{ JSON.parse(DECK[i].content); el.textContent=''; return true; }
-  catch(e){ el.textContent='⚠ this slide\'s content is unreadable — regenerate it'; el.style.color='#a32019'; return false; }
+  catch(e){ el.textContent='⚠ this slide\'s content is unreadable. Regenerate it'; el.style.color='#a32019'; return false; }
 }
 function slideTitle(d){
   try{ const c=JSON.parse(d.content)||{}; return c.title || c.kicker || c.subtitle || '(untitled slide)'; }
   catch(e){ return '(unreadable)'; }
 }
-function renderDeck(){
-  const box=document.getElementById('deck_list');
-  box.innerHTML = DECK.map((d,i)=>{
-    const sc = d.scopes || (d.scopes={content:false,layout:false,color:false});
-    return `
-    <div class="slide-row" id="sl_row_${i}">
-      <button class="slide-thumb" id="sl_thumb_${i}" onclick="openShowAt(${i})"
-              title="Open the slideshow at this slide"><span class="thumb-ph">…</span></button>
-      <div class="slide-row-body">
+// The per-slide controls bar (layout / theme / transition, regenerate scopes, move /
+// remove, guide, notes). Rendered ABOVE the big editable canvas for the SELECTED slide.
+// Same control IDs and handlers as before, so every existing deck function keeps working.
+function slideControlsHtml(d,i,sc){
+  return `
         <div class="srow1">
           <span class="slide-n">${i+1}</span>
-          <span class="slide-title" title="${esc(slideTitle(d))}">${esc(slideTitle(d))}</span>
+          <span class="slide-title" id="sl_rowtitle_${i}" title="${esc(slideTitle(d))}">${esc(slideTitle(d))}</span>
           <span class="sp"></span>
           <span class="sel-wrap"><select class="sl-layout" title="Layout for this slide" onchange="deckSetLayout(${i}, this.value)">
-            ${LAYOUTS.map(l=>`<option value="${l}" ${l===d.layout?'selected':''}>${l}</option>`).join('')}</select></span>
-          <span class="sel-wrap"><select class="sl-theme${d.theme?' themed':''}" title="Color theme — Auto uses the layout's natural theme; Dark/Light flips it" onchange="deckSetTheme(${i}, this.value)">
+            ${layoutOptionsHtml(slidePickerValue(d))}</select></span>
+          <span class="sel-wrap"><select class="sl-theme${d.theme?' themed':''}" title="Color theme: Auto uses the layout's natural theme; Dark/Light flips it" onchange="deckSetTheme(${i}, this.value)">
             <option value="" ${!d.theme?'selected':''}>Auto theme</option>
             <option value="dark" ${d.theme==='dark'?'selected':''}>Dark</option>
             <option value="light" ${d.theme==='light'?'selected':''}>Light</option></select></span>
+          <span class="sel-wrap"><select class="sl-theme${d.transition?' themed':''}" title="Slide transition: overrides the deck default; 'none' opts this slide out" onchange="deckSetTransition(${i}, this.value)">
+            ${['','none','fade','cut','push','wipe','split','cover'].map(t=>`<option value="${t}" ${(d.transition||'')===t?'selected':''}>${t?('↦ '+t):'Deck transition'}</option>`).join('')}</select></span>
         </div>
         <div class="srow2">
           <span class="regen-lbl">Regenerate</span>
           <span class="scopeseg">
-            <button type="button" class="scope-btn${sc.content?' active':''}" title="Reword the text — keeps layout & colors" onclick="toggleScope(${i},'content',this)">Content</button>
+            <button type="button" class="scope-btn${sc.content?' active':''}" title="Reword the text, keeps layout & colors" onclick="toggleScope(${i},'content',this)">Content</button>
             <button type="button" class="scope-btn${sc.layout?' active':''}" title="Let AI pick the best-fitting layout" onclick="toggleScope(${i},'layout',this)">Layout</button>
-            <button type="button" class="scope-btn${sc.color?' active':''}" title="Reshuffle accent colors — instant, no AI" onclick="toggleScope(${i},'color',this)">Color</button>
+            <button type="button" class="scope-btn${sc.color?' active':''}" title="Reshuffle accent colors (instant, no AI)" onclick="toggleScope(${i},'color',this)">Color</button>
           </span>
           <button class="btn xs" id="sl_regen_${i}" title="Run the checked scopes" onclick="regenSlide(${i})">↻ Run</button>
+          <span class="sel-wrap"><select class="sl-theme" id="sl_regen_n_${i}" title="How many treatments to draft. >1 opens a picker so you can compare and choose.">
+            ${[1,2,3].map(nn=>`<option value="${nn}" ${nn===1?'selected':''}>${nn===1?'1 option':nn+' options'}</option>`).join('')}</select></span>
+          <button class="btn xs" id="sl_edit_btn_${i}" title="Edit this slide's text directly" onclick="toggleEdit(${i})">${d._editing?'✕ Close editor':'✎ Edit'}</button>
+          <button class="btn xs" title="Insert an on-brand icon (shows on the image / imagetext layouts)" onclick="openAssetPicker(${i})">🖼 Icon</button>
+          <button class="btn xs" title="Save this slide as a reusable template (appears under “My saved slides”)" onclick="saveSlideTemplate(${i})">☆ Template</button>
           <span class="row-flash" id="sl_valid_${i}"></span>
           <span class="sp"></span>
           <button class="iconbtn" title="Move up" onclick="deckMove(${i},-1)" ${i===0?'disabled':''}>↑</button>
@@ -832,12 +1188,208 @@ function renderDeck(){
           <span class="guide-arrow">↳</span>
           <input type="text" class="sl-guide" id="sc_guide_${i}" value="${esc(d.guide||'')}"
                  oninput="DECK[${i}].guide=this.value"
-                 placeholder="what should change? (optional — guides Content / Layout regen)">
+                 placeholder="what should change? (optional, guides Content / Layout regen)">
         </div>
+        <div class="srow3">
+          <span class="guide-arrow" title="Speaker notes: ride into the PowerPoint notes page">📝</span>
+          <textarea class="sl-guide sl-notes" id="sc_notes_${i}" rows="2"
+                 oninput="DECK[${i}].notes=this.value"
+                 placeholder="speaker notes (optional, spoken on the PowerPoint notes page)">${esc(d.notes||'')}</textarea>
+        </div>`;
+}
+// PowerPoint-style edit surface: a thumbnail RAIL on the left selects a slide; the
+// selected slide shows big on the right with its controls docked above and the inline
+// text editor below the canvas. SEL = the selected slide index.
+function renderDeck(){
+  const box=document.getElementById('deck_list');
+  if(!DECK.length){ box.innerHTML=''; return; }
+  if(SEL>=DECK.length) SEL=DECK.length-1;
+  if(SEL<0) SEL=0;
+  const rail = DECK.map((d,i)=>{
+    let ok=true; try{ JSON.parse(d.content); }catch(e){ ok=false; }
+    return `<button class="rail-item${i===SEL?' sel':''}${ok?'':' bad'}" id="rail_${i}"
+              onclick="selectSlide(${i})" title="${esc(slideTitle(d))}">
+        <span class="rail-n">${i+1}</span>
+        <span class="rail-thumb" id="sl_thumb_${i}"><span class="thumb-ph">…</span></span>
+      </button>`;}).join('');
+  const d=DECK[SEL], i=SEL;
+  const sc = d.scopes || (d.scopes={content:false,layout:false,color:false});
+  const pane = `
+      <div class="slide-row panectl" id="sl_row_${i}">${slideControlsHtml(d,i,sc)}</div>
+      <button class="big-canvas" id="big_canvas" onclick="openShowAt(${i})"
+              title="Open the slideshow at this slide"><span class="thumb-ph">…</span></button>
+      <div id="sl_edit_${i}">${d._editing?slideEditorHtml(i):''}</div>`;
+  box.innerHTML = `<div class="deck-edit">
+      <div class="deck-rail">${rail}
+        <button class="rail-add" onclick="deckAdd()" title="Add a slide">+ slide</button>
       </div>
-    </div>`;}).join('');
-  DECK.forEach((d,i)=>deckValidate(i));
+      <div class="deck-pane">${pane}</div>
+    </div>`;
+  DECK.forEach((dd,k)=>deckValidate(k));
   paintThumbs();
+}
+function selectSlide(i){ if(i<0||i>=DECK.length||i===SEL) return; SEL=i; renderDeck(); }
+
+// ===== Visual-asset (icon) picker: insert an on-brand icon into a slide's image slot =====
+// The library is SVG (recolored to brand at render time); the slide stores the bare
+// filename. Renders on the image / imagetext layouts. Cached after the first fetch.
+let _assetTarget=null, _assetCache=null;
+async function openAssetPicker(i){
+  _assetTarget=(i==null?SEL:i);
+  document.getElementById('asset_picker').classList.add('show');
+  const grid=document.getElementById('asset_grid');
+  if(!_assetCache){
+    grid.innerHTML='<span class="hint">Loading…</span>';
+    try{ const r=await (await fetch('/api/assets')).json(); _assetCache=(r&&r.assets)||[]; }
+    catch(e){ _assetCache=[]; }
+  }
+  grid.innerHTML = _assetCache.length
+    ? _assetCache.map(a=>`<button type="button" class="asset-cell" title="${esc(a.name)}" onclick="pickAsset('${a.name}')">${a.svg}<span>${esc(a.name.replace(/^icon-/,'').replace(/\.svg$/,'').replace(/-/g,' '))}</span></button>`).join('')
+    : '<span class="hint">No icons in the library.</span>';
+}
+function closeAssetPicker(){ document.getElementById('asset_picker').classList.remove('show'); _assetTarget=null; }
+function _setSlideImage(name){
+  const i=_assetTarget; if(i==null||!DECK[i]) return;
+  let o; try{ o=JSON.parse(DECK[i].content)||{}; }catch(e){ o={}; }
+  if(name) o.image=name; else delete o.image;
+  DECK[i].content=JSON.stringify(o,null,2);
+  closeAssetPicker(); renderDeck();
+}
+function pickAsset(name){ _setSlideImage(name); }
+function clearAsset(){ _setSlideImage(null); }
+
+// ===== Direct slide editor: inline structured fields over the slide's content JSON =====
+// Edits write straight back to DECK[i].content and repaint the live thumbnail. The
+// Layout / Theme / Color / Transition controls own the style keys, so those are hidden
+// here. A list item may be a plain string OR a ["lead"," rest"] BOLD pair (the bold
+// lead-in the renderer honors today); the "B" toggle converts between the two.
+const EDIT_SKIP=new Set(['accent','bg','side','mode','colorOff','theme','columns']);
+const EDIT_LONG=new Set(['body','intro','callout','quote','subtitle','desc','footer','center']);
+function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
+function humanKey(k){ return String(k).replace(/[_-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+function _allStr(a){ return a.every(x=>typeof x==='string'); }
+function isItemsArray(a){ return Array.isArray(a) && a.every(x=>typeof x==='string' || (Array.isArray(x)&&_allStr(x))); }
+function isObjArray(a){ return Array.isArray(a) && a.length>0 && a.every(x=>x&&typeof x==='object'&&!Array.isArray(x)); }
+
+function toggleEdit(i){ DECK[i]._editing=!DECK[i]._editing; renderDeck(); }
+function editParse(i){ try{ return JSON.parse(DECK[i].content)||{}; }catch(e){ return null; } }
+function _getAt(o,path){ return path.split('.').reduce((x,k)=>x==null?x:x[k],o); }
+function _setAt(o,path,v){ const ks=path.split('.'); let x=o; for(let j=0;j<ks.length-1;j++){ x=x[ks[j]]; } x[ks[ks.length-1]]=v; }
+
+// One commit per keystroke: model -> DECK[i].content -> debounced live thumb. No row
+// re-render (keeps the caret in the field); the row's title chip updates in place.
+let _editThumbT={};
+function _editCommit(i,obj){
+  DECK[i].content=JSON.stringify(obj,null,2);
+  deckValidate(i);
+  const tch=document.getElementById('sl_rowtitle_'+i);
+  if(tch){ const t=slideTitle(DECK[i]); tch.textContent=t; tch.title=t; }
+  clearTimeout(_editThumbT[i]); _editThumbT[i]=setTimeout(()=>paintThumbs(),300);
+}
+// text-leaf edit (no structural change) — preserves focus
+function editStr(i,path,v){ const o=editParse(i); if(!o) return; _setAt(o,path,v); _editCommit(i,o); }
+// list-item edit: a list entry is a plain string OR a ["lead"," rest"] bold pair
+function editItem(i,path,idx,part,v){
+  const o=editParse(i); if(!o) return; const arr=_getAt(o,path); if(!Array.isArray(arr)) return;
+  if(part==='plain'){ arr[idx]=v; }
+  else { let e=arr[idx]; e=Array.isArray(e)?e.slice():[String(e||''),'']; e[part==='lead'?0:1]=v; arr[idx]=e; }
+  _editCommit(i,o);
+}
+function itemBold(i,path,idx){           // toggle a list entry between plain string and bold pair
+  const o=editParse(i); if(!o) return; const arr=_getAt(o,path); if(!Array.isArray(arr)) return;
+  const e=arr[idx]; arr[idx]=Array.isArray(e)?e.join(''):[String(e||''),''];
+  _editCommit(i,o); renderEditor(i);
+}
+function itemAdd(i,path){ const o=editParse(i); if(!o) return; const arr=_getAt(o,path);
+  if(Array.isArray(arr)){ arr.push(''); _editCommit(i,o); renderEditor(i); } }
+function itemDel(i,path,idx){ const o=editParse(i); if(!o) return; const arr=_getAt(o,path);
+  if(Array.isArray(arr)){ arr.splice(idx,1); _editCommit(i,o); renderEditor(i); } }
+// object-list (steps/cards/milestones/columns…): add clones the last entry's shape
+// blanked (accent kept so the palette keeps cycling); remove drops one.
+function objAdd(i,path){ const o=editParse(i); if(!o) return; const arr=_getAt(o,path); if(!Array.isArray(arr)) return;
+  const tmpl=arr.length?arr[arr.length-1]:{title:'',body:''}; const blank={};
+  Object.keys(tmpl).forEach(k=>{ const v=tmpl[k];
+    blank[k]= (k==='accent')?v : (typeof v==='string'?'':(Array.isArray(v)?[]:((v&&typeof v==='object')?{}:''))); });
+  arr.push(blank); _editCommit(i,o); renderEditor(i);
+}
+function objDel(i,path,idx){ const o=editParse(i); if(!o) return; const arr=_getAt(o,path);
+  if(Array.isArray(arr)){ arr.splice(idx,1); _editCommit(i,o); renderEditor(i); } }
+// re-render just this slide's editor panel (after a structural add/remove/toggle)
+function renderEditor(i){ const host=document.getElementById('sl_edit_'+i); if(host) host.innerHTML=slideEditorHtml(i); }
+
+function slideEditorHtml(i){
+  const o=editParse(i);
+  if(!o) return '<div class="sl-edit"><span class="hint">This slide’s JSON is unreadable. Use Regenerate, or Open JSON.</span></div>';
+  const body=editFields(i,o,'');
+  const csv=('chart' in o || 'series' in o) ? chartCsvBox(i) : '';
+  return '<div class="sl-edit">'+(body||'<span class="hint">No editable text on this slide.</span>')+csv+'</div>';
+}
+// M7: paste a CSV/TSV table -> fills this chart slide's categories + series (first
+// column = category labels, header row = series names). Server does the parsing.
+function chartCsvBox(i){
+  return `<details class="egroup chart-csv"><summary class="eglabel">Paste CSV / TSV to fill the data</summary>`
+   + `<textarea id="chart_csv_${i}" class="chart-csv-ta" placeholder="Quarter, Admits, Discharges&#10;Q1, 120, 110&#10;Q2, 145, 132"></textarea>`
+   + `<div class="chart-csv-row"><button class="ghost xs" onclick="fillChartFromCsv(${i})">Fill from CSV</button>`
+   + `<span class="hint" id="chart_csv_msg_${i}"></span></div></details>`;
+}
+async function fillChartFromCsv(i){
+  const ta=document.getElementById('chart_csv_'+i), msg=document.getElementById('chart_csv_msg_'+i);
+  const text=(ta&&ta.value||'').trim();
+  if(!text){ if(msg) msg.textContent='Paste a table first.'; return; }
+  let res; try{ res=await (await fetch('/api/chart-csv',{method:'POST',body:JSON.stringify({csv:text})})).json(); }
+  catch(e){ if(msg) msg.textContent='Could not parse.'; return; }
+  if(!res||!res.ok||!res.series||!res.series.length){ if(msg) msg.textContent='No data found in that table.'; return; }
+  const o=editParse(i); if(!o) return;
+  o.categories=res.categories; o.series=res.series;
+  _editCommit(i,o); renderEditor(i);
+  if(msg) msg.textContent=`Filled ${res.series.length} series × ${res.categories.length} rows.`;
+}
+// walk an object: a field per text leaf, a list editor per items-array, a card list
+// per object-array, a sub-group per nested object. Style keys are hidden (EDIT_SKIP).
+function editFields(i,obj,base){
+  let h='';
+  Object.keys(obj).forEach(k=>{
+    if(EDIT_SKIP.has(k)) return;
+    const path=base?base+'.'+k:k, v=obj[k];
+    if(k==='chart' && (typeof v==='string' || v==null)){   // chart type -> a dropdown, not a free text box
+      const cur=String(v||'bar');
+      const opts=CHART_TYPES.concat(CHART_TYPES.includes(cur)?[]:[cur])
+        .map(t=>`<option value="${escAttr(t)}"${t===cur?' selected':''}>${esc(t)}</option>`).join('');
+      h+=`<div class="ef"><label>${esc(humanKey(k))}</label>`
+       + `<select onchange="editStr(${i},'${path}',this.value)">${opts}</select></div>`;
+      return;
+    }
+    if(typeof v==='string' || typeof v==='number'){
+      const long=EDIT_LONG.has(k)||String(v).length>60;
+      h+=`<div class="ef"><label>${esc(humanKey(k))}</label>`
+       + (long?`<textarea oninput="editStr(${i},'${path}',this.value)">${esc(String(v))}</textarea>`
+              :`<input value="${escAttr(String(v))}" oninput="editStr(${i},'${path}',this.value)">`)
+       + '</div>';
+    } else if(Array.isArray(v) && isItemsArray(v)){
+      h+=`<div class="egroup"><div class="eglabel">${esc(humanKey(k))}</div>`+itemsHtml(i,path,v)+'</div>';
+    } else if(isObjArray(v)){
+      h+=`<div class="egroup"><div class="eglabel">${esc(humanKey(k))}</div>`;
+      v.forEach((it,idx)=>{ h+=`<div class="ecard"><button class="iconbtn danger ecard-x" title="Remove" onclick="objDel(${i},'${path}',${idx})">✕</button>`
+        +editFields(i,it,path+'.'+idx)+'</div>'; });
+      h+=`<button class="ghost xs eadd" onclick="objAdd(${i},'${path}')">+ add</button></div>`;
+    } else if(v && typeof v==='object'){
+      h+=`<div class="egroup"><div class="eglabel">${esc(humanKey(k))}</div>`+editFields(i,v,path)+'</div>';
+    }
+  });
+  return h;
+}
+function itemsHtml(i,path,arr){
+  let h='';
+  arr.forEach((e,idx)=>{
+    const pair=Array.isArray(e);
+    h+=`<div class="eitem"><button type="button" class="eb${pair?' on':''}" title="Bold the lead-in" onclick="itemBold(${i},'${path}',${idx})">B</button>`;
+    if(pair){ h+=`<span class="epair"><input class="lead" value="${escAttr(e[0]||'')}" placeholder="bold lead" oninput="editItem(${i},'${path}',${idx},'lead',this.value)">`
+                + `<input value="${escAttr(e[1]||'')}" placeholder="rest" oninput="editItem(${i},'${path}',${idx},'rest',this.value)"></span>`; }
+    else { h+=`<input value="${escAttr(String(e||''))}" oninput="editItem(${i},'${path}',${idx},'plain',this.value)">`; }
+    h+=`<button class="iconbtn danger" title="Remove" onclick="itemDel(${i},'${path}',${idx})">✕</button></div>`;
+  });
+  h+=`<button class="ghost xs eadd" onclick="itemAdd(${i},'${path}')">+ add item</button>`;
+  return h;
 }
 // Scope is a per-slide toggle stored on the DECK item, so it survives re-renders
 // (layout/theme change) without clobbering the typed guidance. No re-render here —
@@ -860,6 +1412,16 @@ function paintThumbs(){
     if(THUMB_CACHE[key]){ slot.innerHTML=THUMB_CACHE[key]; return; }
     fetchThumb(i, d, key);
   });
+  paintBig();
+}
+// The big editable canvas shows the SELECTED slide full size — the SAME poster SVG as its
+// rail thumb (it scales via its viewBox), pulled from cache or fetched on demand.
+function paintBig(){
+  const big=document.getElementById('big_canvas'); if(!big) return;
+  const d=DECK[SEL]; if(!d) return;
+  const key=slideKey(d); big.dataset.key=key;
+  if(THUMB_CACHE[key]){ big.innerHTML=THUMB_CACHE[key]; }
+  else { big.innerHTML='<span class="thumb-ph">…</span>'; fetchThumb(SEL, d, key); }
 }
 async function fetchThumb(i, d, key){
   let res;
@@ -870,6 +1432,8 @@ async function fetchThumb(i, d, key){
   THUMB_CACHE[key]=res.svg;
   const slot=document.getElementById('sl_thumb_'+i);
   if(slot && slot.dataset.key===key) slot.innerHTML=res.svg;   // still the same slide
+  const big=document.getElementById('big_canvas');             // mirror onto the big canvas
+  if(i===SEL && big && big.dataset.key===key) big.innerHTML=res.svg;
 }
 function flashRow(i,msg,ok){
   const el=document.getElementById('sl_valid_'+i); if(!el) return;
@@ -892,7 +1456,7 @@ function recolorSlide(i){
   else if(lay==='cards'){ set(c.cards); }
   else if(lay==='cycles'){ set(c.steps); }
   else if(lay==='divider'){ c.bg=['dark','primary','secondary','tertiary'][off%4]; }
-  // chart: series colors are automatic from the palette — nothing to reshuffle here
+  // chart: series colors are automatic from the palette. Nothing to reshuffle here
   DECK[i].content=JSON.stringify(c,null,2);
 }
 // Regenerate the CHECKED aspects of one slide. Color-only = instant local reshuffle;
@@ -903,36 +1467,149 @@ async function regenSlide(i){
   if(!wantContent && !wantLayout && !wantColor){
     flashRow(i,'Tick Content, Layout, and/or Color first.',false); return; }
   if(wantColor && !wantContent && !wantLayout && !RECOLOR_LAYOUTS.includes(DECK[i].layout)){
-    flashRow(i,'This layout’s colors come from the palette automatically — nothing to reshuffle. (Try the Theme picker to flip dark/light.)',false); return; }
+    flashRow(i,'This layout’s colors come from the palette automatically. Nothing to reshuffle. (Try the Theme picker to flip dark/light.)',false); return; }
   // Color-only -> no AI, instant
   if(wantColor && !wantContent && !wantLayout){
-    recolorSlide(i); renderDeck(); flashRow(i,'✓ Recolored — open Preview slideshow to see it.'); return; }
+    recolorSlide(i); renderDeck(); flashRow(i,'✓ Recolored. Open Preview slideshow to see it.'); return; }
   // Content and/or Layout -> a scoped AI pass
-  if(!val('sl_src')){ alert('Regenerate re-drafts from your source folder — pick it in step 1 first.'); return; }
-  const prov=val('sl_provider'); if(!prov){ alert('Connect an AI account first (step 1).'); return; }
+  if(!val('sl_src')&&!val('sl_urls')){ alert('Regenerate re-drafts from your source folder or links. Pick a folder or add a source link first.'); return; }
+  const prov=val('ai_provider'); if(!prov){ alert('Connect an AI account in the top bar first.'); return; }
   let cur={}; try{ cur=JSON.parse(DECK[i].content); }catch(e){}
   const summaries=DECK.map((d,k)=>`${k+1}. [${d.layout}]${k===i?'  <-- regenerate this one':''}`);
-  const payload={ provider:prov, source:val('sl_src'), model:val('sl_model_sel'),
+  const nCtl=document.getElementById('sl_regen_n_'+i); const nWant=nCtl?(parseInt(nCtl.value,10)||1):1;
+  const payload={ provider:prov, source:val('sl_src'), urls:val('sl_urls'), model:val('ai_model'),
     layout:DECK[i].layout, content:cur, slide_summaries:summaries, idx:i+1, total:DECK.length,
     title:val('sl_title'), focus:val('sl_focus'), audience:val('sl_aud'),
     guidance:val('sc_guide_'+i)||'', scope_content:wantContent, scope_layout:wantLayout,
-    images:val('sl_images') };
+    images:val('sl_images'), n:nWant, brand:brand() };
   const btn=document.getElementById('sl_regen_'+i); const old=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
+  await snapshotBefore('Before slide '+(i+1)+' regenerate');   // rewind point (M15)
   let res; try{ res=await (await fetch('/api/regenerate-slide',{method:'POST',body:JSON.stringify(payload)})).json(); }
   catch(e){ res={error:String(e)}; }
   if(btn){ btn.disabled=false; btn.innerHTML=old; }
   if(!res || res.error || res.ok===false){ alert('Regenerate failed: '+((res&&res.error)||'unknown')); return; }
-  DECK[i]={ layout:(res.layout||DECK[i].layout), content:JSON.stringify(res.content||{},null,2),
-            colorOff:DECK[i].colorOff, theme:DECK[i].theme, scopes:DECK[i].scopes, guide:DECK[i].guide };
+  // Multi-candidate: let the operator compare treatments and pick one (previews are
+  // deterministic, so each candidate renders cheaply). Ranked best-first by the server.
+  if(Array.isArray(res.candidates) && res.candidates.length>1){ openCandidates(i, res.candidates, wantColor); return; }
+  reviewThenApply(i, res, wantColor, wantContent, wantLayout);
+}
+// Write one regenerated treatment (a {layout, content, lint_ok} object) into slide i,
+// optionally reshuffle colors on top, repaint, and flash the row. Shared by the single
+// and multi-candidate paths.
+function applyCandidate(i, c, wantColor, wantContent, wantLayout){
+  DECK[i]={ layout:(c.layout||DECK[i].layout), content:JSON.stringify(c.content||{},null,2),
+            colorOff:DECK[i].colorOff, theme:DECK[i].theme, scopes:DECK[i].scopes, guide:DECK[i].guide, notes:DECK[i].notes, transition:DECK[i].transition };
   if(wantColor) recolorSlide(i);                        // reshuffle on top of the AI result
   renderDeck();
   const what=[wantContent&&'content', wantLayout&&'layout', wantColor&&'color'].filter(Boolean).join(' + ');
-  flashRow(i, '✓ Regenerated ('+what+') — open Preview slideshow to see it.'
-    + (res.lint_ok===false?'  ⚠ may need a fix':''), res.lint_ok!==false);
+  flashRow(i, '✓ Regenerated ('+what+'). Open Preview slideshow to see it.'
+    + (c.lint_ok===false?'  ⚠ may need a fix':''), c.lint_ok!==false);
 }
+// ---- X1: diff + accept/reject on regenerate (deck slides) ----
+// The regen returns a whole new slide. Rather than swap it wholesale, show the
+// operator each CHANGED top-level content field old-vs-new and let them keep the
+// new title but reject the new body — a per-field merge, not all-or-nothing.
+let DIFF_I=null, DIFF_OLD={}, DIFF_NEW={}, DIFF_LAYOUT='', DIFF_KEYS=[], DIFF_CTX={};
+// A stable, order-insensitive compare so re-ordered object keys don't read as "changed".
+function _diffEq(a,b){ return JSON.stringify(_diffSort(a))===JSON.stringify(_diffSort(b)); }
+function _diffSort(v){
+  if(Array.isArray(v)) return v.map(_diffSort);
+  if(v && typeof v==='object'){ const o={}; Object.keys(v).sort().forEach(k=>o[k]=_diffSort(v[k])); return o; }
+  return v;
+}
+function _diffShow(v){
+  if(v===undefined) return '(none)';
+  if(typeof v==='string') return v;
+  try{ return JSON.stringify(v,null,1); }catch(e){ return String(v); }
+}
+// Decide whether a regen result even needs review, then route to the diff or straight apply.
+function reviewThenApply(i, c, wantColor, wantContent, wantLayout){
+  const oldLayout=DECK[i].layout, newLayout=(c.layout||oldLayout);
+  let oldC={}; try{ oldC=JSON.parse(DECK[i].content||'{}'); }catch(e){}
+  const newC=c.content||{};
+  // Field-level merge only makes sense within ONE layout schema. If the layout itself
+  // changed (or content wasn't regenerated), the fields aren't comparable → apply whole.
+  if(!wantContent || newLayout!==oldLayout){ applyCandidate(i, c, wantColor, wantContent, wantLayout); return; }
+  const keys=Array.from(new Set([...Object.keys(oldC), ...Object.keys(newC)]))
+    .filter(k=>!_diffEq(oldC[k], newC[k]));
+  if(!keys.length){ applyCandidate(i, c, wantColor, wantContent, wantLayout); return; }  // nothing actually changed
+  DIFF_I=i; DIFF_OLD=oldC; DIFF_NEW=newC; DIFF_LAYOUT=newLayout; DIFF_KEYS=keys;
+  DIFF_CTX={ wantColor, wantContent, wantLayout, lint_ok:c.lint_ok };
+  renderDiff();
+  document.getElementById('diff_modal').classList.add('show');
+}
+function renderDiff(){
+  const list=document.getElementById('diff_list');
+  list.innerHTML=DIFF_KEYS.map((k,n)=>{
+    const inOld=(k in DIFF_OLD), inNew=(k in DIFF_NEW);
+    const kind=!inOld?'added':(!inNew?'removed':'changed');
+    const tag=kind==='changed'?'':`<span class="diff-kind ${kind}">${kind==='added'?'new field':'removed by AI'}</span>`;
+    return `<div class="diff-row" id="diff_row_${n}">
+      <div class="diff-head"><b>${esc(k)}</b>${tag}
+        <label class="diff-take"><input type="checkbox" id="diff_take_${n}" checked onchange="markDiffRow(${n})"> take new</label></div>
+      <div class="diff-panes">
+        <div class="diff-pane old" id="diff_old_${n}"><span class="plab">your current</span>${esc(_diffShow(DIFF_OLD[k]))}</div>
+        <div class="diff-pane new" id="diff_new_${n}"><span class="plab">new draft</span>${esc(_diffShow(DIFF_NEW[k]))}</div>
+      </div></div>`;
+  }).join('');
+  DIFF_KEYS.forEach((k,n)=>markDiffRow(n));
+  const w=(DECK[DIFF_I]?'Slide '+(DIFF_I+1):'')+' · '+DIFF_KEYS.length+' changed field'+(DIFF_KEYS.length===1?'':'s');
+  document.getElementById('diff_note').textContent=w;
+}
+// Reflect the take-new/keep-mine choice: strike through the side being discarded.
+function markDiffRow(n){
+  const take=document.getElementById('diff_take_'+n).checked;
+  const o=document.getElementById('diff_old_'+n), nw=document.getElementById('diff_new_'+n);
+  o.classList.toggle('dropped', take); nw.classList.toggle('dropped', !take);
+}
+function diffSetAll(take){
+  DIFF_KEYS.forEach((k,n)=>{ document.getElementById('diff_take_'+n).checked=take; markDiffRow(n); });
+}
+function applyDiff(){
+  if(DIFF_I==null){ closeDiff(); return; }
+  const merged=Object.assign({}, DIFF_OLD);            // start from the current slide
+  DIFF_KEYS.forEach((k,n)=>{
+    const take=document.getElementById('diff_take_'+n).checked;
+    if(take){ if(k in DIFF_NEW) merged[k]=DIFF_NEW[k]; else delete merged[k]; }  // accept the AI's field (incl. its removal)
+    // untaken → leave DIFF_OLD[k] in place (already copied)
+  });
+  const i=DIFF_I, ctx=DIFF_CTX;
+  closeDiff();
+  applyCandidate(i, { layout:DIFF_LAYOUT, content:merged, lint_ok:ctx.lint_ok }, ctx.wantColor, ctx.wantContent, ctx.wantLayout);
+}
+function closeDiff(){ document.getElementById('diff_modal').classList.remove('show'); DIFF_I=null; DIFF_KEYS=[]; }
+// ---- Multi-candidate treatment picker ----
+let CAND_FOR=null, CAND_LIST=[], CAND_COLOR=false;
+function openCandidates(i, cands, wantColor){
+  CAND_FOR=i; CAND_LIST=cands; CAND_COLOR=wantColor;
+  document.getElementById('cand_modal').classList.add('show');
+  const grid=document.getElementById('cand_grid');
+  grid.innerHTML=cands.map((c,k)=>`<div class="cand-cell">
+      <div class="cand-prev" id="cand_prev_${k}"><span class="thumb-ph">…</span></div>
+      <div class="cand-meta"><b>${k===0?'★ Recommended':'Option '+(k+1)}</b>
+        <span class="cand-tag">${esc(c.layout||'')}${c.lint_ok===false?' · ⚠ may need a fix':''}</span></div>
+      <button class="btn xs" onclick="useCandidate(${k})">Use this</button>
+    </div>`).join('');
+  cands.forEach((c,k)=>renderCandPreview(k, c));
+}
+async function renderCandPreview(k, c){
+  let res;
+  try{ res=await (await fetch('/api/slide-svg',{method:'POST',
+        body:JSON.stringify({layout:c.layout, content:JSON.stringify(c.content||{}), theme:(DECK[CAND_FOR]||{}).theme, brand:brand(), images:val('sl_images')})})).json(); }
+  catch(e){ return; }
+  const slot=document.getElementById('cand_prev_'+k);
+  if(slot && res && res.svg) slot.innerHTML=res.svg;
+}
+function useCandidate(k){
+  const c=CAND_LIST[k]; if(c==null||CAND_FOR==null){ closeCand(); return; }
+  const i=CAND_FOR, wantColor=CAND_COLOR, sc=DECK[i].scopes||{};
+  closeCand();                                  // close the picker before the diff opens
+  reviewThenApply(i, c, wantColor, !!sc.content, !!sc.layout);
+}
+function closeCand(){ document.getElementById('cand_modal').classList.remove('show'); CAND_FOR=null; CAND_LIST=[]; }
 // ---- Slideshow preview: faithful SVG posters, one at a time, Next/Back ----
-let SHOW_SVGS=[], SHOW_I=0;
+let SHOW_SVGS=[], SHOW_I=0, SHOW_NOTES=false;
 function openShowAt(i){ openShow(i); }
 async function openShow(startAt){
   if(!DECK.length){ alert('Add or generate at least one slide first.'); return; }
@@ -962,6 +1639,22 @@ function showRender(anim){
   const ov=document.getElementById('sl_show');
   ov.classList.remove('sx-fade','sx-next','sx-prev','sx-wipe');
   if(anim){ void ov.offsetWidth; ov.classList.add(anim); }   // restart the animation
+  paintShowNotes();
+}
+// Presenter notes ride alongside the slideshow: the deck already carries per-slide
+// notes (edited per row / auto-drafted), so the panel reads straight from DECK in
+// the same order as SHOW_SVGS. Toggled with the 📝 button or the 'N' key.
+function paintShowNotes(){
+  const panel=document.getElementById('show_notes'); if(!panel) return;
+  panel.style.display=SHOW_NOTES?'block':'none';
+  if(!SHOW_NOTES) return;
+  const d=DECK[SHOW_I], n=(d&&typeof d.notes==='string')?d.notes.trim():'';
+  panel.innerHTML = n ? esc(n) : '<span class="muted">No notes for this slide.</span>';
+}
+function toggleShowNotes(){
+  SHOW_NOTES=!SHOW_NOTES;
+  document.getElementById('show_notes_btn').classList.toggle('on',SHOW_NOTES);
+  paintShowNotes();
 }
 function showAnim(dir){
   const tx=val('show_tx');
@@ -983,35 +1676,72 @@ function showKey(e){
   if(e.key==='Escape'){ closeShow(); }
   else if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); showNav(1); }
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); showNav(-1); }
+  else if(e.key==='n'||e.key==='N'){ e.preventDefault(); toggleShowNotes(); }
 }
 const SRC_EXTS=['md','txt','markdown','text','rst','csv','tsv','log','doc','docx','rtf','odt','html','htm','pdf','png','jpg','jpeg','tif','tiff','bmp','gif','webp'];
+// Item 7 — source assurance. Before generating, show EVERY source that will be
+// ingested so the operator can confirm all of them are included: folder documents
+// (split into supported vs unsupported types) PLUS each pasted link. The engine
+// reads every file in the folder + every URL, so "all of these will be used".
+function _urlList(v){ return (v||'').split(/[\n,]+/).map(s=>s.trim()).filter(Boolean); }
+function renderSrcAssure(elId, files, urlsVal){
+  const el=document.getElementById(elId); if(!el) return;
+  const urls=_urlList(urlsVal);
+  const sup=files.filter(f=>SRC_EXTS.includes(extOf(f))), uns=files.filter(f=>!SRC_EXTS.includes(extOf(f)));
+  if(!files.length && !urls.length){
+    el.innerHTML='No sources yet. Drop documents (.md/.txt/.docx/.pdf) or images (OCR’d) in this folder, pick a single file, or add a link below.'; return;
+  }
+  const parts=[]; if(sup.length) parts.push(`${sup.length} document(s)`); if(urls.length) parts.push(`${urls.length} link(s)`);
+  let h='';
+  if(parts.length) h+=`<div class="result ok" style="padding:7px 11px;margin:0"><span>✓</span><span class="name">All ${parts.join(' + ')} will be included when you generate</span></div>`;
+  if(sup.length) h+=`<div class="hint" style="margin-top:4px">Documents: ${sup.map(esc).join(', ')}</div>`;
+  if(urls.length) h+=`<div class="hint">Links: ${urls.map(esc).join(', ')}</div>`;
+  if(uns.length) h+=`<div class="result warn" style="padding:7px 11px;margin-top:4px"><span>⚠</span><span class="name">Skipped — unsupported type: ${uns.map(esc).join(', ')}</span></div>`;
+  el.innerHTML=h;
+}
+// After generating: the explicit list of what was used vs what was dropped (with
+// the engine's reason), so "are all my sources in?" is answerable at a glance.
+function srcUsedHtml(used, skipped){
+  let h='';
+  if(used&&used.length) h+=`<div class="hint" style="margin-top:4px">Sources used (${used.length}): ${used.map(esc).join(', ')}</div>`;
+  if(skipped&&skipped.length) h+=`<div class="result warn" style="padding:7px 11px;margin-top:4px"><span>⚠</span><span class="name">Not included (${skipped.length}): ${skipped.map(esc).join('; ')}</span></div>`;
+  return h;
+}
+async function _resolveSrcFiles(p){
+  if(p && SRC_EXTS.includes(extOf(p))) return [p.split('/').pop()];   // a single picked file
+  if(p){ try{ return ((await (await fetch('/api/listfiles?path='+encodeURIComponent(p))).json()).files)||[]; }catch(e){} }
+  return [];
+}
 async function refreshSlSrc(){
-  const p=val('sl_src'); const el=document.getElementById('sl_src_files'); if(!p){ el.innerHTML=''; return; }
-  if(SRC_EXTS.includes(extOf(p))){ el.innerHTML='Selected file: <code>'+esc(p.split('/').pop())+'</code>'; return; }
-  const r=await (await fetch('/api/listfiles?path='+encodeURIComponent(p))).json();
-  el.innerHTML = r.files.length
-    ? 'Source documents ('+r.files.length+'): '+r.files.join(', ')
-    : 'No documents yet — drop articles/docs (.md/.txt/.docx/.pdf) in this folder, or pick a single file.';
+  renderSrcAssure('sl_src_files', await _resolveSrcFiles(val('sl_src')), val('sl_urls'));
 }
 // Render the final deck result (shared by the streaming + fallback paths).
 function deckResult(box, res){
   const slides=res.slides||[];
   if(!slides.length){ box.insertAdjacentHTML('beforeend','<div class="result err">No slides generated.</div>'); return; }
-  DECK = slides.map(s=>({layout:(s.layout||'infographic'), content:JSON.stringify(s.content||{},null,2)}));
+  DECK = slides.map(s=>({layout:(s.layout||'infographic'), content:JSON.stringify(s.content||{},null,2),
+                         notes:(typeof s.notes==='string'?s.notes:undefined)}));
   renderDeck();
-  let h=`<div class="result ok"><span>✓</span><span class="name">Generated ${res.count} slide(s) from ${(res.used_sources||[]).length} document(s)</span>
-    <span class="sp"></span><span class="hint">review &amp; edit them in step 2 below</span></div>`;
+  let h=`<div class="result ok"><span>✓</span><span class="name">Generated ${res.count} slide(s) from ${(res.used_sources||[]).length} source(s)</span>
+    <span class="sp"></span><span class="hint">Continue to “Review, edit &amp; build” to edit each slide</span></div>`;
   if(res.lint_ok===false) h+=`<div class="result err">⚠ Some slides may need a fix:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
-  if(res.skipped&&res.skipped.length) h+=`<div class="result err">Skipped (unsupported, e.g. PDF): ${res.skipped.map(esc).join(', ')}</div>`;
+  if(res.lint_warnings&&res.lint_warnings.length) h+=`<div class="result warn">• ${(res.lint_warnings||[]).map(esc).join('<br>• ')}</div>`;
+  h+=srcUsedHtml(res.used_sources, res.skipped);
   box.insertAdjacentHTML('beforeend', h);
 }
-async function genDeck(){
-  if(!val('sl_src')){ alert('Pick a source materials folder (step 1).'); return; }
-  const prov=val('sl_provider'); if(!prov){ alert('Connect an AI account first.'); return; }
-  if(val('sl_title') && !val('sl_name')) setv('sl_name', val('sl_title'));
-  const payload={ provider:prov, source:val('sl_src'), title:val('sl_title'),
-    focus:val('sl_focus'), audience:val('sl_aud'), nslides:val('sl_n'), model:val('sl_model_sel'),
-    images:val('sl_images'), preset:val('sl_preset') };
+// Shared source/definition payload for the deck outline + generation passes.
+function deckPayload(){
+  return { provider:val('ai_provider'), source:val('sl_src'), urls:val('sl_urls'), title:val('sl_title'),
+    focus:val('sl_focus'), audience:val('sl_aud'), nslides:val('sl_n'), model:val('ai_model'),
+    images:val('sl_images'), preset:val('sl_preset'), brand:brand() };
+}
+async function genDeck(outline){
+  if(!CURRENT_PROJECT){ alert('Create or open a project first (step 1).'); return; }
+  if(!val('sl_src')&&!val('sl_urls')){ alert('Pick a source materials folder or add a source link first.'); return; }
+  const prov=val('ai_provider'); if(!prov){ alert('Connect an AI account in the top bar first.'); return; }
+  const payload=deckPayload();
+  if(Array.isArray(outline)&&outline.length) payload.outline=outline;   // M8 — approved outline drives generation
+  await snapshotBefore('Before regenerate deck');   // rewind point (M15)
   const box=document.getElementById('sl_gen_results');
   const go=document.getElementById('sl_gen'); go.disabled=true; go.innerHTML='<span class="spin"></span>Writing…';
   box.innerHTML='<div class="hint" style="margin-bottom:6px">Designing the deck live (one pass):</div><pre class="gen-live" id="sl_gen_live"></pre>';
@@ -1033,7 +1763,7 @@ async function genDeck(){
     else res={error:'stream ended without a result'};
   }catch(streamErr){
     // streaming unavailable — fall back to the one-shot endpoint so generation still works
-    live.textContent='(streaming unavailable — generating…)';
+    live.textContent='(streaming unavailable, generating…)';
     try{ res=await (await fetch('/api/generate-deck',{method:'POST',body:JSON.stringify(payload)})).json(); }
     catch(e){ res={error:String(e)}; }
   }
@@ -1044,6 +1774,71 @@ async function genDeck(){
   // collapse the live JSON into a details pane, then show the result
   box.innerHTML=`<details class="capnote"><summary>View the generated deck JSON</summary><pre class="gen-live">${esc(live.textContent)}</pre></details>`;
   deckResult(box, res);
+  saveProject(true);   // persist the new deck + definition into the project
+}
+
+/* ---- M8: editable deck OUTLINE (optional plan-first path) ----
+   Sketch a layout+title+one-liner per slide, let the operator reorder/edit, then
+   approve to drive the full generation pass (cuts wasted regen). Distinct from the
+   one-shot "Generate presentation"; the operator opts in via "Plan outline first". */
+let OUTLINE=[];
+function syncOutline(){   // read the row inputs back into OUTLINE before any structural op
+  document.querySelectorAll('#deck_outline .ol-row').forEach((r,i)=>{
+    if(!OUTLINE[i]) return;
+    OUTLINE[i].layout=r.querySelector('.ol-layout').value;
+    OUTLINE[i].title=r.querySelector('.ol-title').value;
+    OUTLINE[i].summary=r.querySelector('.ol-sum').value;
+  });
+}
+function renderOutline(){
+  const box=document.getElementById('deck_outline'); if(!box) return;
+  if(!OUTLINE.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='';
+  box.innerHTML=`<div class="hint" style="margin:0 0 6px"><b>Slide outline</b> — edit titles, reorder, or change the suggested layout, then approve. The approved outline drives generation.</div>`
+    + OUTLINE.map((o,i)=>`<div class="ol-row" style="display:flex;gap:6px;align-items:center;margin:4px 0">
+        <span class="hint" style="width:20px;text-align:right">${i+1}.</span>
+        <select class="ol-layout" style="width:150px">${layoutOptionsHtml(o.layout||'infographic')}</select>
+        <input class="ol-title" style="width:210px" value="${esc(o.title||'')}" placeholder="slide title">
+        <input class="ol-sum" style="flex:1;min-width:120px" value="${esc(o.summary||'')}" placeholder="the one point this slide makes">
+        <button class="ghost" onclick="moveOutline(${i},-1)" title="Move up">↑</button>
+        <button class="ghost" onclick="moveOutline(${i},1)" title="Move down">↓</button>
+        <button class="ghost" onclick="delOutline(${i})" title="Remove slide">✕</button>
+      </div>`).join('')
+    + `<p style="margin:10px 0 0"><button class="ghost" onclick="addOutline()">+ Add slide</button>
+        <button class="btn" style="margin-left:10px" onclick="approveOutline()">✓ Approve &amp; generate slides</button>
+        <button class="ghost" style="margin-left:6px" onclick="clearOutline()">Cancel</button></p>`;
+}
+function moveOutline(i,d){ syncOutline(); const j=i+d; if(j<0||j>=OUTLINE.length) return;
+  const t=OUTLINE[i]; OUTLINE[i]=OUTLINE[j]; OUTLINE[j]=t; renderOutline(); }
+function delOutline(i){ syncOutline(); OUTLINE.splice(i,1); renderOutline(); }
+function addOutline(){ syncOutline(); OUTLINE.push({layout:'infographic',title:'',summary:''}); renderOutline(); }
+function clearOutline(){ OUTLINE=[]; renderOutline(); }
+async function approveOutline(){
+  syncOutline();
+  const clean=OUTLINE.filter(o=>(o.title||'').trim()||(o.summary||'').trim())
+                     .map(o=>({layout:o.layout||'infographic', title:(o.title||'').trim(), summary:(o.summary||'').trim()}));
+  if(!clean.length){ alert('Add at least one slide with a title or point to the outline first.'); return; }
+  clearOutline();
+  await genDeck(clean);
+}
+async function deckPlan(){
+  if(!CURRENT_PROJECT){ alert('Create or open a project first (step 1).'); return; }
+  if(!val('sl_src')&&!val('sl_urls')){ alert('Pick a source materials folder or add a source link first.'); return; }
+  const prov=val('ai_provider'); if(!prov){ alert('Connect an AI account in the top bar first.'); return; }
+  const box=document.getElementById('sl_gen_results');
+  const stop=busy('sl_plan','Planning');
+  box.innerHTML='<div class="result ok"><span class="spin"></span><span class="name">Reading sources &amp; sketching the outline…</span></div>';
+  let res; try{ res=await (await fetch('/api/deck-plan',{method:'POST',body:JSON.stringify(deckPayload())})).json(); }
+  catch(e){ res={error:String(e)}; }
+  stop();
+  if(!res || res.error || res.ok===false){
+    box.innerHTML=`<div class="result err">✗ ${esc((res&&res.error)||'Planning failed')}</div>`; clearOutline(); return; }
+  OUTLINE=(res.outline||[]).map(o=>({layout:o.layout||'infographic', title:o.title||'', summary:o.summary||''}));
+  box.innerHTML=`<div class="result ok"><span>✓</span><span class="name">Sketched ${OUTLINE.length} slide(s)</span>`
+    + `<span class="sp"></span><span class="hint">${(res.used_sources||[]).length} source(s)</span></div>`
+    + srcUsedHtml(res.used_sources, res.skipped)
+    + (res.rationale?`<div class="hint" style="margin:6px 0 2px"><b>Arc:</b> ${esc(res.rationale)}</div>`:'');
+  renderOutline();
 }
 function detectLayout(c){ c=c||{};
   if(c.milestones) return 'timeline';
@@ -1063,19 +1858,53 @@ async function loadDeckJSON(){
   else if(Array.isArray(d)) slides=d;                                     // a bare [...] of slides
   else if(d && typeof d==='object') slides=[{layout:d.layout, content:(d.content||d)}]; // one slide's content
   if(!slides.length){ alert('No slides found in that JSON.'); return; }
-  DECK = slides.map(s=>({layout:(s.layout||detectLayout(s.content||{})), content:JSON.stringify(s.content||{},null,2)}));
+  DECK = slides.map(s=>({layout:(s.layout||detectLayout(s.content||{})), content:JSON.stringify(s.content||{},null,2),
+                         notes:(typeof s.notes==='string'?s.notes:undefined),
+                         transition:(typeof s.transition==='string'?s.transition:undefined)}));
   renderDeck();
   document.getElementById('sl_gen_results').innerHTML =
     `<div class="result ok"><span>✓</span><span class="name">Loaded ${DECK.length} slide(s) from ${esc(p.split('/').pop())}</span>
      <span class="sp"></span><span class="hint">review &amp; edit below, then build</span></div>`;
 }
+async function genNotes(){
+  if(!DECK.length){ alert('Generate or add at least one slide first.'); return; }
+  const prov=val('ai_provider'); if(!prov){ alert('Connect an AI account in the top bar first.'); return; }
+  const flash=document.getElementById('sl_notes_flash'); if(flash){ flash.textContent=''; flash.style.color=''; }
+  const payload={ provider:prov, title:val('sl_title'), focus:val('sl_focus'), audience:val('sl_aud'),
+    model:val('ai_model'), slides:DECK.map(d=>({layout:d.layout, content:d.content})) };
+  await snapshotBefore('Before speaker notes');   // rewind point (M15)
+  const stop=busy('sl_notes_btn','Writing notes');
+  let res; try{ res=await (await fetch('/api/deck-notes',{method:'POST',body:JSON.stringify(payload)})).json(); }
+  catch(e){ res={error:String(e)}; }
+  stop();
+  if(!res || res.ok===false || res.error){
+    if(flash){ flash.textContent='✗ '+esc((res&&res.error)||'could not generate notes'); flash.style.color='#a32019'; } return; }
+  const notes=res.notes||[];
+  DECK.forEach((d,i)=>{ if(typeof notes[i]==='string') d.notes=notes[i]; });
+  renderDeck();
+  const n=notes.filter(x=>x&&x.trim()).length;
+  if(flash){ flash.textContent=`✓ Drafted speaker notes for ${n} slide(s). Edit any below; they ride into the PowerPoint notes pages.`; flash.style.color='#1d6b48'; }
+}
+// HTML export bakes a fixed fade between slides and no per-element entrance, so
+// the .pptx-only motion controls are dimmed (not hidden) when HTML is chosen, and
+// the Build hint reflects what the operator gets.
+function syncDeckFormat(){
+  const html=val('sl_format')==='html';
+  ['sl_transition','sl_animate'].forEach(id=>{ const el=document.getElementById(id);
+    if(el){ el.disabled=html; el.parentElement.style.opacity=html?'.5':''; } });
+  const hint=document.getElementById('sl_go_hint');
+  if(hint) hint.textContent=html
+    ? 'Saves a standalone .html slideshow (opens offline; arrow keys + N for presenter notes).'
+    : 'Saves an editable PowerPoint deck into the project folder.';
+}
 async function buildDeck(){
-  if(!DECK.length){ alert('Generate a presentation (step 1) or add a slide first.'); return; }
+  if(!CURRENT_PROJECT){ alert('Create or open a project first (step 1).'); return; }
+  if(!DECK.length){ alert('Generate a presentation or add a slide first.'); return; }
   const bad=DECK.map((d,i)=>deckValidate(i)?null:(i+1)).filter(x=>x);
   if(bad.length){ alert('Fix invalid JSON on slide(s): '+bad.join(', ')); return; }
-  const payload={ slides:DECK.map(d=>({layout:d.layout, content:d.content, theme:d.theme})), brand:brand(),
-    transition:val('sl_transition'), out:val('sl_out'), name:val('sl_name')||'presentation',
-    images:val('sl_images'), animate:val('sl_animate') };
+  const payload={ slides:DECK.map(d=>({layout:d.layout, content:d.content, theme:d.theme, notes:d.notes, transition:d.transition})), brand:brand(),
+    transition:val('sl_transition'), out:CURRENT_PROJECT, name:val('sl_title')||'presentation',
+    images:val('sl_images'), animate:val('sl_animate'), format:val('sl_format') };
   const stop=busy('sl_go','Building');
   let res; try{ res=await (await fetch('/api/deck',{method:'POST',body:JSON.stringify(payload)})).json(); }
   catch(e){ res={error:String(e)}; }
@@ -1084,26 +1913,35 @@ async function buildDeck(){
   if(res.error){ box.innerHTML=`<div class="result err">✗ ${esc(res.error)}</div>`; return; }
   const fname=res.out?res.out.split('/').pop():'';
   let h=`<div class="result ${res.ok?'ok':'err'}"><span>${res.ok?'✓':'✗'}</span>
-    <span class="name">${res.ok?`Built presentation — ${res.slides} slide(s)`:'Build failed'}</span>
+    <span class="name">${res.ok?`Built presentation: ${res.slides} slide(s)`:'Build failed'}</span>
     ${res.ok?`<span class="file">→ ${esc(fname)}</span>`:''}<span class="sp"></span>
     ${res.ok?`<button class="ghost" onclick="reveal('${res.out.replace(/'/g,"\\'")}')">Open</button>`:''}</div>`;
   if(res.log&&!res.ok) h+=`<details class="log"><summary>log</summary><pre>${esc(res.log)}</pre></details>`;
   box.innerHTML=h;
+  if(res.ok) saveProject(true);   // persist the deck that was just built
 }
+// The AI account + model live ONCE in the top bar and apply to every tab. We rebuild
+// the single provider select, repaint the pill + status banner, then re-apply the
+// operator's saved choice (a re-check must not clobber it) and dim the model picker
+// when a non-claude provider is active.
 function applyProviders(provs){
   const opts = Object.entries(provs).map(([k,v])=>
-    `<option value="${k}" ${v.available?'':'disabled'}>${v.label}${v.available?'':' — not connected'}</option>`).join('');
-  document.getElementById('gen_provider').innerHTML = opts;
-  const slp=document.getElementById('sl_provider'); if(slp) slp.innerHTML=opts;
+    `<option value="${k}" ${v.available?'':'disabled'}>${v.label}${v.available?'':' (not connected)'}</option>`).join('');
+  document.getElementById('ai_provider').innerHTML = opts;
   const avail=Object.values(provs).filter(v=>v.available), unavail=Object.values(provs).filter(v=>!v.available);
   document.getElementById('ai_pill').textContent = avail.length? 'Connected':'Not connected';
   document.getElementById('ai_pill').className = 'pill '+(avail.length?'ready':'wait');
-  const statusHtml = avail.length
-    ? '✓ '+avail.map(v=>v.label).join(', ')+(unavail.length?'<br>To add another: '+unavail.map(v=>v.install).join('<br>'):'')
-    : '⚠ No subscription connected.<br>'+unavail.map(v=>v.install).join('<br>');
-  document.getElementById('ai_status').innerHTML = statusHtml;
-  const sla=document.getElementById('sl_ai_status'); if(sla) sla.innerHTML=statusHtml;
-  syncModelCtl('gen_provider','gen_model_row'); syncModelCtl('sl_provider','sl_model_row');
+  // The top-bar pill already says Connected / Not connected, so the banner stays
+  // out of the way when all is well and only appears (amber, with install help)
+  // when no subscription is connected.
+  const banner=document.getElementById('ai_status');
+  if(avail.length){
+    banner.innerHTML=''; banner.className='aibanner';
+  } else {
+    banner.innerHTML = '⚠ No AI subscription connected. '+unavail.map(v=>v.install).join('<br>');
+    banner.className = 'aibanner show warn';
+  }
+  restoreAiPrefs();
 }
 // P2: the Haiku/Sonnet/Opus model picker is claude-specific — run_cli ignores `model`
 // for codex (ChatGPT/Codex selects its own model via its subscription login). So when
@@ -1115,9 +1953,26 @@ function syncModelCtl(provId, rowId){
   const isClaude = prov.value==='claude' || prov.value==='';   // '' = none picked yet → leave as claude default
   if(sel) sel.disabled = !isClaude;
   row.style.opacity = isClaude ? '' : '.5';
+  row.title = isClaude ? '' : 'ChatGPT (Codex) selects its own model on your subscription. This control is ignored.';
   if(hint) hint.textContent = isClaude
     ? (hint.getAttribute('data-default')||hint.textContent)
-    : 'ChatGPT (Codex) selects its own model on your subscription — this control is ignored.';
+    : 'ChatGPT (Codex) selects its own model on your subscription. This control is ignored.';
+}
+// Persist the global AI choice across reloads (app-wide, not per-project).
+function onAiChange(){
+  try{ localStorage.setItem('cb_ai_provider', val('ai_provider'));
+       localStorage.setItem('cb_ai_model', val('ai_model')); }catch(e){}
+  syncModelCtl('ai_provider','ai_model_wrap');
+}
+function restoreAiPrefs(){
+  try{
+    const p=localStorage.getItem('cb_ai_provider'), m=localStorage.getItem('cb_ai_model');
+    if(p){ const sel=document.getElementById('ai_provider');
+      if([...sel.options].some(o=>o.value===p&&!o.disabled)) sel.value=p; }
+    if(m!==null){ const sel=document.getElementById('ai_model');
+      if([...sel.options].some(o=>o.value===m)) sel.value=m; }
+  }catch(e){}
+  syncModelCtl('ai_provider','ai_model_wrap');
 }
 async function refreshAI(){ applyProviders((await (await fetch('/api/ai-status')).json()).providers||{}); }
 
@@ -1135,6 +1990,38 @@ async function pick(mode, targetId, cb, exts){
   document.getElementById('picker').classList.add('show');
 }
 function closePicker(){ document.getElementById('picker').classList.remove('show'); }
+
+// Read-only script viewer. `which` (optional) scrolls to that module's heading so
+// you can read the unit before deciding to regenerate it. The script is the
+// canonical edit surface (md/IR), so this stays view-only by design.
+function closeScriptView(){ document.getElementById('scriptview').classList.remove('show'); }
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && document.getElementById('scriptview').classList.contains('show')) closeScriptView();
+});
+document.getElementById('scriptview').addEventListener('click', e=>{
+  if(e.target.id==='scriptview') closeScriptView();   // backdrop click
+});
+async function viewScript(which){
+  if(!CURRENT_SCRIPT){ alert('No script yet. Generate one first.'); return; }
+  const body=document.getElementById('sv_body');
+  document.getElementById('sv_title').textContent = which ? ('Script · Microlearning '+which) : 'Script';
+  document.getElementById('sv_path').textContent = CURRENT_SCRIPT;
+  body.textContent='Loading…';
+  document.getElementById('scriptview').classList.add('show');
+  let r; try{ r=await (await fetch('/api/readtext?path='+encodeURIComponent(CURRENT_SCRIPT))).json(); }
+  catch(e){ r={ok:false,error:String(e)}; }
+  if(!r||!r.ok){ body.textContent='Could not read the script: '+((r&&r.error)||'unknown error'); return; }
+  body.textContent=r.text;
+  if(which){
+    // jump to "## Microlearning N" (the heading the scanner keys on)
+    const lines=r.text.split('\n'); let off=0, hit=-1;
+    const re=new RegExp('^#{1,3}\\s*Microlearning\\s+'+which+'\\b','i');
+    for(let k=0;k<lines.length;k++){ if(re.test(lines[k])){ hit=off; break; } off+=lines[k].length+1; }
+    if(hit>=0){ const r2=document.createRange(); const tn=body.firstChild;
+      if(tn){ try{ r2.setStart(tn,hit); r2.setEnd(tn,hit); const rect=r2.getBoundingClientRect();
+        const host=body.parentElement; host.scrollTop += rect.top - host.getBoundingClientRect().top - 12; }catch(e){} } }
+  } else { body.parentElement.scrollTop=0; }
+}
 async function loadDir(path){
   const r = await (await fetch('/api/ls?path='+encodeURIComponent(path))).json();
   pk.path=r.path;
@@ -1160,27 +2047,33 @@ function setTarget(v){ setv(pk.target,v); closePicker(); if(pk.cb) pk.cb();
   if(pk.target==='src') refreshSrc(); if(pk.target==='sl_src') refreshSlSrc();
   if(pk.target==='sl_images') renderDeck(); }   // repaint thumbnails with the new image folder
 
-/* ---- step 1: projects ---- */
+/* ---- step 1: projects (shared by both tabs — a project holds course AND deck work) ---- */
+// Both tabs have their own copy of the picker controls (ws/newproj/projlist and the
+// sl_-prefixed twins). The functions take the source ids so either tab drives the
+// same global project; we mirror the workspace + project list into both.
 function setProjects(list){
-  const sel=document.getElementById('projlist');
-  sel.innerHTML = (list&&list.length)? list.map(p=>`<option value="${p.path.replace(/"/g,'&quot;')}">${esc(p.name)}${p.updated?(' — '+p.updated.slice(0,10)):''}</option>`).join('')
-                                     : '<option value="">(no projects yet)</option>';
+  const opts = (list&&list.length)? list.map(p=>`<option value="${p.path.replace(/"/g,'&quot;')}">${esc(p.name)}${p.updated?(' ('+p.updated.slice(0,10)+')'):''}</option>`).join('')
+                                  : '<option value="">(no projects yet)</option>';
+  ['projlist','sl_projlist'].forEach(id=>{ const sel=document.getElementById(id); if(sel) sel.innerHTML=opts; });
 }
-async function setWorkspace(){
-  if(!val('ws')){ alert('Pick a projects location first.'); return; }
-  const r=await (await fetch('/api/workspace',{method:'POST',body:JSON.stringify({path:val('ws')})})).json();
-  setv('ws',r.workspace); setProjects(r.projects);
+async function setWorkspace(wsId){
+  wsId=wsId||'ws';
+  if(!val(wsId)){ alert('Pick a projects location first.'); return; }
+  const r=await (await fetch('/api/workspace',{method:'POST',body:JSON.stringify({path:val(wsId)})})).json();
+  setv('ws',r.workspace); setv('sl_ws',r.workspace); setProjects(r.projects);
 }
-async function newProject(){
-  const name=val('newproj').trim(); if(!name){ alert('Name the project first.'); return; }
+async function newProject(nameId, wsId){
+  nameId=nameId||'newproj'; wsId=wsId||'ws';
+  const name=val(nameId).trim(); if(!name){ alert('Name the project first.'); return; }
   // Honor the "Projects location" field directly — no need to click Use first.
-  const r=await (await fetch('/api/project/new',{method:'POST',body:JSON.stringify({name, workspace:val('ws')})})).json();
+  const r=await (await fetch('/api/project/new',{method:'POST',body:JSON.stringify({name, workspace:val(wsId)})})).json();
   if(r.error){ alert(r.error); return; }
-  if(r.workspace) setv('ws', r.workspace);
-  setProjects(r.projects); setv('newproj',''); loadProject(r);
+  if(r.workspace){ setv('ws', r.workspace); setv('sl_ws', r.workspace); }
+  setProjects(r.projects); setv(nameId,''); loadProject(r);
 }
-async function openProject(){
-  const path=document.getElementById('projlist').value; if(!path){ alert('No project selected.'); return; }
+async function openProject(listId){
+  listId=listId||'projlist';
+  const path=document.getElementById(listId).value; if(!path){ alert('No project selected.'); return; }
   const r=await (await fetch('/api/project/open',{method:'POST',body:JSON.stringify({path})})).json();
   if(r.error){ alert(r.error); return; } loadProject(r);
 }
@@ -1189,39 +2082,223 @@ function loadProject(r){
   setv('src',FOLDERS.source||''); setv('img',FOLDERS.images||'');
   const m=r.meta||{};
   setv('gen_title',m.title||''); setv('gen_obj',m.objective||''); setv('gen_aud',m.audience||''); setv('gen_units',m.units||'');
-  if(m.archetype){ const a=document.getElementById('gen_arch'); if([...a.options].some(o=>o.value===m.archetype)) a.value=m.archetype; }
-  if(m.preset){ const ps=document.getElementById('gen_preset'); if([...ps.options].some(o=>o.value===m.preset)) ps.value=m.preset; }
-  if(m.brand){ const b=document.getElementById('brand'); if([...b.options].some(o=>o.value===m.brand)) b.value=m.brand; }
-  if(m.provider){ const p=document.getElementById('gen_provider'); if([...p.options].some(o=>o.value===m.provider&&!o.disabled)) p.value=m.provider; }
-  syncModelCtl('gen_provider','gen_model_row');   // a restored non-claude provider must dim the model picker
+  _setSelIf('gen_arch',m.archetype); _setSelIf('gen_preset',m.preset); _setSelIf('brand',m.brand);
   CURRENT_SCRIPT = m.script || null;
+  // slide-presentation meta — a project holds the deck definition (and the deck itself)
+  setv('sl_title',m.sl_title||''); setv('sl_focus',m.sl_focus||''); setv('sl_aud',m.sl_aud||''); setv('sl_n',m.sl_n||'');
+  _setSelIf('sl_preset',m.sl_preset);
+  if(Array.isArray(m.deck) && m.deck.length){ DECK=m.deck.map(d=>({...d})); renderDeck(); }
   document.getElementById('hdr_project').textContent = 'Project: '+r.name;
   document.getElementById('proj_current').innerHTML =
-    `<div class="detected">✓ Open: <b>${esc(r.name)}</b> — files live in <code>${esc(r.path)}</code>
-     &nbsp;<button class="ghost" onclick="saveProject(false)">Save details</button></div>`;
+    `<div class="detected">✓ Open: <b>${esc(r.name)}</b>. Files live in <code>${esc(r.path)}</code>
+     &nbsp;<button class="ghost" onclick="saveProject(false)">Save details</button>
+     &nbsp;<button class="ghost" onclick="openHistory()">⟲ History</button>
+     &nbsp;<button class="ghost" onclick="saveProjectTemplate()" title="Save this whole project (deck + course script) as a reusable starter">★ Save as template</button>
+     &nbsp;<button class="ghost" onclick="openTemplatePicker()" title="Start from a saved project starter (loads into this session)">＋ New from template</button></div>`;
+  const slpc=document.getElementById('sl_proj_current');
+  if(slpc) slpc.innerHTML=`<div class="detected">✓ Open: <b>${esc(r.name)}</b>. The built deck saves into <code>${esc(r.path)}</code>
+     &nbsp;<button class="ghost" onclick="saveProject(false)">Save details</button>
+     &nbsp;<button class="ghost" onclick="openHistory()">⟲ History</button>
+     &nbsp;<button class="ghost" onclick="saveProjectTemplate()" title="Save this whole project (deck + course script) as a reusable starter">★ Save as template</button>
+     &nbsp;<button class="ghost" onclick="openTemplatePicker()" title="Start from a saved project starter (loads into this session)">＋ New from template</button></div>`;
   STAGED=[]; document.getElementById('b_results').innerHTML='';
-  document.getElementById('b_publish').innerHTML='<div class="hint">Generate a preview in step 7 first, then publish.</div>';
+  document.getElementById('b_publish').innerHTML='<div class="hint">Generate a preview first, then publish.</div>';
   refreshSrc(); scriptStatus(); scanScript(); loadCourses();
 }
 async function saveProject(silent){
   if(!CURRENT_PROJECT){ if(!silent) alert('Create or open a project first.'); return; }
   const meta={ title:val('gen_title'), objective:val('gen_obj'), audience:val('gen_aud'), units:val('gen_units'),
     archetype:document.getElementById('gen_arch').value, preset:val('gen_preset'),
-    brand:brand(), provider:document.getElementById('gen_provider').value };
+    brand:brand(),
+    sl_title:val('sl_title'), sl_focus:val('sl_focus'), sl_aud:val('sl_aud'), sl_n:val('sl_n'),
+    sl_preset:val('sl_preset'), deck:DECK };
   await fetch('/api/project/save',{method:'POST',body:JSON.stringify({path:CURRENT_PROJECT,meta})});
-  if(!silent){ const el=document.getElementById('proj_current');
-    el.insertAdjacentHTML('beforeend','<span style="color:#1d6b48;font-size:12px;margin-left:8px">saved ✓</span>');
-    setTimeout(()=>{const s=el.querySelector('span');if(s)s.remove();},1500); }
+  if(!silent){ const el=document.getElementById(MODE==='slide'?'sl_proj_current':'proj_current');
+    if(el){ el.insertAdjacentHTML('beforeend','<span style="color:#1d6b48;font-size:12px;margin-left:8px">saved ✓</span>');
+      setTimeout(()=>{const s=el.querySelector('span');if(s)s.remove();},1500); } }
+}
+
+/* ---- M17: saved templates / starters -------------------------------------
+   Save the current project (deck + course script) OR a single slide as a
+   reusable starter; "New from template" loads a project starter into the
+   current session (a checkpoint is captured first). Slide starters appear in
+   the deck builder's "My saved slides" picker. */
+function _setSelIf(id,v){ const e=document.getElementById(id);
+  if(e&&v&&[...e.options].some(o=>o.value===v)) e.value=v; }
+function renderSavedSlidePicker(){
+  const sel=document.getElementById('deck_add_saved'); if(!sel) return;
+  const slides=MY_TEMPLATES.filter(t=>t.kind==='slide');
+  sel.innerHTML='<option value="">'+(slides.length?'— pick a saved slide —':'— none saved yet —')+'</option>'
+    + slides.map(t=>`<option value="${esc(t.id)}">${esc(t.name)} (${esc(t.layout)})</option>`).join('');
+}
+function insertSavedSlide(){
+  const id=val('deck_add_saved'); if(!id){ alert('Pick one of your saved slides first.'); return; }
+  const t=MY_TEMPLATES.find(x=>x.id===id); if(!t){ alert('That saved slide is gone — refresh.'); return; }
+  DECK.push({layout:t.layout||'infographic', content:t.content||'{}'});
+  SEL=DECK.length-1; renderDeck();
+}
+function _tplFlash(msg){
+  const el=document.getElementById(MODE==='slide'?'sl_proj_current':'proj_current');
+  if(!el) return;
+  el.insertAdjacentHTML('beforeend',`<span class="tpl-flash" style="color:#1d6b48;font-size:12px;margin-left:8px">${esc(msg)}</span>`);
+  setTimeout(()=>{ const s=el.querySelector('.tpl-flash'); if(s) s.remove(); },1800);
+}
+async function refreshTemplates(){
+  try{ MY_TEMPLATES=((await (await fetch('/api/templates')).json()).templates)||MY_TEMPLATES; }catch(e){}
+  renderSavedSlidePicker();
+}
+async function saveProjectTemplate(){
+  if(!CURRENT_PROJECT){ alert('Open or create a project first.'); return; }
+  const name=prompt('Name this project template:', val('gen_title')||val('sl_title')||'My starter');
+  if(name===null) return;
+  await saveProject(true);                          // persist the in-memory deck first
+  const r=await (await fetch('/api/template/save',{method:'POST',
+    body:JSON.stringify({kind:'project', project:CURRENT_PROJECT, name:name.trim()})})).json();
+  if(r&&r.ok){ MY_TEMPLATES=r.templates||MY_TEMPLATES; renderSavedSlidePicker(); _tplFlash('Project template saved ✓'); }
+  else alert('Could not save template: '+((r&&r.error)||'unknown'));
+}
+async function saveSlideTemplate(i){
+  const d=DECK[i]; if(!d) return;
+  const name=prompt('Name this slide template:', slideTitle(d)||('Slide '+(i+1)));
+  if(name===null) return;
+  const r=await (await fetch('/api/template/save',{method:'POST',
+    body:JSON.stringify({kind:'slide', name:name.trim(), layout:d.layout, content:d.content})})).json();
+  if(r&&r.ok){ MY_TEMPLATES=r.templates||MY_TEMPLATES; renderSavedSlidePicker(); _tplFlash('Slide template saved ✓'); }
+  else alert('Could not save template: '+((r&&r.error)||'unknown'));
+}
+async function openTemplatePicker(){
+  await refreshTemplates();
+  const proj=MY_TEMPLATES.filter(t=>t.kind==='project');
+  const box=document.getElementById('tpl_list');
+  box.innerHTML = proj.length
+    ? proj.map(t=>`<div class="hist-row"><div><b>${esc(t.name)}</b>
+        <span class="hint">${(t.n_slides||0)} slide(s)${t.script_name?' · course script':''}</span></div>
+        <div><button class="btn xs" onclick="useTemplate('${esc(t.id)}')">Use</button>
+        &nbsp;<button class="iconbtn danger" title="Delete template" onclick="delTemplate('${esc(t.id)}')">✕</button></div></div>`).join('')
+    : '<div class="hint">No saved project templates yet. Use “★ Save as template” on an open project to create one.</div>';
+  document.getElementById('tpl_modal').classList.add('show');
+}
+function closeTemplatePicker(){ document.getElementById('tpl_modal').classList.remove('show'); }
+async function useTemplate(id){
+  if(CURRENT_PROJECT){
+    if(!confirm('Load this template into the current project? The current deck and definition fields will be replaced (a checkpoint is saved first, so it is undoable).')) return;
+    await snapshotBefore('Before New from template');
+  }
+  const r=await (await fetch('/api/template/new',{method:'POST',
+    body:JSON.stringify({id, project:CURRENT_PROJECT||''})})).json();
+  if(!r||!r.ok){ alert('Could not load template: '+((r&&r.error)||'unknown')); return; }
+  applyProjectTemplate(r); closeTemplatePicker();
+}
+async function delTemplate(id){
+  if(!confirm('Delete this template permanently?')) return;
+  const r=await (await fetch('/api/template/delete',{method:'POST',body:JSON.stringify({id})})).json();
+  if(r&&r.ok){ MY_TEMPLATES=r.templates||MY_TEMPLATES; renderSavedSlidePicker(); openTemplatePicker(); }
+  else alert('Could not delete: '+((r&&r.error)||'unknown'));
+}
+function applyProjectTemplate(r){
+  const m=r.meta||{};
+  setv('gen_title',m.title||''); setv('gen_obj',m.objective||''); setv('gen_aud',m.audience||''); setv('gen_units',m.units||'');
+  _setSelIf('gen_arch',m.archetype); _setSelIf('gen_preset',m.preset); _setSelIf('brand',m.brand);
+  setv('sl_title',m.sl_title||''); setv('sl_focus',m.sl_focus||''); setv('sl_aud',m.sl_aud||''); setv('sl_n',m.sl_n||'');
+  _setSelIf('sl_preset',m.sl_preset);
+  if(Array.isArray(m.deck) && m.deck.length){ DECK=m.deck.map(d=>({...d})); SEL=0; renderDeck(); }
+  if(r.script){ CURRENT_SCRIPT=r.script; if(typeof scriptStatus==='function') scriptStatus(); if(typeof scanScript==='function') scanScript(); }
+  alert('Template “'+(r.name||'starter')+'” loaded'+(r.script?' — its course script was placed in this project':'')+'.');
+}
+
+/* ---- M15: checkpoint / rewind --------------------------------------------
+   Auto-snapshot the project IR before each AI edit, then one-click restore.
+   Deck/slide edits live in browser memory, so we persist the deck (saveProject)
+   and THEN snapshot, capturing the pre-edit state; course-script edits snapshot
+   server-side. snapshotBefore never blocks the edit if the snapshot fails. */
+async function snapshotBefore(label){
+  if(!CURRENT_PROJECT) return null;
+  try{
+    await saveProject(true);                       // persist the in-memory deck first
+    return await (await fetch('/api/snapshot',{method:'POST',
+      body:JSON.stringify({project:CURRENT_PROJECT, label, kind:'auto'})})).json();
+  }catch(e){ return null; }
+}
+async function manualSnapshot(){
+  if(!CURRENT_PROJECT){ alert('Open a project first.'); return; }
+  await saveProject(true);
+  const r=await (await fetch('/api/snapshot',{method:'POST',
+    body:JSON.stringify({project:CURRENT_PROJECT, label:'Manual checkpoint', kind:'manual'})})).json();
+  if(r&&r.ok) paintHistory(r.snapshots); else alert('Could not snapshot: '+((r&&r.error)||'unknown'));
+}
+async function openHistory(){
+  if(!CURRENT_PROJECT){ alert('Open a project first.'); return; }
+  document.getElementById('hist_modal').classList.add('show');
+  paintHistory(null);
+  let snaps=[];
+  try{ snaps=((await (await fetch('/api/snapshots?project='+encodeURIComponent(CURRENT_PROJECT))).json()).snapshots)||[]; }catch(e){}
+  paintHistory(snaps);
+}
+function closeHistory(){ document.getElementById('hist_modal').classList.remove('show'); }
+let HIST_SNAPS=[];   // last-painted list, so name/rename can read a snapshot's current label
+function histRow(s){
+  const kindLabel={auto:'auto', manual:'checkpoint', 'restore-point':'pre-restore', version:'version'};
+  const files=(s.files||[]).map(f=>esc(f.name)).join(', ')||'—';
+  const isV=s.kind==='version';
+  // versions can be renamed; everything else can be promoted into a named version
+  const nameBtn=isV
+    ? `<button class="ghost" onclick="nameVersion('${esc(s.id)}',false)">Rename</button>`
+    : `<button class="ghost" onclick="nameVersion('${esc(s.id)}',true)">★ Save as version</button>`;
+  return `<div class="hist-row${isV?' is-version':''}">
+      <div class="hist-meta"><b>${esc(s.label||'snapshot')}</b>
+        <span class="hist-kind">${esc(kindLabel[s.kind]||s.kind||'')}</span>
+        <span class="hist-when">${esc((s.created||'').replace('T',' '))}</span>
+        <div class="hint" style="margin-top:2px">${files}</div></div>
+      ${nameBtn}
+      <button class="ghost" onclick="restoreSnapshot('${esc(s.id)}')">Restore</button></div>`;
+}
+function paintHistory(snaps){
+  const box=document.getElementById('hist_list');
+  if(snaps===null){ box.innerHTML='<div class="hint">Loading…</div>'; return; }
+  HIST_SNAPS=snaps||[];
+  if(!HIST_SNAPS.length){ box.innerHTML='<div class="hint">No checkpoints yet. One is captured automatically before each AI edit, or click “Snapshot now” / “Save version”.</div>'; return; }
+  const versions=HIST_SNAPS.filter(s=>s.kind==='version');
+  const others=HIST_SNAPS.filter(s=>s.kind!=='version');
+  let html='';
+  if(versions.length) html+=`<div class="hist-sec">Versions</div>`+versions.map(histRow).join('');
+  html+=`<div class="hist-sec">Checkpoints</div>`+(others.length?others.map(histRow).join('')
+        :'<div class="hint" style="padding:6px 20px">No checkpoints.</div>');
+  box.innerHTML=html;
+}
+async function saveVersion(){
+  if(!CURRENT_PROJECT){ alert('Open a project first.'); return; }
+  const name=prompt('Name this version (e.g. “Sent to SME”):','');
+  if(name===null) return;                       // cancelled
+  await saveProject(true);                       // persist the in-memory deck first
+  const r=await (await fetch('/api/snapshot',{method:'POST',
+    body:JSON.stringify({project:CURRENT_PROJECT, label:name.trim()||'Version', kind:'version'})})).json();
+  if(r&&r.ok) paintHistory(r.snapshots); else alert('Could not save version: '+((r&&r.error)||'unknown'));
+}
+async function nameVersion(id, promote){
+  const cur=(HIST_SNAPS.find(s=>s.id===id)||{}).label||'';
+  const name=prompt(promote?'Name this version:':'Rename version:', promote?'':cur);
+  if(name===null) return;
+  const body={project:CURRENT_PROJECT, id, label:name.trim()||'Version'};
+  if(promote) body.kind='version';               // promote a checkpoint into a kept version
+  const r=await (await fetch('/api/snapshot/rename',{method:'POST',body:JSON.stringify(body)})).json();
+  if(r&&r.ok) paintHistory(r.snapshots); else alert('Could not save: '+((r&&r.error)||'unknown'));
+}
+async function restoreSnapshot(id){
+  if(!confirm('Restore this checkpoint? Your current state is snapshotted first, so you can undo the restore.')) return;
+  const r=await (await fetch('/api/restore',{method:'POST',
+    body:JSON.stringify({project:CURRENT_PROJECT, id})})).json();
+  if(!r||!r.ok){ alert('Restore failed: '+((r&&r.error)||'unknown')); return; }
+  closeHistory();
+  // Re-open the project so the restored deck + script load back into the UI.
+  try{
+    const rp=await (await fetch('/api/project/open',{method:'POST',body:JSON.stringify({path:CURRENT_PROJECT})})).json();
+    if(!rp.error) loadProject(rp);
+  }catch(e){}
 }
 
 /* ---- step 3: list source docs ---- */
 async function refreshSrc(){
-  const p=val('src'); const el=document.getElementById('src_files'); if(!p){ el.innerHTML=''; return; }
-  if(SRC_EXTS.includes(extOf(p))){ el.innerHTML='Selected file: <code>'+esc(p.split('/').pop())+'</code>'; return; }
-  const r=await (await fetch('/api/listfiles?path='+encodeURIComponent(p))).json();
-  el.innerHTML = r.files.length
-    ? 'Source documents ('+r.files.length+'): '+r.files.join(', ')
-    : 'No documents yet — drop source materials in this folder.';
+  renderSrcAssure('src_files', await _resolveSrcFiles(val('src')), val('src_urls'));
 }
 
 /* ---- shared: which script is in use + unit count ---- */
@@ -1229,16 +2306,118 @@ function scriptStatus(){
   const el=document.getElementById('script_status'); if(!el) return;
   el.innerHTML = CURRENT_SCRIPT
     ? 'Current script: <code>'+CURRENT_SCRIPT.split('/').pop()+'</code>'
-    : 'No script yet — generate one in step 4 (or open a project that has one).';
+    : 'No script yet. Generate one on the Source materials step (or open a project that has one).';
+  const tb=document.getElementById('translate_box'); if(tb) tb.style.display = CURRENT_SCRIPT?'':'none';
+  const cb=document.getElementById('captions_box'); if(cb) cb.style.display = CURRENT_SCRIPT?'':'none';
+  const xb=document.getElementById('consistency_box'); if(xb) xb.style.display = CURRENT_SCRIPT?'':'none';
 }
-async function scanScript(){
-  const sel=document.getElementById('b_which');
-  if(!CURRENT_SCRIPT){ sel.innerHTML='<option value="1">1</option>'; syncScope(); return; }
-  const r=await (await fetch('/api/scan?md='+encodeURIComponent(CURRENT_SCRIPT))).json();
-  const mls=r.mls||[];
-  sel.innerHTML = mls.length? mls.map(m=>`<option value="${m.which}">${m.which}. ${esc(m.title)}</option>`).join('') : '<option value="1">1</option>';
-  syncScope(); loadModules();
+/* ---- C20: check an appended unit against the rest for term/voice drift ---- */
+async function checkConsistency(){
+  if(!CURRENT_SCRIPT){ alert('Generate or open a course script first.'); return; }
+  const which=(val('cons_which')||'').trim();
+  const box=document.getElementById('cons_results');
+  box.innerHTML=`<div class="result ok"><span class="spin"></span><span class="name">Checking for term/voice drift…</span></div>`;
+  let r; try{ r=await (await fetch('/api/consistency',{method:'POST',
+    body:JSON.stringify({script:CURRENT_SCRIPT, which:(which||null), brand:brand()})})).json(); }
+  catch(e){ r={error:String(e)}; }
+  if(!r||!r.ok){ box.innerHTML=`<div class="result err">✗ Consistency check failed: ${esc((r&&r.error)||'')}</div>`; return; }
+  if(r.note){ box.innerHTML=`<div class="result ok"><span>·</span><span class="name">${esc(r.note)}</span></div>`; return; }
+  const fs=r.findings||[];
+  let h=`<div class="result ${fs.length?'err':'ok'}"><span>${fs.length?'⚠':'✓'}</span>`
+    +`<span class="name">Unit ${r.which} of ${r.units}${r.title?(' — '+esc(r.title)):''}: ${fs.length?(fs.length+' drift finding(s)'):'no term/voice drift'}</span></div>`;
+  for(const f of fs){
+    h+=`<div class="result err"><span>·</span><span class="name">[${esc(f.check)}] ${esc(f.message)}</span></div>`;
+  }
+  box.innerHTML=h;
 }
+/* ---- M3: generate local captions (.vtt) for the current course's media ---- */
+async function genCaptions(){
+  if(!CURRENT_SCRIPT){ alert('Generate or open a course script first.'); return; }
+  const lang=(val('cap_lang')||'en').trim()||'en';
+  const overwrite=document.getElementById('cap_overwrite').checked;
+  const box=document.getElementById('cap_results');
+  box.innerHTML=`<div class="result ok"><span class="spin"></span><span class="name">Transcribing media locally…</span></div>`;
+  let r; try{ r=await (await fetch('/api/captions',{method:'POST',
+    body:JSON.stringify({script:CURRENT_SCRIPT, lang, overwrite})})).json(); }
+  catch(e){ r={error:String(e)}; }
+  if(!r||!r.ok){ box.innerHTML=`<div class="result err">✗ Captions failed: ${esc((r&&r.error)||'')}</div>`; return; }
+  const rep=r.report||[];
+  let h=`<div class="result ${r.backend?'ok':'err'}"><span>${r.backend?'✓':'⚠'}</span>`
+    +`<span class="name">${r.backend?('Backend: '+esc(r.backend)+' — '+r.written+' written, '+r.bound+' bound'):'No local Whisper found — install faster-whisper to caption'}</span></div>`;
+  for(const x of rep){
+    const ok=(x.status==='written'||x.status==='exists'||x.status==='bound');
+    const label=x.status==='written'?('captioned → '+esc(x.vtt||'')):x.status==='exists'?('bound existing → '+esc(x.vtt||'')):x.status==='bound'?'already captioned':('skipped: '+esc(x.reason||''));
+    h+=`<div class="result ${ok?'ok':'err'}"><span>${ok?'✓':'·'}</span><span class="name">${esc(x.src||'(no src)')} — ${label}</span></div>`;
+  }
+  box.innerHTML=h;
+}
+/* ---- translate / localize the current course, preserving §8 structure (M5) ---- */
+async function translateCourse(){
+  if(!CURRENT_SCRIPT){ alert('Generate or open a course script first.'); return; }
+  const target=(val('tr_target')||'').trim();
+  if(!target){ alert('Enter a target language or locale (e.g. Spanish, es, en-GB).'); return; }
+  const prov=val('ai_provider');
+  if(!prov){ alert('Connect an AI account in the top bar first.'); return; }
+  const box=document.getElementById('tr_results');
+  box.innerHTML=`<div class="result ok"><span class="spin"></span><span class="name">Translating into ${esc(target)}… (one pass per module)</span></div>`;
+  let r; try{ r=await (await fetch('/api/translate',{method:'POST',
+    body:JSON.stringify({provider:prov, script:CURRENT_SCRIPT, target, brand:brand(), model:val('ai_model')})})).json(); }
+  catch(e){ r={error:String(e)}; }
+  if(!r||!r.ok){ box.innerHTML=`<div class="result err">✗ Translate failed: ${esc((r&&r.error)||'')}</div>`; return; }
+  const warn=(r.structure_ok===false)||(r.lint_ok===false);
+  let h=`<div class="result ${warn?'err':'ok'}"><span>${warn?'⚠':'✓'}</span>`
+    +`<span class="name">${r.mode==='localize'?'Localized':'Translated'} ${r.units} unit(s) → ${r.out.split('/').pop()}</span>`
+    +`<span class="sp"></span><button class="ghost" onclick="reveal('${r.out.replace(/'/g,"\\'")}')">Show in Finder</button></div>`;
+  if(r.tm_reused) h+=`<div class="result ok"><span>↺</span><span class="name">${r.tm_reused} unit(s) reused from translation memory — no re-review needed</span></div>`;
+  if(r.pending_approval){
+    h+=`<div class="result ok"><span>⧗</span><span class="name">${r.tm_stored} new unit(s) stored, pending your approval before reuse.</span>`
+      +`<span class="sp"></span><button class="ghost" onclick="approveTranslation('${esc(target).replace(/'/g,"\\'")}')">Approve translation (add to memory)</button></div>`;
+  }
+  if(r.structure_ok===false) h+=`<div class="result err">⚠ Block structure drifted from the source — review before building:<br>${(r.structure_issues||[]).map(esc).join('<br>')}</div>`;
+  if(r.lint_ok===false) h+=`<div class="result err">⚠ Failed the §8 lint:<br>${(r.lint_errors||[]).map(esc).join('<br>')}</div>`;
+  box.innerHTML=h;
+}
+/* ---- C17: approve a full translation so its units become reusable memory ---- */
+async function approveTranslation(target){
+  if(!CURRENT_SCRIPT){ alert('Open the SOURCE course script first.'); return; }
+  let r; try{ r=await (await fetch('/api/tm-approve',{method:'POST',
+    body:JSON.stringify({script:CURRENT_SCRIPT, target})})).json(); }
+  catch(e){ r={error:String(e)}; }
+  const box=document.getElementById('tr_results');
+  if(!r||!r.ok){ box.innerHTML+=`<div class="result err">✗ Approval failed: ${esc((r&&r.error)||'')}</div>`; return; }
+  box.innerHTML+=`<div class="result ok"><span>✓</span><span class="name">Approved ${r.approved} unit(s) for ${esc(r.target)} — future translations will reuse them verbatim.</span></div>`;
+}
+/* ---- M6: bulk-generate courses from a manifest CSV (validate first, then generate all) ---- */
+async function batchGenerate(validate){
+  const csv=(val('batch_csv')||'').trim();
+  if(!csv){ alert('Choose a manifest .csv first.'); return; }
+  const prov=val('ai_provider');
+  if(!validate && !prov){ alert('Connect an AI account in the top bar first.'); return; }
+  const out=(val('batch_out')||'').trim();
+  if(!validate && !out){ alert('Choose an output folder for the generated courses.'); return; }
+  const box=document.getElementById('batch_results');
+  box.innerHTML=`<div class="result ok"><span class="spin"></span><span class="name">${validate?'Checking the manifest…':'Generating courses… (one pass per row — may take a while)'}</span></div>`;
+  let r; try{ r=await (await fetch('/api/batch-generate',{method:'POST',
+    body:JSON.stringify({csv, out, provider:prov, brand:brand(), validate:!!validate})})).json(); }
+  catch(e){ r={error:String(e)}; }
+  if(!r){ box.innerHTML='<div class="result err">✗ Batch failed.</div>'; return; }
+  if(r.error && !r.rows){ box.innerHTML=`<div class="result err">✗ ${esc(r.error)}</div>`; return; }
+  if(validate || (r.rows && !r.results)){
+    const rows=r.rows||[];
+    let h=`<div class="result ${r.ok?'ok':'err'}"><span>${r.ok?'✓':'✗'}</span><span class="name">Manifest: ${r.n} row(s), ${r.ok_count} ok, ${r.fail_count} with issues</span></div>`;
+    h+=rows.map(c=>`<div class="result ${c.ok?'ok':'err'}"><span>${c.ok?'✓':'✗'}</span><span class="name">row ${c.row}: ${esc(c.title)}${c.ok?'':' — '+esc((c.issues||[]).join('; '))}</span></div>`).join('');
+    box.innerHTML=h; return;
+  }
+  let h=`<div class="result ${r.fail_count?'err':'ok'}"><span>${r.fail_count?'⚠':'✓'}</span><span class="name">Generated ${r.ok_count}/${r.n} course(s) → ${esc(out)}</span></div>`;
+  h+=(r.results||[]).map(x=>x.ok
+    ?`<div class="result ok"><span>${x.lint_ok===false?'⚠':'✓'}</span><span class="name">row ${x.row}: ${esc(x.title)} → ${esc(String(x.out).split('/').pop())}${x.lint_ok===false?' (lint issues)':''}</span></div>`
+    :`<div class="result err"><span>✗</span><span class="name">row ${x.row}: ${esc(x.title)} — ${esc(x.error||'failed')}</span></div>`).join('');
+  box.innerHTML=h;
+}
+// Publish granularity now comes from the per-unit / all buttons on the preview
+// results, so there's no separate unit picker to populate — just refresh the
+// per-module regenerate list.
+async function scanScript(){ loadModules(); }
 
 /* ---- regenerate a single module (without redoing the whole course) ---- */
 async function loadModules(){
@@ -1248,31 +2427,96 @@ async function loadModules(){
   try{ mls=((await (await fetch('/api/scan?md='+encodeURIComponent(CURRENT_SCRIPT))).json()).mls)||[]; }
   catch(e){ box.innerHTML=''; return; }
   if(!mls.length){ box.innerHTML=''; return; }
-  box.innerHTML='<div class="hint" style="margin:10px 0 4px">Modules in the current script — regenerate any one on its own:</div>'+
-    mls.map(m=>`<div class="result ok"><span>📝</span><span class="name">Microlearning ${m.which}: ${esc(m.title)}</span><span class="sp"></span>`
-      +`<button class="ghost xs" onclick="regenModule(${m.which})">↻ Regenerate</button></div>`).join('');
+  box.innerHTML='<div class="hint" style="margin:10px 0 4px">Modules in the current script. <b>View</b> reads the drafted text; regenerate any one on its own with an optional steer instead of a blind reroll:'
+      +' <button class="ghost xs" style="margin-left:6px" onclick="viewScript()">📄 View full script</button></div>'+
+    mls.map(m=>`<div class="modrow"><div class="result ok"><span>📝</span><span class="name">Microlearning ${m.which}: ${esc(m.title)}</span><span class="sp"></span>`
+      +`<button class="ghost xs" onclick="viewScript(${m.which})">📄 View</button>`
+      +`<button class="ghost xs" style="margin-left:6px" onclick="regenModule(${m.which})">↻ Regenerate</button></div>`
+      +`<div class="srow3"><span class="guide-arrow" title="Steer the redraft (optional)">↳</span>`
+      +`<input type="text" class="sl-guide" id="mod_guide_${m.which}" `
+      +`placeholder="what should change? (optional — e.g. more clinical, 3 KCs, warmer tone)"></div></div>`).join('');
 }
 async function regenModule(which){
-  const guidance=prompt(`Regenerate Microlearning ${which}.\n\nOptional — what should change? (leave blank to just re-draft it)`, '');
-  if(guidance===null) return;                       // cancelled
+  const guidance=(val('mod_guide_'+which)||'');     // inline steer (optional)
   const base=genPreflight(); if(!base) return;
   const box=document.getElementById('script_modules');
   box.insertAdjacentHTML('afterbegin',`<div class="result ok" id="regen_note"><span class="spin"></span><span class="name">Regenerating Microlearning ${which}…</span></div>`);
+  // X1: ask for a REVIEW re-draft — the server hands back old + new unit markdown
+  // and doesn't write; the operator picks block-by-block, then we apply the merge.
   let r; try{ r=await (await fetch('/api/regenerate-unit',{method:'POST',
-    body:JSON.stringify({...base, script:CURRENT_SCRIPT, which, guidance})})).json(); }
+    body:JSON.stringify({...base, script:CURRENT_SCRIPT, which, guidance, review:true})})).json(); }
   catch(e){ r={error:String(e)}; }
   const note=document.getElementById('regen_note'); if(note) note.remove();
   if(!r||!r.ok){ box.insertAdjacentHTML('afterbegin',`<div class="result err">✗ Regenerate failed: ${esc((r&&r.error)||'')}</div>`); return; }
+  openUnitDiff(which, r.old_md||'', r.new_md||'');
+}
+// ---- X1: diff + accept/reject on regenerate (course units) ----
+// A regenerated unit comes back as markdown. Split both the current and new unit into
+// top-level blocks (blank-line delimited — how markdown delimits block elements) and
+// align them by position, so the operator can keep block 2's rewrite but reject block 4's.
+let UDIFF_WHICH=null, UDIFF_OLD=[], UDIFF_NEW=[], UDIFF_ROWS=[];
+function splitBlocks(md){
+  return String(md||'').split(/\n[ \t]*\n/).map(s=>s.replace(/\s+$/,'').replace(/^\n+/,'')).filter(s=>s.trim());
+}
+function openUnitDiff(which, oldMd, newMd){
+  UDIFF_WHICH=which; UDIFF_OLD=splitBlocks(oldMd); UDIFF_NEW=splitBlocks(newMd);
+  const n=Math.max(UDIFF_OLD.length, UDIFF_NEW.length);
+  UDIFF_ROWS=[];
+  for(let k=0;k<n;k++){
+    const o=UDIFF_OLD[k], nw=UDIFF_NEW[k];
+    const kind=(o===undefined)?'added':(nw===undefined?'removed':(o.trim()===(nw||'').trim()?'same':'changed'));
+    UDIFF_ROWS.push({k, o, nw, kind});
+  }
+  renderUnitDiff();
+  document.getElementById('udiff_modal').classList.add('show');
+}
+function renderUnitDiff(){
+  const list=document.getElementById('udiff_list');
+  list.innerHTML=UDIFF_ROWS.map((r,n)=>{
+    const tag=r.kind==='same'?'<span class="diff-kind">unchanged</span>'
+      :(r.kind==='changed'?'':`<span class="diff-kind ${r.kind}">${r.kind==='added'?'new block':'removed by AI'}</span>`);
+    return `<div class="diff-row ${r.kind==='same'?'same':''}">
+      <div class="diff-head"><b>Block ${n+1}</b>${tag}
+        <label class="diff-take"><input type="checkbox" id="udiff_take_${n}" checked onchange="markUnitRow(${n})"> take new</label></div>
+      <div class="diff-panes">
+        <div class="diff-pane old" id="udiff_old_${n}"><span class="plab">your current</span>${esc(r.o===undefined?'(none)':r.o)}</div>
+        <div class="diff-pane new" id="udiff_new_${n}"><span class="plab">new draft</span>${esc(r.nw===undefined?'(none)':r.nw)}</div>
+      </div></div>`;
+  }).join('');
+  UDIFF_ROWS.forEach((r,n)=>markUnitRow(n));
+  const changed=UDIFF_ROWS.filter(r=>r.kind!=='same').length;
+  document.getElementById('udiff_note').textContent='Microlearning '+UDIFF_WHICH+' · '+changed+' changed block'+(changed===1?'':'s')+' of '+UDIFF_ROWS.length;
+}
+function markUnitRow(n){
+  const take=document.getElementById('udiff_take_'+n).checked;
+  const o=document.getElementById('udiff_old_'+n), nw=document.getElementById('udiff_new_'+n);
+  o.classList.toggle('dropped', take); nw.classList.toggle('dropped', !take);
+}
+function unitSetAll(take){ UDIFF_ROWS.forEach((r,n)=>{ document.getElementById('udiff_take_'+n).checked=take; markUnitRow(n); }); }
+async function applyUnitDiff(){
+  if(UDIFF_WHICH==null){ closeUnitDiff(); return; }
+  const parts=[];
+  UDIFF_ROWS.forEach((r,n)=>{
+    const take=document.getElementById('udiff_take_'+n).checked;
+    const chosen=take?r.nw:r.o;                   // take-new (incl. an AI removal → undefined → dropped)
+    if(chosen!==undefined && chosen.trim()) parts.push(chosen);
+  });
+  const merged=parts.join('\n\n');
+  const which=UDIFF_WHICH;
+  closeUnitDiff();
+  const box=document.getElementById('script_modules');
+  box.insertAdjacentHTML('afterbegin',`<div class="result ok" id="regen_note"><span class="spin"></span><span class="name">Applying Microlearning ${which}…</span></div>`);
+  let r; try{ r=await (await fetch('/api/apply-unit-merge',{method:'POST',
+    body:JSON.stringify({script:CURRENT_SCRIPT, which, merged_md:merged, brand:brand()})})).json(); }
+  catch(e){ r={error:String(e)}; }
+  const note=document.getElementById('regen_note'); if(note) note.remove();
+  if(!r||!r.ok){ box.insertAdjacentHTML('afterbegin',`<div class="result err">✗ Apply failed: ${esc((r&&r.error)||'')}</div>`); return; }
   document.getElementById('gen_results').innerHTML=
-    `<div class="result ok"><span>✓</span><span class="name">Regenerated Microlearning ${which}${r.lint_ok===false?' — ⚠ lint issues, check it':''}</span>`
+    `<div class="result ok"><span>✓</span><span class="name">Regenerated Microlearning ${which}${r.lint_ok===false?' (⚠ lint issues, check it)':''}</span>`
     +`<span class="sp"></span><button class="ghost" onclick="reveal('${CURRENT_SCRIPT.replace(/'/g,"\\'")}')">Show in Finder</button></div>`;
   scanScript();   // refreshes the unit dropdown + this module list
 }
-// "Every unit" builds one package per unit, so the single-unit picker doesn't apply.
-function syncScope(){
-  const every=(document.querySelector('input[name=b_scope]:checked')||{}).value==='course';
-  const sel=document.getElementById('b_which'); if(sel) sel.disabled=every;
-}
+function closeUnitDiff(){ document.getElementById('udiff_modal').classList.remove('show'); UDIFF_WHICH=null; UDIFF_ROWS=[]; }
 
 /* ---- step 4: generate ---- */
 // Generate dispatcher — pick the mode (Streaming single-pass vs Staged per-unit).
@@ -1282,12 +2526,12 @@ function generate(){
 }
 function genPreflight(){
   if(!CURRENT_PROJECT){ alert('Create or open a project first (step 1).'); return null; }
-  const prov=document.getElementById('gen_provider').value;
-  if(!prov){ alert('Connect an AI account first (step 2).'); return null; }
-  if(!val('src')){ alert('Pick a source documents folder (step 3).'); return null; }
+  const prov=val('ai_provider');
+  if(!prov){ alert('Connect an AI account in the top bar first.'); return null; }
+  if(!val('src')&&!val('src_urls')){ alert('Pick a source documents folder or add at least one source link first.'); return null; }
   if(!val('gen_obj')||!val('gen_aud')){ alert('Objective and audience are required.'); return null; }
-  return { provider:prov, source:val('src'), images:val('img'), title:val('gen_title'),
-    objective:val('gen_obj'), audience:val('gen_aud'), model:val('gen_model_sel'),
+  return { provider:prov, source:val('src'), urls:val('src_urls'), images:val('img'), title:val('gen_title'),
+    objective:val('gen_obj'), audience:val('gen_aud'), model:val('ai_model'),
     archetype:document.getElementById('gen_arch').value, preset:val('gen_preset'),
     brand:brand(), project:CURRENT_PROJECT };
 }
@@ -1297,8 +2541,9 @@ function genResult(box, res, extra){
   let h=(extra||'')+`<div class="result ${res.ok&&!bad?'ok':'err'}"><span>${res.ok&&!bad?'✓':'⚠'}</span>`
     + `<span class="name">Drafted ${res.units} unit(s) → ${res.out.split('/').pop()}</span>`
     + `<span class="sp"></span>${res.out?`<button class="ghost" onclick="reveal('${res.out.replace(/'/g,"\\'")}')">Show in Finder</button>`:''}</div>`;
-  if(bad) h+=`<div class="result err">⚠ Saved but failed the §8 lint — fix before building:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
+  if(bad) h+=`<div class="result err">⚠ Saved but failed the §8 lint. Fix before building:<br>${(res.lint_errors||[]).map(esc).join('<br>')}</div>`;
   if(res.review_docx&&res.review_docx.length) h+=`<div class="result ok">✓ Review doc(s): ${res.review_docx.map(d=>esc(d.split('/').pop())).join(', ')}</div>`;
+  h+=srcUsedHtml(res.used_sources, res.skipped);
   box.innerHTML=h;
   CURRENT_SCRIPT=res.out; scriptStatus(); scanScript(); saveProject(true);
 }
@@ -1362,9 +2607,9 @@ async function generateStaged(){
     if(!plan.ok){ box.innerHTML=`<div class="result err">✗ ${esc(plan.error||'Planning failed')}</div>`; return; }
     const units=plan.units||[];
     log=`<div class="result ok"><span>✓</span><span class="name">Planned ${units.length} unit(s)</span>`
-      + `<span class="sp"></span><span class="hint">${(plan.used_sources||[]).length} source doc(s)</span></div>`
+      + `<span class="sp"></span><span class="hint">${(plan.used_sources||[]).length} source(s)</span></div>`
+      + srcUsedHtml(plan.used_sources, plan.skipped)
       + `<div class="hint" style="margin:6px 0 2px">`+units.map((u,i)=>`${i+1}. ${esc(u.title)}`).join('<br>')+`</div>`;
-    if(plan.skipped&&plan.skipped.length) log+=`<div class="result err">Skipped (unsupported): ${plan.skipped.map(esc).join(', ')}</div>`;
     box.innerHTML=log;
     // ---- pass 3: script ALL units IN PARALLEL (capped) — they generate at the
     //      same time, so wall-clock ≈ one unit instead of the sum. ----
@@ -1381,7 +2626,7 @@ async function generateStaged(){
       paint();
     });
     if(firstErr){ box.insertAdjacentHTML('beforeend',
-      `<div class="result err">✗ Unit ${firstErr.i+1} (${esc(units[firstErr.i].title)}): ${esc(firstErr.e)} — fix and re-run.</div>`); return; }
+      `<div class="result err">✗ Unit ${firstErr.i+1} (${esc(units[firstErr.i].title)}): ${esc(firstErr.e)}. Fix and re-run.</div>`); return; }
     // ---- pass 4: assemble + save + review docs ----
     go.innerHTML='<span class="spin"></span>Saving &amp; checking…';
     const save=await post('/api/save-course',{ out:FOLDERS.drafts, title:val('gen_title'), brand:brand(),
@@ -1391,7 +2636,7 @@ async function generateStaged(){
     let h=log+`<div class="result ${save.ok&&!bad?'ok':'err'}"><span>${save.ok&&!bad?'✓':'⚠'}</span>`
       + `<span class="name">Drafted ${save.units} unit(s) → ${save.out.split('/').pop()}</span>`
       + `<span class="sp"></span>${save.out?`<button class="ghost" onclick="reveal('${save.out.replace(/'/g,"\\'")}')">Show in Finder</button>`:''}</div>`;
-    if(bad) h+=`<div class="result err">⚠ Saved but failed the §8 lint — fix before building:<br>${(save.lint_errors||[]).map(esc).join('<br>')}</div>`;
+    if(bad) h+=`<div class="result err">⚠ Saved but failed the §8 lint. Fix before building:<br>${(save.lint_errors||[]).map(esc).join('<br>')}</div>`;
     if(save.review_docx&&save.review_docx.length) h+=`<div class="result ok">✓ Review doc(s): ${save.review_docx.map(d=>esc(d.split('/').pop())).join(', ')}</div>`;
     box.innerHTML=h;
     CURRENT_SCRIPT=save.out; scriptStatus(); scanScript(); saveProject(true);
@@ -1402,9 +2647,9 @@ async function generateStaged(){
 
 /* ---- step 5: apply review ---- */
 async function applyReview(){
-  if(!CURRENT_SCRIPT){ alert('No script to update — generate one first (step 4).'); return; }
-  if(!val('rev_doc')){ alert('Choose the reviewed .docx.'); return; }
-  const payload={ provider:document.getElementById('gen_provider').value, script:CURRENT_SCRIPT,
+  if(!CURRENT_SCRIPT){ alert('No script to update. Generate one first.'); return; }
+  if(!val('rev_doc')){ alert('Choose the reviewed document(s): a folder, or one .docx.'); return; }
+  const payload={ provider:val('ai_provider'), script:CURRENT_SCRIPT,
     reviewed:val('rev_doc'), approved_dir:FOLDERS.approved, brand:brand(), project:CURRENT_PROJECT };
   const stop=busy('rev_go','Updating');
   let res; try{ res=await (await fetch('/api/revise',{method:'POST',body:JSON.stringify(payload)})).json(); }
@@ -1429,7 +2674,7 @@ async function loadCourses(){
   let cs=[];
   try{ cs=((await (await fetch('/api/courses?dir='+encodeURIComponent(FOLDERS.output))).json()).courses)||[]; }
   catch(e){ box.innerHTML=`<div class="result err">✗ ${esc(String(e))}</div>`; return; }
-  if(!cs.length){ box.innerHTML='<div class="hint">No built courses yet — generate a preview above (set Build to “Every unit” in step 6 to make all modules).</div>'; return; }
+  if(!cs.length){ box.innerHTML='<div class="hint">No built courses yet. Generate a preview above to render every unit.</div>'; return; }
   // One preview per MICROLEARNING — the HTML is identical across scorm/cmi5 and the
   // staged/published copies, so collapse to a single button per unit (prefer published).
   const byUnit={};
@@ -1445,22 +2690,25 @@ async function loadCourses(){
   }).join('');
 }
 
-/* ---- step 7: generate preview ---- */
+/* ---- step 5: generate preview (render-only) ---- */
+// The preview is the learner-facing HTML, which is identical across SCORM/cmi5 — so
+// we build the canonical SCORM render for EVERY unit into the hidden .preview area
+// purely to look at. The package FORMAT is chosen on the next step, at publish time.
+function _unitOf(p){ const m=(p||'').match(/_m(\d+)_/); return m?parseInt(m[1],10):1; }
 async function generateCourses(){
-  if(!CURRENT_SCRIPT){ alert('No script yet — do step 4 (and step 5 if reviewed).'); return; }
-  if(!val('img')){ alert('Pick an images folder (step 3).'); return; }
-  const formats=[...document.querySelectorAll('.b_fmt:checked')].map(c=>c.value);
-  if(!formats.length){ alert('Pick at least one output format (step 6).'); return; }
+  if(!CURRENT_SCRIPT){ alert('Generate a script first (and apply the SME review if you have one).'); return; }
+  if(!val('img')){ alert('Pick an images folder on the Source materials step.'); return; }
   const payload={ md:CURRENT_SCRIPT, images:val('img'), out:FOLDERS.output, brand:brand(),
-    scope:document.querySelector('input[name=b_scope]:checked').value, which:val('b_which'),
-    formats, validate:document.getElementById('b_validate').checked,
-    animate:document.getElementById('b_animate').checked, stage:true };
+    scope:'course', formats:['html'],   // preview = render-only HTML; SCORM is built at publish
+    validate:document.getElementById('b_validate').checked,
+    animate:document.getElementById('b_animate').checked,
+    gate:document.getElementById('b_gate').checked, stage:true };
   const stop=busy('b_go','Building preview');
   let res; try{ res=await (await fetch('/api/build',{method:'POST',body:JSON.stringify(payload)})).json(); }
   catch(e){ res={error:String(e)}; }
   stop();
   if(res.error){ document.getElementById('b_results').innerHTML=`<div class="result err">Error: ${esc(res.error)}</div>`; return; }
-  STAGED=(res.results||[]).map((r,i)=>({...r,idx:i,published:null}));
+  STAGED=(res.results||[]).map((r,i)=>({...r,idx:i,published:null,which:_unitOf(r.out)}));
   renderStaged();
 }
 function buildReportHtml(rep){
@@ -1475,15 +2723,15 @@ function buildReportHtml(rep){
     ...warns.map(w=>`<li class="br-warn">• ${esc(w)}</li>`)];
   const n=errs.length+warns.length, sev=errs.length?'has-err':'has-warn';
   const sum=`${errs.length?errs.length+' issue'+(errs.length>1?'s':''):''}${errs.length&&warns.length?' · ':''}${warns.length?warns.length+' warning'+(warns.length>1?'s':''):''}`;
-  return `<details class="buildreport ${sev}" open><summary>Build report — ${esc(sum)}</summary>`
+  return `<details class="buildreport ${sev}" open><summary>Build report: ${esc(sum)}</summary>`
     +`<ul>${items.join('')}</ul></details>`;
 }
 
 function renderStaged(){
   const box=document.getElementById('b_results'), pub=document.getElementById('b_publish');
-  if(!STAGED.length){ box.innerHTML=''; pub.innerHTML='<div class="hint">Generate a preview in step 7 first, then publish.</div>'; return; }
-  // step 7: previews
-  let h='<div class="hint">Preview each course below. When you’re happy, publish in step 8.</div>';
+  if(!STAGED.length){ box.innerHTML=''; pub.innerHTML='<div class="hint">Generate a preview first, then publish.</div>'; return; }
+  // previews (this step)
+  let h='<div class="hint">Preview each course below. When you’re happy, choose the format and publish on the next step.</div>';
   STAGED.forEach(r=>{
     const fname=r.out?r.out.split('/').pop():''; let a='';
     if(r.ok){
@@ -1497,17 +2745,17 @@ function renderStaged(){
     if(r.log&&!r.ok) h+=`<details class="log"><summary>log · ${r.label}</summary><pre>${esc(r.log)}</pre></details>`;
   });
   box.innerHTML=h;
-  // step 8: publish
+  // publish (next step): build the chosen format(s) for each approved unit into output
   const pending=STAGED.filter(r=>r&&r.ok&&!r.published), done=STAGED.filter(r=>r&&r.published&&r.published.ok);
   let p='';
   if(pending.length){
-    p+='<div class="hint">Publish the courses you approve — they move into the output folder, ready to upload.</div>';
+    p+='<div class="hint">Pick the format(s) above, then publish the courses you approve. Each is packaged into the output folder, ready to upload.</div>';
     pending.forEach(r=>{ p+=`<div class="result ok"><span>•</span><span class="name">${r.label}</span><span class="sp"></span>
       <button class="btn" style="padding:6px 12px" onclick="publishItems([${r.idx}])">Publish ▸</button></div>`; });
     if(pending.length>1) p+=`<p><button class="btn" onclick="publishItems('all')">Publish all approved</button></p>`;
   }
   if(done.length){
-    p+='<div style="font-size:12.5px;color:#1d6b48;margin:10px 0 4px"><b>Published — ready to upload to the LMS:</b></div>';
+    p+='<div style="font-size:12.5px;color:#1d6b48;margin:10px 0 4px"><b>Published, ready to upload to the LMS:</b></div>';
     p+=done.map(r=>`<div class="result ok"><span>📦</span><span class="name">${r.published.out.split('/').pop()}</span><span class="sp"></span>
       <button class="ghost" onclick="reveal('${r.published.out.replace(/'/g,"\\'")}')">Show in Finder</button></div>`).join('');
     p+=`<p style="font-size:13px"><button class="ghost" onclick="reveal('${(FOLDERS.output||'').replace(/'/g,"\\'")}')">Open output folder</button></p>`;
@@ -1515,14 +2763,36 @@ function renderStaged(){
   if(!pending.length && !done.length) p='<div class="hint">No successful preview to publish yet.</div>';
   pub.innerHTML=p; loadCourses();
 }
+// Publish = build the operator's chosen format(s) for each approved unit straight
+// into the output folder (stage:false). The preview only rendered the SCORM HTML;
+// the real package(s) — SCORM/cmi5/PowerPoint — are produced here, at publish time.
 async function publishItems(sel){
-  const idxs = sel==='all' ? STAGED.filter(r=>r&&r.ok&&!r.published).map(r=>r.idx) : sel;
-  const items = idxs.map(i=>STAGED[i]).filter(Boolean).map(r=>({path:r.out,label:r.label,fmt:r.fmt}));
-  if(!items.length) return;
-  let res; try{ res=await (await fetch('/api/publish',{method:'POST',body:JSON.stringify({out:FOLDERS.output,items,project:CURRENT_PROJECT})})).json(); }
-  catch(e){ alert('Publish failed: '+e); return; }
-  (res.published||[]).forEach(pd=>{ const r=STAGED.find(s=>s.label===pd.label&&!s.published); if(r) r.published=pd; });
+  const formats=[...document.querySelectorAll('.b_fmt:checked')].map(c=>c.value);
+  if(!formats.length){ alert('Pick at least one output format above first.'); return; }
+  const all = sel==='all';
+  const idxs = all ? STAGED.filter(r=>r&&r.ok&&!r.published).map(r=>r.idx) : sel;
+  const units = idxs.map(i=>STAGED[i]).filter(Boolean).map(r=>r.which);
+  if(!units.length) return;
+  const base={ md:CURRENT_SCRIPT, images:val('img'), out:FOLDERS.output, brand:brand(), formats,
+    validate:document.getElementById('b_validate').checked,
+    animate:document.getElementById('b_animate').checked,
+    gate:document.getElementById('b_gate').checked, stage:false };
+  // 'all' -> one course-scope build; a single unit -> a scoped single-unit build.
+  const payload = all ? {...base, scope:'course'} : {...base, scope:'single', which:units[0]};
+  const pub=document.getElementById('b_publish');
+  pub.insertAdjacentHTML('afterbegin','<div class="result ok" id="pub_note"><span class="spin"></span><span class="name">Publishing…</span></div>');
+  let res; try{ res=await (await fetch('/api/build',{method:'POST',body:JSON.stringify(payload)})).json(); }
+  catch(e){ res={error:String(e)}; }
+  const note=document.getElementById('pub_note'); if(note) note.remove();
+  if(res.error){ pub.insertAdjacentHTML('afterbegin',`<div class="result err">✗ Publish failed: ${esc(res.error)}</div>`); return; }
+  const results=res.results||[];
+  units.forEach(w=>{ const hits=results.filter(x=>_unitOf(x.out)===w && x.ok);
+    const st=STAGED.find(s=>s.which===w && !s.published);
+    if(st && hits.length) st.published={ok:true, out:hits[0].out}; });
   saveProject(true); renderStaged();
+  const failed=results.filter(x=>!x.ok);
+  if(failed.length) document.getElementById('b_publish').insertAdjacentHTML('afterbegin',
+    `<div class="result err">✗ ${failed.length} package(s) failed to build. ${esc(((failed[0].log)||'').slice(-200))}</div>`);
 }
 
 init();

@@ -12,13 +12,14 @@ course. Another stage builds these scripts into branded SCORM.
 ## Read these first (they are the authoritative grammar + style — do not guess)
 
 1. `templates/AUTHORING_GUIDE.md` — the `.md` authoring grammar and conventions.
-2. `trigger/examples/responsible-ai-hallucination-script.md` — a real example of
+2. `templates/TASTE_GUIDE.md` — the anti-slop discipline: variety, restraint,
+   one idea per slide, no filler verbs, no fake-precise numbers. Apply at all times.
+3. `trigger/examples/responsible-ai-hallucination-script.md` — a real example of
    the exact output shape you must match (`## Microlearning N: …`, `**Slide N — …**`,
    `*Section:*`, `*Visual:*`, `> GAP:` notes, knowledge checks).
-3. `templates/concept-explainer.md`, `templates/decision-scenario.md`,
+4. `templates/concept-explainer.md`, `templates/decision-scenario.md`,
    `templates/software-procedure.md`, `templates/policy-acceptable-use.md`,
-   `templates/onboarding-company.md`, `templates/onboarding-role.md`,
-   `templates/sales-rep-onboarding.md`, `templates/objection-handling.md` —
+   `templates/onboarding-company.md`, `templates/onboarding-role.md` —
    the archetypes; pick the best-fitting archetype per microlearning.
 
 ## What to produce

@@ -1,0 +1,10 @@
+{
+  "name": "workshop-section",
+  "title": "Workshop: section divider",
+  "description": "A bold section break: a full-bleed brand-color fill carries the slide, with a centered kicker ('Section 1') and a large centered section title in reversed white text. Brand supplies the fill color; white text keeps the title high-contrast on the block.",
+  "regions": [
+    {"role": "background", "rect": [0.0, 0.0, 1.0, 1.0], "color": "primary"},
+    {"role": "kicker", "rect": [0.10, 0.40, 0.80, 0.07], "bind": "kicker", "align": "center", "color": "white"},
+    {"role": "title",  "rect": [0.10, 0.48, 0.80, 0.16], "bind": "title",  "align": "center", "size": 40, "color": "white"}
+  ]
+}

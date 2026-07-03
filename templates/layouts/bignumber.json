@@ -1,0 +1,11 @@
+{
+  "name": "bignumber",
+  "title": "Big number + caption",
+  "description": "One large metric with a kicker, statement, and supporting line. Brand supplies all color/type; this spec is structure only.",
+  "regions": [
+    {"role": "kicker",   "rect": [0.08, 0.18, 0.84, 0.08], "bind": "kicker",   "align": "center"},
+    {"role": "value",    "rect": [0.08, 0.28, 0.84, 0.28], "bind": "value",    "align": "center"},
+    {"role": "title",    "rect": [0.08, 0.58, 0.84, 0.16], "bind": "title",    "align": "center"},
+    {"role": "subtitle", "rect": [0.08, 0.76, 0.84, 0.12], "bind": "subtitle", "align": "center"}
+  ]
+}

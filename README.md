@@ -9,7 +9,7 @@ branding (names, colors, logo, fonts) is loaded from an external **brand profile
 under `./brands` at build time. Exports conform to whichever brand you load; the
 system stays neutral.
 
-One Markdown (or Word) source → branded, tracked **SCORM 1.2 / cmi5**, an editable
+One Markdown (or Word) source → branded, tracked **SCORM 1.2 / SCORM 2004 / cmi5**, an editable
 **PowerPoint**, or an SME-review **Word** doc.
 
 ## Build

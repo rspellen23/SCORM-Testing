@@ -78,21 +78,37 @@ def _accent(pal, name, default="primary"):
 
 LAYOUTS = ("infographic", "process", "comparison", "timeline", "divider", "chart",
            "image", "imagetext", "cards", "quote", "statement", "bullets",
-           "agenda", "closing", "sectionheader", "cycles")
+           "agenda", "closing", "sectionheader", "cycles", "template")
 
 
 def _resolve_images(content, images_dir):
-    """Return content with the `image` field resolved to a usable path: an
-    absolute path is kept as-is; a bare filename is joined to `images_dir`.
-    A blank/missing image is left alone. Shallow-copies only when it rewrites,
-    so callers can pass the original dict safely."""
+    """Return content with the `image` field resolved to a usable path: an existing
+    absolute path is kept as-is; a bare filename is joined to `images_dir`, falling
+    back to the shared icon library (`assets/icons`) when the brand folder doesn't
+    have it. A blank/missing image is left alone. Shallow-copies only when it
+    rewrites, so callers can pass the original dict safely."""
     if not isinstance(content, dict):
         return content
     img = content.get("image")
-    if not img or not isinstance(img, str) or os.path.isabs(img) or not images_dir:
+    if not img or not isinstance(img, str) or os.path.isabs(img):
+        return content
+    resolved = None
+    if images_dir:                                # brand image folder wins when it has the file
+        cand = os.path.join(images_dir, img)
+        if os.path.isfile(cand):
+            resolved = cand
+    if resolved is None:                          # else the shared icon library (recolored on render)
+        try:
+            import assets as _assets
+            resolved = _assets.icon_path(img)
+        except Exception:
+            resolved = None
+    if resolved is None and images_dir:           # bare name, not a library icon: join anyway
+        resolved = os.path.join(images_dir, img)  # (downstream placeholder then names the file)
+    if resolved is None:
         return content
     c = dict(content)
-    c["image"] = os.path.join(images_dir, img)
+    c["image"] = resolved
     return c
 
 
@@ -131,6 +147,21 @@ def _place_image(s, path, x, y, w, h, pal, rect, text, fit=None):
     `framePt` token draws a thin mat behind the picture; `shadow` lifts it off the
     page. A missing/unreadable file becomes a labeled placeholder, never a crash.
     The SAME code drives the SVG preview (slide_svg reuses this), so preview ==.pptx."""
+    # SVG asset (icon/shape): python-pptx can't embed SVG and the preview mock needs a
+    # raster too, so recolor it on-brand and rasterize to a cached PNG (resvg-py). Both
+    # surfaces then place the identical PNG -> preview == .pptx. Icons read best whole,
+    # so default an SVG to contain-fit. No rasterizer installed -> path stays .svg and
+    # the not-found/placeholder branch below degrades gracefully.
+    if isinstance(path, str) and path.lower().endswith(".svg") and os.path.isfile(path):
+        try:
+            import assets as _assets
+            _png = _assets.svg_asset_to_png(path, pal.get("ink"))
+        except Exception:
+            _png = None
+        if _png:
+            path = _png
+            if fit is None:
+                fit = "contain"
     tok = (pal.get("design") or {}).get("image") or {}
     fit = fit or tok.get("fit", "cover")
     framePt = tok.get("framePt", 0) or 0
@@ -826,7 +857,8 @@ def _export_deck_native(slides, out, brand, bp, base_pal, images_dir,
             fill, rect, text = _drawkit(s)
             RENDERERS[layout](s, content, pal, fill, rect, text)
             used.append("generative:" + layout)
-        _apply_tx(s, transition, transition_dir, transition_speed)
+        _write_notes(s, spec0.get("notes"))
+        _apply_tx(s, spec0.get("transition") or transition, transition_dir, transition_speed)
         _apply_anim(s, animate, animate_speed, layout=layout)
     prs.save(out)
     return {"layout": "deck", "slides": len(used), "render": used}
@@ -842,7 +874,21 @@ def _cont(spec, content, key, chunk, is_cont):
     out = {"layout": spec.get("layout"), "content": c}
     if spec.get("theme"):                         # carry the cross-cutting theme flag
         out["theme"] = spec["theme"]
+    if spec.get("transition"):                    # the per-slide transition rides every page
+        out["transition"] = spec["transition"]
+    if spec.get("notes") and not is_cont:         # speaker notes ride the FIRST page only
+        out["notes"] = spec["notes"]
     return out
+
+
+def _write_notes(slide, notes):
+    """Write optional speaker notes onto a slide's PowerPoint notes page. No-op
+    (and never creates a notes slide) when `notes` is empty, so notes-free decks
+    render byte-identically to before this feature existed."""
+    text = "" if notes is None else str(notes).strip()
+    if not text:
+        return
+    slide.notes_slide.notes_text_frame.text = text
 
 
 def _paginate(spec, design):
@@ -912,7 +958,10 @@ def export_deck(slides, out, brand=None,
         layout = (spec or {}).get("layout", "infographic")
         s, _ = _add_slide(prs, (spec or {}).get("content"), pal, layout, images_dir, brand, bp,
                           (spec or {}).get("theme"))
-        _apply_tx(s, transition, transition_dir, transition_speed)
+        _write_notes(s, (spec or {}).get("notes"))
+        # a per-slide transition overrides the deck-wide default; "none" opts a slide
+        # out even when the deck has one.
+        _apply_tx(s, (spec or {}).get("transition") or transition, transition_dir, transition_speed)
         _apply_anim(s, animate, animate_speed, layout=layout)
         used.append(layout)
     prs.save(out)
@@ -1319,8 +1368,11 @@ def _render_chart(s, content, pal, fill, rect, text):
       "chart": "bar|line|pie|stackedBar|groupedBar",
       "categories": ["Q1", "Q2", ...],
       "series": [{"name": "Admits", "data": [120, 145, ...]}, ...],
-      "xLabel": "...", "yLabel": "...", "source": "..."
+      "xLabel": "...", "yLabel": "...", "source": "...", "takeaway": "..."
     }
+
+    `takeaway` is an optional one-line plain-language insight (the "so what")
+    rendered between the chart and the source footnote.
     """
     from pptx.chart.data import CategoryChartData
     from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION, XL_LABEL_POSITION
@@ -1347,16 +1399,24 @@ def _render_chart(s, content, pal, fill, rect, text):
     xl = {"bar": XL_CHART_TYPE.COLUMN_CLUSTERED,
           "groupedBar": XL_CHART_TYPE.COLUMN_CLUSTERED,
           "stackedBar": XL_CHART_TYPE.COLUMN_STACKED,
+          "horizontalBar": XL_CHART_TYPE.BAR_CLUSTERED,
+          "horizontalStackedBar": XL_CHART_TYPE.BAR_STACKED,
           "line": XL_CHART_TYPE.LINE_MARKERS,
-          "pie": XL_CHART_TYPE.PIE}.get(ctype, XL_CHART_TYPE.COLUMN_CLUSTERED)
+          "area": XL_CHART_TYPE.AREA,
+          "pie": XL_CHART_TYPE.PIE,
+          "donut": XL_CHART_TYPE.DOUGHNUT}.get(ctype, XL_CHART_TYPE.COLUMN_CLUSTERED)
 
-    gf = s.shapes.add_chart(xl, Inches(0.6), Inches(1.5), Inches(12.13), Inches(5.2), cd)
+    takeaway = content.get("takeaway")
+    # shrink the plot only when a takeaway line needs room beneath it, so decks
+    # without a takeaway render byte-identically to before.
+    chart_h = Inches(4.7) if takeaway else Inches(5.2)
+    gf = s.shapes.add_chart(xl, Inches(0.6), Inches(1.5), Inches(12.13), chart_h, cd)
     chart = gf.chart
     chart.has_title = False
     order = [pal["primary"], pal["secondary"], pal["tertiary"], pal["dark"]]
     plot = chart.plots[0]
 
-    if ctype == "pie":
+    if ctype in ("pie", "donut"):
         chart.has_legend = True
         chart.legend.position = XL_LEGEND_POSITION.RIGHT
         chart.legend.include_in_layout = False
@@ -1397,6 +1457,10 @@ def _render_chart(s, content, pal, fill, rect, text):
         except Exception:
             pass
 
+    # ---- takeaway insight (the "so what", carried through from the block) ----
+    if takeaway:
+        text(Inches(0.6), Inches(6.35), Inches(12.13), Inches(0.5),
+             [[(takeaway, 13, pal["ink"], True)]], align=PP_ALIGN.CENTER)
     # ---- source footnote (the provenance line; carried through from the block) ----
     if content.get("source"):
         text(Inches(0.6), Inches(6.92), Inches(12.13), Inches(0.4),
@@ -1993,7 +2057,185 @@ def _render_cycles(s, content, pal, fill, rect, text):
     return {"layout": "cycles", "steps": len(steps)}
 
 
+# ---- generic, DATA-DRIVEN layout (ingestable template slide-types) -----------
+# A "template" layout is a JSON region-spec (templates/layouts/<name>.json) rendered
+# with the SELECTED BRAND's tokens + the client's images. This is what makes layouts
+# INGESTABLE: a new slide type is data (role-tagged regions at relative geometry), not
+# new Python. Structure comes from the spec; ALL color/type comes from the brand palette;
+# images come from the content (client pool). See pptx_ingest.py for the .pptx -> spec path.
+_TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             "templates", "layouts")
+_TEMPLATE_CACHE = {}
+
+
+def list_template_layouts():
+    """Names of the available data-driven template layouts (for the picker)."""
+    if not os.path.isdir(_TEMPLATE_DIR):
+        return []
+    return sorted(n[:-5] for n in os.listdir(_TEMPLATE_DIR) if n.endswith(".json"))
+
+
+def load_template_spec(name):
+    """Load a named region-spec, or None. basename-confined to the template dir."""
+    if not name:
+        return None
+    if name in _TEMPLATE_CACHE:
+        return _TEMPLATE_CACHE[name]
+    p = os.path.join(_TEMPLATE_DIR, os.path.basename(str(name)) + ".json")
+    if not os.path.isfile(p):
+        return None
+    try:
+        with open(p, encoding="utf-8") as fh:
+            spec = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    _TEMPLATE_CACHE[name] = spec
+    return spec
+
+
+# Placeholder content per role, so a freshly-picked template starts with editable
+# stand-in text the operator overwrites (mirrors the slide-layout *.example.json idea).
+_ROLE_STARTER = {
+    "title": "Title", "kicker": "Label", "value": "100",
+    "subtitle": "Supporting line", "body": "Body text.",
+}
+
+
+def build_template_starter(spec):
+    """Starter content dict for a region-spec: {"template": name, <bind>: placeholder...}
+    so picking the template yields an editable slide. Brand supplies all color/type."""
+    content = {"template": spec.get("name")}
+    for region in spec.get("regions", []):
+        role = region.get("role", "body")
+        bind = region.get("bind")
+        if role == "cards":
+            keys = region.get("item", {"title": "title", "body": "body"})
+            n = max(1, int(region.get("columns", 3)))
+            content[bind or "cards"] = [
+                {keys.get("title", "title"): f"Card {k + 1}",
+                 keys.get("body", "body"): "Short supporting line."}
+                for k in range(n)]
+        elif role in ("background", "image"):
+            continue                                  # backdrop has no text; image stays empty
+        elif bind:
+            content[bind] = _ROLE_STARTER.get(role, "Body text.")
+    return content
+
+
+def template_layout_info():
+    """One record per data-driven template (templates/layouts/*.json), for the picker:
+    {name, title, category, brand, starter}. `category` is "default" (generic, any brand)
+    or a client name (client-specific); `brand` is the client-specific default brand."""
+    out = []
+    for name in list_template_layouts():
+        spec = load_template_spec(name)
+        if not spec:
+            continue
+        out.append({
+            "name": name,
+            "title": spec.get("title") or name,
+            "category": spec.get("category") or "default",
+            "brand": spec.get("brand"),
+            "starter": build_template_starter(spec),
+        })
+    return out
+
+
+def _render_template(s, content, pal, fill, rect, text):
+    """Render a named region-spec (content['template']) brand-themed. Falls back to a
+    labeled placeholder if the template is missing."""
+    spec = load_template_spec(content.get("template"))
+    if not spec:
+        rect(0, 0, W, H, pal["white"])
+        text(Inches(1), Inches(3.2), Inches(11.33), Inches(1.2),
+             [[("Template not found: " + str(content.get("template")), 16,
+                pal.get("muted", pal["grey"]), True)]],
+             align=PP_ALIGN.CENTER, anchor=MSO_ANCHOR.MIDDLE)
+        return {"layout": "template", "template": content.get("template"), "missing": True}
+
+    rect(0, 0, W, H, pal["white"])                       # brand-light canvas
+    ink = pal.get("ink", pal["dark"])
+    muted = pal.get("muted", pal["grey"])
+    accent = _accent(pal, "primary")
+    align_map = {"left": PP_ALIGN.LEFT, "center": PP_ALIGN.CENTER, "right": PP_ALIGN.RIGHT}
+
+    def emu(r):
+        x, y, w, h = r
+        return int(x * W), int(y * H), int(w * W), int(h * H)
+
+    def tone(region, default):
+        """Resolve an optional per-region `color` text token (a palette key like
+        'white', 'ink', 'primary') to a color, falling back to the role's default
+        when the key is absent or unknown. Lets a text region sit in reversed
+        white on a full brand-color fill; absent => byte-identical to before."""
+        tok = region.get("color")
+        return pal.get(tok, default) if tok else default
+
+    def one(region, value, size, color, bold):
+        x, y, w, h = emu(region["rect"])
+        al = align_map.get(region.get("align", "left"), PP_ALIGN.LEFT)
+        text(x, y, w, h, [[(str(value), region.get("size", size),
+                            tone(region, color), bold)]],
+             align=al, anchor=MSO_ANCHOR.TOP, line=1.1)
+
+    for region in spec.get("regions", []):
+        role = region.get("role", "body")
+        bind = region.get("bind")
+        val = content.get(bind) if bind else region.get("text")
+        if role == "background":
+            x, y, w, h = emu(region["rect"])
+            rect(x, y, w, h, _accent(pal, region.get("color", "primary")))
+            continue
+        if role == "image":
+            x, y, w, h = emu(region["rect"])
+            _place_image(s, content.get(bind or "image"), x, y, w, h, pal, rect, text,
+                         fit=region.get("fit"))
+            continue
+        if role == "cards":
+            items = content.get(bind or "cards") or []
+            cols = max(1, int(region.get("columns", len(items) or 1)))
+            x, y, w, h = emu(region["rect"])
+            gap = Inches(0.25)
+            cw = int((w - gap * (cols - 1)) / cols)
+            keys = region.get("item", {"title": "title", "body": "body"})
+            pad = Inches(0.22)
+            for idx, it in enumerate(items[:cols]):
+                if not isinstance(it, dict):
+                    it = {keys.get("body", "body"): it}
+                cx = x + idx * (cw + gap)
+                rect(cx, y, cw, h, pal.get("card", pal["white"]), rounded=True)
+                tk, bk = keys.get("title", "title"), keys.get("body", "body")
+                if it.get(tk):
+                    text(cx + pad, y + pad, cw - 2 * pad, Inches(0.55),
+                         [[(str(it[tk]), 14, pal.get("cardInk", ink), True)]])
+                if it.get(bk):
+                    text(cx + pad, y + pad + Inches(0.55), cw - 2 * pad, h - pad - Inches(0.65),
+                         [[(str(it[bk]), 11.5, muted, False)]], line=1.2)
+            continue
+        if not val:
+            continue
+        if role == "title":
+            one(region, val, 30, ink, True)
+        elif role in ("kicker", "heading", "eyebrow"):
+            one(region, val, 16, accent, True)
+        elif role == "value":
+            one(region, val, 72, ink, True)
+        elif role in ("subtitle", "caption"):
+            one(region, val, 16, muted, False)
+        else:                                            # body / default
+            x, y, w, h = emu(region["rect"])
+            al = align_map.get(region.get("align", "left"), PP_ALIGN.LEFT)
+            col = tone(region, ink)
+            if isinstance(val, list):
+                runs = [[("• " + str(it), region.get("size", 14), col, False)] for it in val]
+            else:
+                runs = [[(str(val), region.get("size", 14), col, False)]]
+            text(x, y, w, h, runs, align=al, line=1.25, space_after=4)
+    return {"layout": "template", "template": spec.get("name")}
+
+
 RENDERERS = {
+    "template": _render_template,
     "infographic": _render_infographic,
     "process": _render_process,
     "comparison": _render_comparison,

@@ -120,6 +120,27 @@ def test_readjson_system_path_blocked(port):
     assert "not allowed" in data["error"].lower()
 
 
+def test_readtext_system_path_blocked(port):
+    # the View-script endpoint must obey the same allowlist as readjson
+    status, body = _get(port, "/api/readtext?path=/etc/passwd")
+    assert status == 200
+    data = json.loads(body)
+    assert data["ok"] is False
+    assert "not allowed" in data["error"].lower()
+
+
+def test_readtext_reads_allowed_file(port, tmp_path, monkeypatch):
+    # a file inside an allowed root reads back verbatim; confine roots to tmp_path
+    monkeypatch.setattr(server, "_allow_roots", lambda: [str(tmp_path)])
+    f = tmp_path / "script.md"
+    f.write_text("## Microlearning 1: Intro\nhello", encoding="utf-8")
+    status, body = _get(port, "/api/readtext?path=" + str(f))
+    assert status == 200
+    data = json.loads(body)
+    assert data["ok"] is True
+    assert data["text"] == "## Microlearning 1: Intro\nhello"
+
+
 def test_preview_outside_roots_is_404(port):
     status, _ = _get(port, "/preview/etc/passwd")
     assert status == 404
@@ -169,3 +190,16 @@ def test_safe_path_arg_rejects_flag_like_values():
     for bad in ("-rf", "--out", "-"):
         with pytest.raises(ValueError):
             server._safe_path_arg(bad, "source")
+
+
+def test_template_layouts_payload_shape():
+    # step 2d: the picker payload lists data-driven templates with category/brand/starter.
+    pytest.importorskip("pptx")            # template_layout_info needs the export extra
+    tpls = server.template_layouts()
+    assert isinstance(tpls, list)
+    names = {t["name"] for t in tpls}
+    assert {"bignumber", "three-cards"} <= names         # the shipped generic specs
+    for t in tpls:
+        assert set(("name", "title", "category", "brand", "starter")) <= set(t)
+        assert t["category"] == "default" or isinstance(t["category"], str)
+        assert t["starter"]["template"] == t["name"]

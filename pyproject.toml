@@ -19,6 +19,10 @@ export = [
     "python-docx>=0.8.11",
     "pypdf>=3.9",
     "Pillow>=9.0",
+    # SVG asset rasterizer (icon/shape library -> on-brand PNG for the .pptx, which
+    # python-pptx can't take as SVG). Self-contained binary wheel, no system libs,
+    # Win+Mac. Optional at runtime: absent -> .pptx icon falls back to a placeholder.
+    "resvg-py>=0.1",
 ]
 # Development + CI: schema validation of importer output and the test suite.
 # jsonschema is OPTIONAL at runtime — importers validate when it is installed

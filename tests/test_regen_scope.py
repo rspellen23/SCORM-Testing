@@ -35,7 +35,7 @@ def test_both_is_full_redraft():
 
 def test_layout_lock_ignores_model_layout(monkeypatch):
     # when layout is locked, a model that returns a different layout is overridden
-    monkeypatch.setattr(A, "read_sources", lambda f: ("source text", ["a.md"], []))
+    monkeypatch.setattr(A, "read_sources", lambda f, urls=None: ("source text", ["a.md"], []))
     monkeypatch.setattr(A, "run_cli",
                         lambda *a, **k: (True, '{"layout":"timeline","content":{"title":"Y"}}', ""))
     res = A.regenerate_slide("claude", "/src", "process", CUR, [], 1, 3,
@@ -44,7 +44,7 @@ def test_layout_lock_ignores_model_layout(monkeypatch):
 
 
 def test_layout_unlocked_accepts_model_layout(monkeypatch):
-    monkeypatch.setattr(A, "read_sources", lambda f: ("source text", ["a.md"], []))
+    monkeypatch.setattr(A, "read_sources", lambda f, urls=None: ("source text", ["a.md"], []))
     monkeypatch.setattr(A, "run_cli",
                         lambda *a, **k: (True, '{"layout":"timeline","content":{"title":"Y","milestones":[]}}', ""))
     res = A.regenerate_slide("claude", "/src", "process", CUR, [], 1, 3,

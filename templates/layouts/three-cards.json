@@ -1,0 +1,11 @@
+{
+  "name": "three-cards",
+  "title": "Title + three feature cards",
+  "description": "A heading over a row of three cards (title + body each). Cards repeat over the content's `cards` array; brand supplies card/background/ink colors. An optional image slot rides the header.",
+  "regions": [
+    {"role": "title", "rect": [0.06, 0.09, 0.70, 0.12], "bind": "title"},
+    {"role": "image", "rect": [0.80, 0.07, 0.14, 0.14], "bind": "image", "fit": "contain"},
+    {"role": "cards", "rect": [0.06, 0.30, 0.88, 0.52], "bind": "cards", "columns": 3,
+     "item": {"title": "title", "body": "body"}}
+  ]
+}

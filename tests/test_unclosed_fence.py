@@ -55,6 +55,18 @@ def test_unclosed_categorize_stops_at_next_slide():
     _survives("**Slide 2 — Sort**\n*Categorize:*\nbucket: One\nitem: x -> One\n")
 
 
+def test_unclosed_matching_stops_at_next_slide():
+    _survives("**Slide 2 — Match**\n*Matching:*\npair: A -> 1\npair: B -> 2\n")
+
+
+def test_unclosed_sequence_stops_at_next_slide():
+    _survives("**Slide 2 — Order**\n*Sequence:*\nstep: First\nstep: Second\n")
+
+
+def test_unclosed_fillblank_stops_at_next_slide():
+    _survives("**Slide 2 — Fill**\n*FillBlank:*\nblank: A is ___ -> b\nblank: C is ___ -> d\n")
+
+
 def test_unclosed_comparison_stops_at_next_slide():
     _survives("**Slide 2 — Compare**\n*Comparison:*\n::: panel\nheading: Old\n- a\n")
 

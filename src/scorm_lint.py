@@ -1,10 +1,11 @@
-"""Structural conformance lint for a built SCORM 1.2 package (.zip).
+"""Structural conformance lint for a built SCORM package (.zip).
 
-Catches the things that make a package fail on a strict LMS: malformed/missing
-manifest, dangling resource/item references, <file> entries that aren't in the zip
-(or content in the zip that nothing references), duplicate identifiers, missing SCO
-entry point, and absent controlling XSDs. Stdlib only. Optionally runs `xmllint`
-against the bundled schema when it's on PATH.
+Handles SCORM 1.2 (imscp_rootv1p1p2) and SCORM 2004 4th Edition (imscp_v1p1),
+auto-detected from the manifest's root namespace, plus cmi5 (cmi5.xml). Catches
+the things that make a package fail on a strict LMS: malformed/missing manifest,
+dangling resource/item references, <file> entries that aren't in the zip (or
+content in the zip that nothing references), duplicate identifiers, missing SCO
+entry point, and absent controlling XSDs. Stdlib only.
 
 Usage:  python3 src/scorm_lint.py <package.zip>
 Returns nonzero on errors (warnings don't fail).
@@ -12,14 +13,17 @@ Returns nonzero on errors (warnings don't fail).
 import os, sys, zipfile
 import xml.etree.ElementTree as ET
 
-IMSCP = "http://www.imsproject.org/xsd/imscp_rootv1p1p2"
+IMSCP = "http://www.imsproject.org/xsd/imscp_rootv1p1p2"        # SCORM 1.2 content packaging
+IMSCP_2004 = "http://www.imsglobal.org/xsd/imscp_v1p1"          # SCORM 2004 content packaging
 ADLCP = "http://www.adlnet.org/xsd/adlcp_rootv1p2"
 CMI5NS = "https://w3id.org/xapi/profiles/cmi5/v1/CourseStructure.xsd"
 SCHEMA_FILES = ("imscp_rootv1p1p2.xsd", "adlcp_rootv1p2.xsd", "ims_xml.xsd", "imsmd_rootv1p2p1.xsd")
+SCHEMA_FILES_2004 = ("imscp_v1p1.xsd", "adlcp_v1p3.xsd", "adlseq_v1p3.xsd",
+                     "adlnav_v1p3.xsd", "imsss_v1p0.xsd")
 MOVEON = {"Passed", "Completed", "CompletedAndPassed", "CompletedOrPassed", "NotApplicable"}
 
 
-def _q(tag):  # imscp-namespaced tag
+def _q(tag):  # imscp-namespaced tag (SCORM 1.2)
     return "{%s}%s" % (IMSCP, tag)
 
 
@@ -39,11 +43,26 @@ def lint_zip(path):
         except ET.ParseError as e:
             return ["imsmanifest.xml is not well-formed XML: %s" % e], []
 
+    # detect 1.2 vs 2004 from the root namespace; all structural checks below are
+    # namespace-relative, so the only per-version bits are the expected schema
+    # name/version and the controlling-XSD set.
+    root_ns = root.tag[1:root.tag.index("}")] if root.tag.startswith("{") else ""
+    if root_ns == IMSCP_2004:
+        version, ctrl_xsds = "2004", SCHEMA_FILES_2004
+    else:
+        version, ctrl_xsds = "1.2", SCHEMA_FILES
+    cp = root_ns or IMSCP
+    q = lambda tag: "{%s}%s" % (cp, tag)
+
     # namespace + schema sanity
-    if root.tag != _q("manifest"):
-        errors.append("root element is %r, expected imscp:manifest" % root.tag)
-    md = root.find(_q("metadata"))
-    if md is None or (md.findtext(_q("schemaversion")) or "").strip() != "1.2":
+    if root.tag != q("manifest"):
+        errors.append("root element is %r, expected an imscp:manifest" % root.tag)
+    md = root.find(q("metadata"))
+    sv = (md.findtext(q("schemaversion")) if md is not None else None) or ""
+    if version == "2004":
+        if not sv.strip().startswith("2004"):
+            warnings.append("metadata/schemaversion %r is not a '2004 …' value" % sv.strip())
+    elif sv.strip() != "1.2":
         warnings.append("metadata/schemaversion is not '1.2'")
 
     # identifiers unique
@@ -54,24 +73,24 @@ def lint_zip(path):
 
     # resources: id -> {href, files}
     resources = {}
-    for res in root.iter(_q("resource")):
+    for res in root.iter(q("resource")):
         rid = res.get("identifier")
-        hrefs = [f.get("href") for f in res.findall(_q("file")) if f.get("href")]
+        hrefs = [f.get("href") for f in res.findall(q("file")) if f.get("href")]
         resources[rid] = {"href": res.get("href"), "files": hrefs,
-                          "deps": [d.get("identifierref") for d in res.findall(_q("dependency"))]}
+                          "deps": [d.get("identifierref") for d in res.findall(q("dependency"))]}
 
     # organizations: default resolves; every item identifierref resolves; SCO href present
-    orgs = root.find(_q("organizations"))
+    orgs = root.find(q("organizations"))
     referenced = set()
     sco_count = 0
-    if orgs is None or not list(orgs.findall(_q("organization"))):
+    if orgs is None or not list(orgs.findall(q("organization"))):
         errors.append("no <organization> in manifest")
     else:
         default = orgs.get("default")
-        org_ids = [o.get("identifier") for o in orgs.findall(_q("organization"))]
+        org_ids = [o.get("identifier") for o in orgs.findall(q("organization"))]
         if default and default not in org_ids:
             errors.append("organizations default=%r matches no organization" % default)
-        for item in orgs.iter(_q("item")):
+        for item in orgs.iter(q("item")):
             ref = item.get("identifierref")
             if not ref:
                 continue
@@ -96,14 +115,14 @@ def lint_zip(path):
         errors.append("no SCO is referenced by any item (nothing will launch)")
 
     # content present in zip but referenced by nothing (excl. manifest + controlling XSDs)
-    exempt = {"imsmanifest.xml"} | set(SCHEMA_FILES)
+    exempt = {"imsmanifest.xml"} | set(SCHEMA_FILES) | set(SCHEMA_FILES_2004)
     orphan = sorted(n for n in names if n not in referenced and n not in exempt)
     if orphan:
         warnings.append("%d file(s) in package not referenced by the manifest: %s%s"
                         % (len(orphan), ", ".join(orphan[:6]), " …" if len(orphan) > 6 else ""))
 
     # controlling XSDs bundled?
-    for xsd in ("imscp_rootv1p1p2.xsd", "adlcp_rootv1p2.xsd"):
+    for xsd in ctrl_xsds[:2]:
         if xsd not in names:
             warnings.append("controlling schema %s not bundled (strict LMSes may reject)" % xsd)
 
@@ -176,7 +195,7 @@ def main(argv):
         for e in errors:
             print("  error:", e)
         return 1
-    print("PASS: %s is structurally conformant SCORM 1.2%s"
+    print("PASS: %s is structurally conformant%s"
           % (os.path.basename(argv[1]), " (%d warning%s)" % (len(warnings), "" if len(warnings)==1 else "s") if warnings else ""))
     return 0
 

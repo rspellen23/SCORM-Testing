@@ -49,9 +49,9 @@ LIGHT = RGBColor(0xF2, 0xF4, 0xF5)
 # This set is mirrored by blocks.BLOCKS (pptx="drop"/"structural"); the registry
 # drift test (tests/test_block_registry.py) fails if the two disagree.
 _DROP = {"continue", "video", "audio", "embed", "accordion", "process",
-         "flashcard", "categorize", "scenario", "divider", "transition",
+         "flashcard", "categorize", "dragDrop", "matching", "sequence", "fillBlank", "wordSearch", "crossword", "gameShow", "quizBoard", "speedStreak", "questionBank", "scenario", "divider", "transition",
          "sectionStart", "sectionEnd", "button", "timeline", "comparison", "chart",
-         "quote", "infographic"}
+         "quote", "infographic", "reflection"}
 
 
 # ---------------------------------------------------------------- HTML -> runs

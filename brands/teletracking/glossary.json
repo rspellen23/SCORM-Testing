@@ -1,0 +1,38 @@
+{
+  "_comment": "TeleTracking product termbank (M4). Merged OVER brands/_default/glossary.json. PROPOSED FROM MEMORY (reference_nova_platform) — JAMES TO VERIFY/CORRECT. These are product/UI names; per feedback_neutral_naming client terms belong in brand DATA + content (this file), never in code/file naming. 'instead_of' phrases are flagged by lint as wrong-term errors; keep them to clearly-wrong generic shorthand. Tune freely — data only, no code change.",
+  "_to_verify": [
+    "Confirm the exact product UI labels learners actually SEE (feedback_match_system_terminology).",
+    "Add/trim instead_of phrases so the lint never fires on legitimate wording."
+  ],
+  "_decided": [
+    "Both 'Transfer IQ' (legacy) and 'Transfer IQ Pro' (new) are VALID — the two systems co-exist for older/newer customers (James, 2026-06-30). Neither is flagged against the other; bare 'Transfer IQ' is intentionally NOT in any instead_of list."
+  ],
+  "preferred": [
+    {
+      "term": "Transfer IQ Pro",
+      "instead_of": ["the transfer tool", "the transfer app", "the transfer application"],
+      "note": "Nova's patient-transfer product (abbrev TCIQ Pro). Use the product name, not generic shorthand."
+    },
+    {
+      "term": "Referral IQ Pro",
+      "instead_of": ["the referral tool", "the referral app"],
+      "note": "Nova's referral product."
+    },
+    {
+      "term": "Data IQ",
+      "instead_of": [],
+      "note": "Nova's data/analytics product."
+    },
+    {
+      "term": "Nova HL7 Agent",
+      "instead_of": [],
+      "note": "The HL7 integration agent; name it in full, not 'the HL7 thing'."
+    },
+    {
+      "term": "Nova",
+      "instead_of": [],
+      "note": "TeleTracking's Access Solution platform on Palantir Foundry (NOT the academy/LMS). The product clinical staff use."
+    }
+  ],
+  "banned": []
+}

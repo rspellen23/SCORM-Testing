@@ -27,6 +27,11 @@
     "graded": { "type": "boolean", "description": "scored course: KCs count toward a score; status becomes passed/failed (default false = completion-only, unscored)" },
     "passingScore": { "type": "integer", "minimum": 0, "maximum": 100, "description": "graded only: percent correct required to pass (default 80)" },
     "retry": { "type": "integer", "minimum": 0, "description": "max attempts per knowledge check before it locks + reveals (0 = one-shot). Graded courses score the final answer within the attempts." },
+    "gateCompletion": { "type": "boolean", "description": "M13: when true (default for graded courses) a FAILING score blocks completion (a retry is offered); false = the course completes regardless of score (score is still reported). A build may override via --no-gate." },
+    "objectives": { "type": "array", "description": "M13: graded sections rolled up as scored objectives (per-section subscores reported to the LMS as cmi.objectives / cmi5 result.extensions). Each = {id, name, pass?}.", "items": { "type": "object", "required": ["id", "name"], "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "pass": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 } } } },
+    "preset": { "type": "string", "description": "C19: course PURPOSE preset (compliance/onboarding/product-skill/refresher/standard) declared via `*Preset:*` — sets the audience reading-level band the build report flags against" },
+    "xp": { "type": "object", "description": "gamification #3: points/XP MOTIVATIONAL overlay declared via `*Points:* on` (purely cosmetic — never affects the graded score, completion gate, or LMS score). Absent = no overlay.", "properties": { "weights": { "type": "object", "description": "points per scorable block by category", "properties": { "check": { "type": "integer", "minimum": 0 }, "question": { "type": "integer", "minimum": 0 }, "game": { "type": "integer", "minimum": 0 } } }, "tiers": { "type": "array", "description": "level tiers as [name, threshold] where threshold is a 0..1 fraction of earnable XP", "items": { "type": "array" } } } },
+    "celebrate": { "type": "object", "description": "gamification #6: confetti CELEBRATION overlay declared via `*Celebrate:* on` (purely cosmetic — never affects the score, completion gate, or LMS record). A zero-dep canvas burst fires on the enabled moments, honoring prefers-reduced-motion. Absent = no overlay.", "properties": { "pass": { "type": "boolean", "description": "fire on crossing the graded pass mark" }, "level": { "type": "boolean", "description": "fire on an XP tier level-up" }, "complete": { "type": "boolean", "description": "fire on reaching 100% course completion" } } },
     "_stats": { "type": "object" }
   },
   "definitions": {
@@ -39,7 +44,7 @@
                    "video", "audio", "embed",
                    "note", "statement", "list", "table", "divider", "continue", "objectives", "knowledgeCheck",
                    "button", "cardGrid",
-                   "quote", "accordion", "process", "flashcard", "categorize", "scenario",
+                   "quote", "accordion", "process", "flashcard", "categorize", "dragDrop", "matching", "sequence", "fillBlank", "wordSearch", "crossword", "gameShow", "quizBoard", "speedStreak", "questionBank", "scenario", "reflection",
                    "timeline", "comparison", "chart", "infographic",
                    "transition", "sectionStart", "sectionEnd"]
         },
@@ -67,6 +72,13 @@
         "text": { "type": "string", "description": "Continue button label" },
         "prompt": { "type": "string" },
         "id": { "type": "string", "description": "knowledgeCheck: stable id, reported as the cmi.interactions id in graded courses" },
+        "objective": { "type": "string", "description": "knowledgeCheck/matching/sequence/fillBlank (M13): id of the graded section (objective) this block scores into (M12 blocks contribute fractional got/max credit)" },
+        "draw": { "type": "integer", "minimum": 1, "description": "questionBank (C5): how many questions to draw from the pool at runtime (absent/>=pool → draw all)" },
+        "questions": { "type": "array", "description": "questionBank (C5): the pool of question blocks (knowledgeCheck/matching/sequence/fillBlank); the player draws `draw` of them per attempt", "items": { "$ref": "#/definitions/block" } },
+        "color": { "enum": ["green", "gold", "dark", "blue", "teal"], "description": "sectionStart/transition: brand band color" },
+        "name": { "type": "string", "description": "sectionStart (M13): graded objective label; KCs sharing a name roll up into one subscore" },
+        "graded": { "type": "boolean", "description": "sectionStart (M13): this section is a scored objective (declared a name, pass, or quiz/graded marker)" },
+        "pass": { "type": "integer", "minimum": 0, "maximum": 100, "description": "sectionStart (M13): section pass threshold (percent) for this objective" },
         "multi": { "type": "boolean" },
         "feedback": { "type": "string" },
         "options": {
@@ -133,13 +145,117 @@
             "properties": { "id": { "type": "string" }, "title": { "type": "string" } }
           }
         },
+        "zones": {
+          "type": "array",
+          "description": "dragDrop: the drop targets. `x`/`y` (percent 0-100) position a zone over the optional background diagram (`src`); absent → zones render as a labeled row.",
+          "items": {
+            "type": "object",
+            "required": ["id", "title"],
+            "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "x": { "type": "number" }, "y": { "type": "number" } }
+          }
+        },
         "pool": {
           "type": "array",
-          "description": "categorize: the items to sort; each carries its correct bucket id in 'target'",
+          "description": "categorize/dragDrop: the items to place; each carries its correct bucket/zone id in 'target'",
           "items": {
             "type": "object",
             "required": ["html", "target"],
             "properties": { "html": { "type": "string" }, "target": { "type": "string" } }
+          }
+        },
+        "grid": {
+          "type": "array",
+          "description": "wordSearch: the finished square letter grid (rows of single-character strings). crossword: a rectangular grid where a blocked cell is null. Generated at build time from `words`.",
+          "items": { "type": "array", "items": { "type": ["string", "null"] } }
+        },
+        "words": {
+          "type": "array",
+          "description": "wordSearch/crossword: the target words with their placement (r/c = start cell; wordSearch dr/dc = step direction; crossword dir = across|down + num = clue number) and an optional clue.",
+          "items": {
+            "type": "object",
+            "required": ["text"],
+            "properties": { "text": { "type": "string" }, "display": { "type": "string" }, "clue": { "type": "string" }, "r": { "type": "number" }, "c": { "type": "number" }, "dr": { "type": "number" }, "dc": { "type": "number" }, "dir": { "type": "string" }, "num": { "type": "number" } }
+          }
+        },
+        "rows": { "type": "number", "description": "crossword: the grid height (row count)." },
+        "cols": { "type": "number", "description": "crossword: the grid width (column count)." },
+        "slices": {
+          "type": "array",
+          "description": "gameShow: one multiple-choice question per wheel slice. Options are shuffled at build time (src/gameshow.py) so `answer` (the correct option index) is fixed and resume-stable.",
+          "items": {
+            "type": "object",
+            "required": ["q", "options", "answer"],
+            "properties": {
+              "q": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "answer": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "board": {
+          "type": "array",
+          "description": "quizBoard: one column per category; each holds ordered tiles (top row lowest value). Each tile is an MCQ whose options are shuffled at build time (src/quizboard.py, reusing src/gameshow.py) so `answer` is fixed and resume-stable, plus an escalating point `value`.",
+          "items": {
+            "type": "object",
+            "required": ["name", "tiles"],
+            "properties": {
+              "name": { "type": "string" },
+              "tiles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["q", "options", "answer", "value"],
+                  "properties": {
+                    "q": { "type": "string" },
+                    "options": { "type": "array", "items": { "type": "string" } },
+                    "answer": { "type": "integer", "minimum": 0 },
+                    "value": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "rounds": {
+          "type": "array",
+          "description": "speedStreak: an ordered run of multiple-choice questions answered one at a time. Options are shuffled at build time (src/speedstreak.py, reusing src/gameshow.py) so `answer` (the correct option index) is fixed and resume-stable.",
+          "items": {
+            "type": "object",
+            "required": ["q", "options", "answer"],
+            "properties": {
+              "q": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "answer": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "timer": { "type": "integer", "minimum": 0, "description": "speedStreak: optional per-question countdown in whole seconds (0/absent = untimed). Cosmetic only — drives a speed bonus, never correctness or the graded score." },
+        "pairs": {
+          "type": "array",
+          "description": "matching (M12): each pair = a left item and its correct right partner (id is stable); the learner matches lefts to rights, scored with partial credit",
+          "items": {
+            "type": "object",
+            "required": ["id", "left", "right"],
+            "properties": { "id": { "type": "string" }, "left": { "type": "string" }, "right": { "type": "string" } }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "description": "sequence (M12): the steps in their CORRECT order (array order = answer); the learner assigns each a position, scored with partial credit",
+          "items": {
+            "type": "object",
+            "required": ["id", "html"],
+            "properties": { "id": { "type": "string" }, "html": { "type": "string" } }
+          }
+        },
+        "blanks": {
+          "type": "array",
+          "description": "fillBlank (M12): each = text around a blank (`before`/`after`, the input goes between) + an accept-list of `answers` (lenient match: trim/collapse-space/case-insensitive)",
+          "items": {
+            "type": "object",
+            "required": ["id", "before", "answers"],
+            "properties": { "id": { "type": "string" }, "before": { "type": "string" }, "after": { "type": "string" },
+                            "answers": { "type": "array", "items": { "type": "string" } } }
           }
         },
         "feedbackIncorrect": { "type": "string", "description": "categorize/knowledgeCheck: feedback shown on a wrong answer" },
@@ -165,6 +281,8 @@
             }
           }
         },
+        "model": { "type": "string", "description": "reflection: a model/example answer (HTML) revealed after the learner submits, for self-assessment. Authored at build time — there is no runtime AI scorer (SCORM runs offline)." },
+        "criteria": { "type": "array", "items": { "type": "string" }, "description": "reflection: optional rubric points a good answer includes, revealed alongside the model answer for self-assessment" },
         "accent": { "enum": ["primary", "secondary", "tertiary", "dark"], "description": "timeline/comparison: brand accent role for the block (per-milestone/panel accents are set on each item; omit to auto-cycle)" },
         "milestones": {
           "type": "array",
@@ -195,7 +313,7 @@
             }
           }
         },
-        "chart": { "enum": ["bar", "line", "pie", "stackedBar", "groupedBar"], "description": "chart block: visualization type. bar=column comparison; line=trend; pie=part-to-whole; stackedBar/groupedBar=multi-series" },
+        "chart": { "enum": ["bar", "line", "area", "pie", "donut", "stackedBar", "groupedBar", "horizontalBar", "horizontalStackedBar"], "description": "chart block: visualization type. bar=column comparison; line=trend; area=filled trend; pie/donut=part-to-whole; stackedBar/groupedBar=multi-series columns; horizontalBar/horizontalStackedBar=horizontal bars (good for long category names)" },
         "categories": { "type": "array", "items": { "type": "string" }, "description": "chart: x-axis category labels (bar/line/stacked/grouped) or slice labels (pie). One entry per data point per series." },
         "series": {
           "type": "array",
@@ -212,6 +330,7 @@
         "xLabel": { "type": "string", "description": "chart: x-axis title" },
         "yLabel": { "type": "string", "description": "chart: y-axis (value) title" },
         "source": { "type": "string", "description": "chart: REQUIRED provenance — which source document/table these figures came from. Charts with no source are invalid (no-invented-metrics guardrail)." },
+        "takeaway": { "type": "string", "description": "chart: OPTIONAL one-line plain-language insight (the 'so what') drawn from the plotted numbers; rendered with the chart." },
         "infographic": {
           "type": "object",
           "description": "infographic block: a poster-style overview rendered as a flowing HTML section. The content object is IDENTICAL to the 'infographic' slide-layout content schema, so one JSON serves both the slide generator and the course block.",

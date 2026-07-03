@@ -1,0 +1,15 @@
+{
+  "_comment": "Brand-level termbank (M4). Universal layer — merged UNDER each profile's own glossary.json by authoring.load_glossary(). 'preferred' entries inject approved terms into the generation prompt and lint any phrase in 'instead_of' as a wrong-term error. 'banned' words raise a blocking lint error if they appear in generated markdown. Words match whole-word, case-insensitive. Tune freely — this is data, no code change needed.",
+  "preferred": [],
+  "banned": [
+    "leverage",
+    "seamless",
+    "robust",
+    "next-gen",
+    "revolutionize",
+    "unlock",
+    "empower",
+    "elevate",
+    "unleash"
+  ]
+}

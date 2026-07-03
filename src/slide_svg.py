@@ -17,6 +17,7 @@ band, with the brand palette supplied as CSS custom properties.
 Entry points:
   render_slide_svg(layout, content, brand) -> one <svg> string
   render_deck_svg(slides, brand)           -> list of <svg> strings
+  render_deck_html(slides, brand)          -> one standalone interactive HTML deck
 """
 import re
 import os
@@ -441,3 +442,153 @@ def render_deck_svg(slides, brand=None, images_dir=None, animate=False):
                 f'fill="#B71C1C">Slide {i + 1} ({_esc(layout)}) could not be previewed: '
                 f'{_esc(str(e)[:120])}</text>'))
     return out
+
+
+# ----- standalone interactive HTML deck (M11) --------------------------------
+
+def _json_for_script(value):
+    """JSON-encode for safe embedding inside an inline <script>. The only byte
+    sequence that can break out of a script element is `</...`, so we neutralise
+    `</` (and the unicode line separators JSON leaves raw) — the result is still
+    valid JSON the browser's JSON.parse-equivalent literal accepts."""
+    import json
+    return (json.dumps(value, ensure_ascii=False)
+            .replace("</", "<\\/")
+            .replace(" ", "\\u2028").replace(" ", "\\u2029"))
+
+
+# The viewer chrome is intentionally tiny and dependency-free: the slides are
+# already self-contained <svg> (images inlined as data URIs, fonts from the
+# system stack), so the whole deck is ONE file that opens offline by double-click.
+# Keyboard nav mirrors the dashboard slideshow (arrows/space/PageUp-Down/Esc/Home/End)
+# and adds an 'N' presenter-notes toggle + an 'F' fullscreen toggle.
+_DECK_HTML_CSS = """
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#0b0f12;color:#e8edf0;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
+#stage{position:fixed;inset:0 0 56px 0;display:flex;align-items:center;justify-content:center;padding:24px}
+#slide{width:100%;max-width:calc((100vh - 104px)*1.7778);aspect-ratio:16/9;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);background:#fff}
+#slide svg{display:block;width:100%;height:100%}
+@keyframes dk-fade{from{opacity:0}to{opacity:1}}
+#slide.anim{animation:dk-fade .3s ease both}
+@media (prefers-reduced-motion:reduce){#slide.anim{animation:none}}
+#bar{position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:10px;
+  padding:0 16px;background:#11171c;border-top:1px solid #1f2a31}
+#bar button{background:#1c252c;color:#e8edf0;border:1px solid #2a3640;border-radius:7px;
+  height:34px;min-width:38px;padding:0 12px;font-size:15px;cursor:pointer}
+#bar button:hover{background:#26323b}
+#bar button:disabled{opacity:.4;cursor:default}
+#count{font-variant-numeric:tabular-nums;font-size:14px;color:#9fb0bb;min-width:70px;text-align:center}
+#title{font-size:14px;color:#cdd9e0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp{flex:1}
+#notes{position:fixed;left:0;right:0;bottom:56px;max-height:38vh;overflow:auto;
+  padding:16px 20px;background:#0f161b;border-top:1px solid #1f2a31;
+  font-size:16px;line-height:1.5;color:#dbe6ec;white-space:pre-wrap;display:none}
+#notes.on{display:block}
+#notes.on ~ #stage{}
+.muted{color:#6b7b86;font-style:italic}
+""".strip()
+
+
+def render_deck_html(slides, brand=None, images_dir=None, title="Presentation"):
+    """Render an ordered deck to ONE standalone, self-contained interactive HTML
+    document (M11). The page embeds each slide's poster SVG (already offline-safe:
+    images are inlined data URIs, fonts come from the system stack) plus any
+    per-slide speaker `notes`, and ships a tiny inline viewer: keyboard navigation
+    (←/→/Space/PageUp/PageDown/Home/End/Esc), prev/next buttons, a slide counter,
+    a fade transition, an 'N' presenter-notes toggle, and an 'F' fullscreen toggle.
+    No network, no external files — it opens by double-click on any machine."""
+    svgs = render_deck_svg(slides, brand, images_dir=images_dir, animate=False)
+    notes = []
+    for spec in (slides or []):
+        n = (spec or {}).get("notes")
+        notes.append(n if isinstance(n, str) and n.strip() else "")
+    data = {"slides": svgs, "notes": notes, "title": title or "Presentation"}
+    payload = _json_for_script(data)
+    head_title = _esc(title or "Presentation")
+    return (
+        "<!doctype html>\n"
+        '<html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{head_title}</title>\n"
+        f"<style>\n{_DECK_HTML_CSS}\n</style></head>\n"
+        "<body>\n"
+        '<div id="stage"><div id="slide"></div></div>\n'
+        '<div id="notes"></div>\n'
+        '<div id="bar">'
+        f'<span id="title">{head_title}</span>'
+        '<span class="sp"></span>'
+        '<button id="prev" title="Previous (←)">&lsaquo;</button>'
+        '<span id="count"></span>'
+        '<button id="next" title="Next (→)">&rsaquo;</button>'
+        '<button id="notesBtn" title="Presenter notes (N)">Notes</button>'
+        '<button id="fullBtn" title="Fullscreen (F)">&#9974;</button>'
+        "</div>\n"
+        f'<script id="deck-data" type="application/json">{payload}</script>\n'
+        f"<script>\n{_DECK_HTML_JS}\n</script>\n"
+        "</body></html>\n"
+    )
+
+
+# Inline viewer script. Kept as a module constant so a node test can extract and
+# `--check`/eval it without booting a browser. Reads the embedded JSON, never the
+# network. `D.slides`/`D.notes` are parallel arrays (one entry per slide).
+_DECK_HTML_JS = r"""
+(function(){
+  var D = JSON.parse(document.getElementById('deck-data').textContent);
+  var slides = D.slides || [], notes = D.notes || [];
+  var i = 0, showNotes = false;
+  var slideEl = document.getElementById('slide');
+  var countEl = document.getElementById('count');
+  var notesEl = document.getElementById('notes');
+  var prevBtn = document.getElementById('prev');
+  var nextBtn = document.getElementById('next');
+  var notesBtn = document.getElementById('notesBtn');
+  var fullBtn = document.getElementById('fullBtn');
+  if (D.title) { try { document.title = D.title; } catch(e){} }
+
+  function clamp(n){ return Math.max(0, Math.min(slides.length - 1, n)); }
+  function paintNotes(){
+    var n = notes[i] || '';
+    notesEl.innerHTML = '';
+    if (n) { notesEl.textContent = n; }
+    else { var s = document.createElement('span'); s.className = 'muted';
+           s.textContent = 'No notes for this slide.'; notesEl.appendChild(s); }
+    notesEl.classList.toggle('on', showNotes);
+  }
+  function render(animate){
+    slideEl.innerHTML = slides[i] || '';
+    countEl.textContent = (i + 1) + ' / ' + slides.length;
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = (i === slides.length - 1);
+    if (animate){ slideEl.classList.remove('anim'); void slideEl.offsetWidth;
+                  slideEl.classList.add('anim'); }
+    paintNotes();
+  }
+  function go(n){ var c = clamp(n); if (c === i) return; i = c; render(true); }
+  function toggleNotes(){ showNotes = !showNotes; notesBtn.style.background = showNotes ? '#26323b' : '';
+                          paintNotes(); }
+  function toggleFull(){
+    try { if (document.fullscreenElement) document.exitFullscreen();
+          else document.documentElement.requestFullscreen(); } catch(e){}
+  }
+
+  prevBtn.addEventListener('click', function(){ go(i - 1); });
+  nextBtn.addEventListener('click', function(){ go(i + 1); });
+  notesBtn.addEventListener('click', toggleNotes);
+  fullBtn.addEventListener('click', toggleFull);
+  document.addEventListener('keydown', function(e){
+    var k = e.key;
+    if (k === 'ArrowRight' || k === ' ' || k === 'PageDown'){ e.preventDefault(); go(i + 1); }
+    else if (k === 'ArrowLeft' || k === 'PageUp'){ e.preventDefault(); go(i - 1); }
+    else if (k === 'Home'){ e.preventDefault(); go(0); }
+    else if (k === 'End'){ e.preventDefault(); go(slides.length - 1); }
+    else if (k === 'n' || k === 'N'){ toggleNotes(); }
+    else if (k === 'f' || k === 'F'){ toggleFull(); }
+    else if (k === 'Escape'){ if (showNotes) toggleNotes();
+                              else if (document.fullscreenElement) toggleFull(); }
+  });
+  render(false);
+})();
+""".strip()

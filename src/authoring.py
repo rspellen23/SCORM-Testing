@@ -441,6 +441,39 @@ def _ocr_image(path):
         return None
 
 
+def _ocr_pdf(path):
+    """Tier-2 PDF reader: render each page to a PIL image and OCR via Tesseract.
+    Called when pypdf extracts no text (scanned / image-based PDF). Returns text,
+    "" when OCR runs but the pages hold no readable text, or None when a required
+    backend is absent — so the caller reports a skip-with-install-hint rather than
+    silently dropping the file. Needs Tesseract + pymupdf (`pip install pymupdf`)."""
+    cmd = _tesseract_cmd()
+    if not cmd:
+        return None
+    try:
+        import fitz          # pymupdf — renders PDF pages to bitmaps
+        import io
+        import pytesseract
+        from PIL import Image
+    except Exception:
+        return None
+    pytesseract.pytesseract.tesseract_cmd = cmd
+    Image.MAX_IMAGE_PIXELS = _MAX_IMAGE_PIXELS
+    try:
+        doc = fitz.open(path)
+        pages = []
+        for page in doc:
+            # 2× scale gives Tesseract enough resolution to be accurate on typical
+            # 72-dpi PDF pages without blowing up memory for large documents.
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
+            pages.append(pytesseract.image_to_string(img) or "")
+        doc.close()
+        return "\n".join(pages)
+    except Exception:
+        return ""
+
+
 # ---- C1: transcript → prose --------------------------------------------------
 
 # Paragraph/marker cadence for transcript prose. A gap between cues of at least
@@ -572,9 +605,12 @@ def _read_one(path):
     if low.endswith(".pdf"):
         try:
             from pypdf import PdfReader
-            return "\n".join((pg.extract_text() or "") for pg in PdfReader(path).pages)
+            text = "\n".join((pg.extract_text() or "") for pg in PdfReader(path).pages)
+            if text.strip():
+                return text
         except Exception:
-            return ""
+            pass
+        return _ocr_pdf(path)   # tier-2: scanned / image-based PDF
     if low.endswith((".html", ".htm")):
         return _read_via_textutil(path) or _html_to_text(path)
     if low.endswith(".odt"):
@@ -602,6 +638,18 @@ def _skip_reason(name):
     ext = os.path.splitext(name)[1].lower()
     if ext in _CALLOUT_EXTS:
         return f"{name} ({_CALLOUT_EXTS[ext]})"
+    if ext == ".pdf":
+        missing = []
+        if not _tesseract_cmd():
+            missing.append("Tesseract OCR")
+        try:
+            import fitz  # noqa: F401
+        except Exception:
+            missing.append("pymupdf (`pip install pymupdf`)")
+        if missing:
+            return (f"{name} (scanned PDF — install {' and '.join(missing)} "
+                    f"to extract text from image-based pages)")
+        return f"{name} (scanned PDF — OCR failed)"
     if ext in _OCR_IMAGE_EXTS:
         return f"{name} (image — install Tesseract OCR to read text from images)"
     if ext in _MEDIA_EXTS:

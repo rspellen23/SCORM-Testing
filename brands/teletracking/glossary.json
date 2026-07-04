@@ -10,28 +10,28 @@
   "preferred": [
     {
       "term": "Transfer IQ Pro",
-      "instead_of": ["the transfer tool", "the transfer app", "the transfer application"],
+      "instead_of": ["the transfer tool", "the transfer app", "the transfer application", "the transfer system"],
       "note": "Nova's patient-transfer product (abbrev TCIQ Pro). Use the product name, not generic shorthand."
     },
     {
       "term": "Referral IQ Pro",
-      "instead_of": ["the referral tool", "the referral app"],
+      "instead_of": ["the referral tool", "the referral app", "the referral application", "the referral system"],
       "note": "Nova's referral product."
     },
     {
       "term": "Data IQ",
-      "instead_of": [],
+      "instead_of": ["the analytics tool", "the data tool", "the reporting tool", "the analytics dashboard"],
       "note": "Nova's data/analytics product."
     },
     {
       "term": "Nova HL7 Agent",
-      "instead_of": [],
+      "instead_of": ["the HL7 thing", "the HL7 integration", "the integration agent", "HL7 agent"],
       "note": "The HL7 integration agent; name it in full, not 'the HL7 thing'."
     },
     {
       "term": "Nova",
-      "instead_of": [],
-      "note": "TeleTracking's Access Solution platform on Palantir Foundry (NOT the academy/LMS). The product clinical staff use."
+      "instead_of": ["the platform", "the system", "the app", "the tool"],
+      "note": "TeleTracking's Access Solution platform on Palantir Foundry (NOT the academy/LMS). The product clinical staff use. Note: only flag bare 'the platform' / 'the system' — 'Nova platform' is fine."
     }
   ],
   "banned": []
